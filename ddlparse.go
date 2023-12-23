@@ -1,8 +1,9 @@
 package sqlparse
 
 import (
-	"errors"
 	"fmt"
+	"errors"
+	"strings"
 )
 
 type Rdbms string
@@ -38,11 +39,45 @@ func ParseDdl (ddl string, rdbms Rdbms) ([]Table, error) {
 	//case MySQL:
 	//	return ParseDdlMySQL(ddl)
 	default:
-		return []Table{} errors.New("Not yet supported.")
+		return []Table{}, errors.New("Not yet supported.")
 	}
 }
 
 func ParseDdlSQLite (ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
 
+	for _, t := range tokens {
+		fmt.Sprintf(t)
+	}
+
+	return []Table{}, nil
 }
 
+func tokenize (ddl string) []string {
+	ddl = strings.Replace(ddl, "(", " ( ", -1)
+	ddl = strings.Replace(ddl, ")", " ) ", -1)
+	ddl = strings.Replace(ddl, ";", " ; ", -1)
+	ddl = strings.Replace(ddl, "\"", " \" ", -1)
+	ddl = strings.Replace(ddl, "'", " ' ", -1)
+	ddl = strings.Replace(ddl, "`", " ` ", -1)
+	ddl = strings.Replace(ddl, ",", " , ", -1)
+	ddl = strings.Replace(ddl, "\t", " ", -1)
+	ddl = strings.Replace(ddl, "\n", " ", -1)
+
+	return filter(
+		strings.Split(ddl, " "), 
+		func(s string) bool {
+			return s != " " && s != ""
+		},
+	)
+}
+
+func filter (array []string, f func(string) bool) []string {
+	var ret []string
+	for _, s := range array {
+		if f(s) {
+			ret = append(ret, s)
+		}
+	}
+	return ret
+}
