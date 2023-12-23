@@ -43,38 +43,38 @@ func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 }
 
 type parser interface {
-	validate() []string
-	parse() ([]Table, error)
+	Validate() error
+	Parse() ([]Table, error)
 }
 
 func ParseSQLite(ddl string) ([]Table, error) {
 	tokens := tokenize(ddl)
-	parser := NewSQLiteParser(tokens)
+	parser := newSQLiteParser(tokens)
 
-	if errs := parser.validate(); len(errs) != 0 {
-		return []Table{}, errors.New(strings.Join(errs, "; "))
+	if err := parser.Validate(); err != nil {
+		return []Table{}, err
 	}
-	return parser.parse()
+	return parser.Parse()
 }
 
 func ParsePostgreSQL(ddl string) ([]Table, error) {
 	tokens := tokenize(ddl)
-	parser := NewPostgreSQLParser(tokens)
+	parser := newPostgreSQLParser(tokens)
 
-	if errs := parser.validate(); len(errs) != 0 {
-		return []Table{}, errors.New(strings.Join(errs, "; "))
+	if err := parser.Validate(); err != nil {
+		return []Table{}, err
 	}
-	return parser.parse()
+	return parser.Parse()
 }
 
 func ParseMySQL(ddl string) ([]Table, error) {
 	tokens := tokenize(ddl)
-	parser := NewMySQLParser(tokens)
+	parser := newMySQLParser(tokens)
 
-	if errs := parser.validate(); len(errs) != 0 {
-		return []Table{}, errors.New(strings.Join(errs, "; "))
+	if err := parser.Validate(); err != nil {
+		return []Table{}, err
 	}
-	return parser.parse()
+	return parser.Parse()
 }
 
 func tokenize(ddl string) []string {
