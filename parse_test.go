@@ -1,9 +1,9 @@
-package sqlparse
+package ddlparse
 
 import "testing"
 
-func TestParseDdl(t *testing.T) {
-	//ParseDdl()
+func TestParse(t *testing.T) {
+	//Parse()
     //t.Errorf("failed")
 }
 

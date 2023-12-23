@@ -1,3 +1,3 @@
-module github.com/kodaimura/sqlparse
+module ddlparse
 
 go 1.20

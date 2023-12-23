@@ -1,4 +1,4 @@
-package sqlparse
+package ddlparse
 
 import (
 	"fmt"
@@ -30,20 +30,20 @@ type Column struct {
 	Check func(interface{}) bool
 }
 
-func ParseDdl (ddl string, rdbms Rdbms) ([]Table, error) {
+func Parse (ddl string, rdbms Rdbms) ([]Table, error) {
 	switch rdbms {
 	case SQLite:
-		return ParseDdlSQLite(ddl)
+		return ParseSQLite(ddl)
 	//case PostgreSQL:
-	//	return ParseDdlPostgreSQL(ddl)
+	//	return ParsePostgreSQL(ddl)
 	//case MySQL:
-	//	return ParseDdlMySQL(ddl)
+	//	return ParseMySQL(ddl)
 	default:
 		return []Table{}, errors.New("Not yet supported.")
 	}
 }
 
-func ParseDdlSQLite (ddl string) ([]Table, error) {
+func ParseSQLite (ddl string) ([]Table, error) {
 	tokens := tokenize(ddl)
 
 	for _, t := range tokens {
@@ -66,9 +66,7 @@ func tokenize (ddl string) []string {
 
 	return filter(
 		strings.Split(ddl, " "), 
-		func(s string) bool {
-			return s != " " && s != ""
-		},
+		func(s string) bool {return s != " " && s != ""},
 	)
 }
 
