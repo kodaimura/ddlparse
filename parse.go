@@ -1,7 +1,6 @@
 package ddlparse
 
 import (
-	"fmt"
 	"errors"
 	"strings"
 )
@@ -30,30 +29,55 @@ type Column struct {
 	Check func(interface{}) bool
 }
 
-func Parse (ddl string, rdbms Rdbms) ([]Table, error) {
+func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	switch rdbms {
 	case SQLite:
 		return ParseSQLite(ddl)
-	//case PostgreSQL:
-	//	return ParsePostgreSQL(ddl)
-	//case MySQL:
-	//	return ParseMySQL(ddl)
+	case PostgreSQL:
+		return ParsePostgreSQL(ddl)
+	case MySQL:
+		return ParseMySQL(ddl)
 	default:
 		return []Table{}, errors.New("Not yet supported.")
 	}
 }
 
-func ParseSQLite (ddl string) ([]Table, error) {
-	tokens := tokenize(ddl)
-
-	for _, t := range tokens {
-		fmt.Sprintf(t)
-	}
-
-	return []Table{}, nil
+type parser interface {
+	validate() []string
+	parse() ([]Table, error)
 }
 
-func tokenize (ddl string) []string {
+func ParseSQLite(ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
+	parser := NewSQLiteParser(tokens)
+
+	if errs := parser.validate(); len(errs) != 0 {
+		return []Table{}, errors.New(strings.Join(errs, "; "))
+	}
+	return parser.parse()
+}
+
+func ParsePostgreSQL(ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
+	parser := NewPostgreSQLParser(tokens)
+
+	if errs := parser.validate(); len(errs) != 0 {
+		return []Table{}, errors.New(strings.Join(errs, "; "))
+	}
+	return parser.parse()
+}
+
+func ParseMySQL(ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
+	parser := NewMySQLParser(tokens)
+
+	if errs := parser.validate(); len(errs) != 0 {
+		return []Table{}, errors.New(strings.Join(errs, "; "))
+	}
+	return parser.parse()
+}
+
+func tokenize(ddl string) []string {
 	ddl = strings.Replace(ddl, "(", " ( ", -1)
 	ddl = strings.Replace(ddl, ")", " ) ", -1)
 	ddl = strings.Replace(ddl, ";", " ; ", -1)
@@ -61,8 +85,12 @@ func tokenize (ddl string) []string {
 	ddl = strings.Replace(ddl, "'", " ' ", -1)
 	ddl = strings.Replace(ddl, "`", " ` ", -1)
 	ddl = strings.Replace(ddl, ",", " , ", -1)
+	ddl = strings.Replace(ddl, "\n", " \n ", -1)
 	ddl = strings.Replace(ddl, "\t", " ", -1)
-	ddl = strings.Replace(ddl, "\n", " ", -1)
+	ddl = strings.Replace(ddl, "/*", " /* ", -1)
+	ddl = strings.Replace(ddl, "*/", " */ ", -1)
+	ddl = strings.Replace(ddl, "--", " -- ", -1)
+	ddl = strings.Replace(ddl, "#", " # ", -1)
 
 	return filter(
 		strings.Split(ddl, " "), 
@@ -70,7 +98,7 @@ func tokenize (ddl string) []string {
 	)
 }
 
-func filter (array []string, f func(string) bool) []string {
+func filter(array []string, f func(string) bool) []string {
 	var ret []string
 	for _, s := range array {
 		if f(s) {
