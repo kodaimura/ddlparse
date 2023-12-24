@@ -1,8 +1,5 @@
 package ddlparse
 
-import (
-	"errors"
-)
 
 type mysqlParser struct {
 	tokens []string
@@ -68,7 +65,7 @@ func (p *mysqlParser) skipMultiLineComment() error {
 	skip = func() error {
 		p.i += 1
 		if (p.i > p.size) {
-			return errors.New("expected '*/' but not found")
+			return NewValidateError(p.lines, "*/", "")
 		} else if (p.tokens[p.i] == "\n") {
 			p.lines += 1
 			return skip()

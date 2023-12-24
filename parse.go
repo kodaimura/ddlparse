@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"fmt"
 	"errors"
 	"strings"
 )
@@ -28,6 +29,27 @@ type Column struct {
 	Default interface{}
 	Check func(interface{}) bool
 }
+
+type ValidateError struct {
+	Line int
+	Expected string
+	Found string
+}
+
+func NewValidateError(line int, expected string, found string) error {
+	return ValidateError{line, expected, found}
+}
+
+func (e ValidateError) Error() string {
+	msg := fmt.Sprintf("ValidateError: (line:%d) expected '%s', ", e.Line, e.Expected)
+	if (e.Found == "") {
+		msg +=  "but not found."
+	} else {
+		msg += fmt.Sprintf("but found '%s'.", e.Found)
+	}
+	return fmt.Sprintf(msg)
+}
+
 
 func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	switch rdbms {
