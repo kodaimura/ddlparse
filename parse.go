@@ -41,11 +41,18 @@ func NewValidateError(line int, expected string, found string) error {
 }
 
 func (e ValidateError) Error() string {
-	msg := fmt.Sprintf("ValidateError: (line:%d) expected '%s', ", e.Line, e.Expected)
-	if (e.Found == "") {
-		msg +=  "but not found."
+	msg := fmt.Sprintf("ValidateError: (line:%d) ", e.Line)
+	if (e.Expected == "" && e.Found != "") {
+		msg += fmt.Sprintf("Unexpected characters '%s' found.", e.Found)
+
+	} else if (e.Expected != "" && e.Found == "") {
+		msg += fmt.Sprintf("Eexpected '%s', but not found.", e.Expected)
+
+	} else if (e.Expected != "" && e.Found == "") {
+		msg += fmt.Sprintf("Eexpected '%s', but found '%s'.", e.Expected, e.Found)
+
 	} else {
-		msg += fmt.Sprintf("but found '%s'.", e.Found)
+		msg += "validate failed."
 	}
 	return fmt.Sprintf(msg)
 }
