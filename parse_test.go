@@ -1,6 +1,8 @@
 package ddlparse
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestParse(t *testing.T) {
 	//Parse()
@@ -8,7 +10,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestTokenize(t *testing.T) {
-	result := tokenize(
+	tokens := tokenize(
 		`CREATE TABLE IF NOT EXISTS users (
 			"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT NOT NULL UNIQUE,
@@ -19,7 +21,36 @@ func TestTokenize(t *testing.T) {
 		);`,
 	)
 
-	for _, s := range result {
-		t.Log(s)
+	if len(tokens) != 76 {
+		t.Errorf("failed")
+	}
+}
+
+func TestSkip(t *testing.T) {
+	tokens := tokenize(`,--XXXXX
+			a
+			/*
+			password TEXT NOT NULL,
+			email TEXT NOT NULL UNIQUE,
+			*/
+			--XXXXX
+			created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+			updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+		);`,
+	)
+
+	parser := &postgresqlParser{tokens, len(tokens), 100, 100}
+	parser.init()
+	parser.next()
+	if parser.tokens[parser.i] != "a" {
+		t.Errorf("failed")
+	}
+	parser.next()
+	if parser.tokens[parser.i] != "created_at" {
+		t.Errorf("failed")
+	}
+	parser.next()
+	if parser.tokens[parser.i] != "TEXT" {
+		t.Errorf("failed")
 	}
 }
