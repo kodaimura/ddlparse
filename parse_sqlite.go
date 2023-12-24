@@ -16,8 +16,9 @@ func newSQLiteParser(tokens []string) parser {
 }
 
 func (p *sqliteParser) init() {
-	p.i = 0
+	p.i = -1
 	p.lines = 0
+	p.next()
 }
 
 func (p *sqliteParser) next() error {
@@ -82,6 +83,7 @@ func (p *sqliteParser) skipMultiLineComment() error {
 
 func (p *sqliteParser) Validate() error {
 	p.init()
+
 	return nil
 }
 

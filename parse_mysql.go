@@ -16,8 +16,9 @@ func newMySQLParser(tokens []string) parser {
 }
 
 func (p *mysqlParser) init() {
-	p.i = 0
+	p.i = -1
 	p.lines = 0
+	p.next()
 }
 
 func (p *mysqlParser) next() error {

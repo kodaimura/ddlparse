@@ -16,8 +16,9 @@ func newPostgreSQLParser(tokens []string) parser {
 }
 
 func (p *postgresqlParser) init() {
-	p.i = 0
+	p.i = -1
 	p.lines = 0
+	p.next()
 }
 
 func (p *postgresqlParser) next() error {
