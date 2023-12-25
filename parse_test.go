@@ -39,7 +39,7 @@ func TestInit(t *testing.T) {
 	if parser.size != len(tokens) {
 		t.Errorf("failed")
 	}
-	if parser.lines != 1 {
+	if parser.line != 1 {
 		t.Errorf("failed")
 	}
 }
@@ -72,7 +72,7 @@ func TestNext(t *testing.T) {
 		t.Errorf("failed")
 	}
 	parser.next()
-	if parser.lines !=  7 {
+	if parser.line !=  7 {
 		t.Errorf("failed")
 	}
 }

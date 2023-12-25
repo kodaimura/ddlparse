@@ -11,8 +11,8 @@ func filter(slice []string, f func(string) bool) []string {
 	return ret
 }
 
-func contains(slice []string, key string) {
-	for s := range slice {
+func contains(slice []string, key string) bool {
+	for _, s := range slice {
 		if s == key {
 			return true
 		}

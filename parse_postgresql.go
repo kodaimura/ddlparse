@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"regexp"
 	"strings"
 )
 
@@ -8,18 +9,18 @@ type postgresqlParser struct {
 	tokens []string
 	size int
 	i int
-	lines int
+	line int
 }
 
 func newPostgreSQLParser(tokens []string) parser {
 	return &postgresqlParser{tokens, len(tokens), 0, 0}
 }
 
-func (p *postgresqlParser) isOutOfRange() {
+func (p *postgresqlParser) isOutOfRange() bool {
 	return p.i > p.size - 1
 }
 
-func (p *postgresqlParser) syntaxError() {
+func (p *postgresqlParser) syntaxError() error {
 	if p.isOutOfRange() {
 		return NewValidateError(p.line, p.tokens[p.size - 1])
 	}
@@ -28,7 +29,7 @@ func (p *postgresqlParser) syntaxError() {
 
 func (p *postgresqlParser) init() {
 	p.i = -1
-	p.lines = 0
+	p.line = 0
 	p.next()
 }
 
@@ -38,7 +39,7 @@ func (p *postgresqlParser) next() error {
 		return nil;
 	}
 	if (p.tokens[p.i] == "\n") {
-		p.lines += 1
+		p.line += 1
 		return p.next()
 	} else if (p.tokens[p.i] == "--") {
 		p.skipSingleLineComment()
@@ -63,7 +64,7 @@ func (p *postgresqlParser) skipSingleLineComment() {
 		if (p.isOutOfRange()) {
 			return
 		} else if (p.tokens[p.i] == "\n") {
-			p.lines += 1
+			p.line += 1
 		} else {
 			skip()
 		}
@@ -81,7 +82,7 @@ func (p *postgresqlParser) skipMultiLineComment() error {
 		if (p.isOutOfRange()) {
 			return p.syntaxError()
 		} else if (p.tokens[p.i] == "\n") {
-			p.lines += 1
+			p.line += 1
 			return skip()
 		} else if (p.tokens[p.i] == "*/") {
 			return nil
@@ -92,9 +93,9 @@ func (p *postgresqlParser) skipMultiLineComment() error {
 	return skip()
 }
 
-const (p *postgresqlParser) isValidName(string name) bool {
+func (p *postgresqlParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	if !pattern.MatchString(tableName) {
+	if !pattern.MatchString(name) {
 		return false
 	}
 
@@ -104,9 +105,9 @@ const (p *postgresqlParser) isValidName(string name) bool {
 	return !contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
 }
 
-const (p *postgresqlParser) isValidQuotedName(string name) bool {
+func (p *postgresqlParser) isValidQuotedName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
-	return pattern.MatchString(tableName)
+	return pattern.MatchString(name)
 }
 
 func (p *postgresqlParser) Validate() error {
@@ -122,7 +123,7 @@ func (p *postgresqlParser) Parse() ([]Table, error) {
 
 
 
-const ReservedWords_PostgreSQL = []string{
+var ReservedWords_PostgreSQL = []string{
 	"A",
 	"ABS",
 	"ADA",

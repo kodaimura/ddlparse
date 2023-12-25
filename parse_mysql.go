@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"regexp"
 	"strings"
 )
 
@@ -8,18 +9,18 @@ type mysqlParser struct {
 	tokens []string
 	size int
 	i int
-	lines int
+	line int
 }
 
 func newMySQLParser(tokens []string) parser {
 	return &mysqlParser{tokens, len(tokens), 0, 0}
 }
 
-func (p *mysqlParser) isOutOfRange() {
+func (p *mysqlParser) isOutOfRange() bool {
 	return p.i > p.size - 1
 }
 
-func (p *mysqlParser) syntaxError() {
+func (p *mysqlParser) syntaxError() error {
 	if p.isOutOfRange() {
 		return NewValidateError(p.line, p.tokens[p.size - 1])
 	}
@@ -28,7 +29,7 @@ func (p *mysqlParser) syntaxError() {
 
 func (p *mysqlParser) init() {
 	p.i = -1
-	p.lines = 0
+	p.line = 0
 	p.next()
 }
 
@@ -38,7 +39,7 @@ func (p *mysqlParser) next() error {
 		return nil;
 	}
 	if (p.tokens[p.i] == "\n") {
-		p.lines += 1
+		p.line += 1
 		return p.next()
 	} else if (p.tokens[p.i] == "--") {
 		p.skipSingleLineComment()
@@ -63,7 +64,7 @@ func (p *mysqlParser) skipSingleLineComment() {
 		if (p.isOutOfRange()) {
 			return
 		} else if (p.tokens[p.i] == "\n") {
-			p.lines += 1
+			p.line += 1
 		} else {
 			skip()
 		}
@@ -81,7 +82,7 @@ func (p *mysqlParser) skipMultiLineComment() error {
 		if (p.isOutOfRange()) {
 			return p.syntaxError()
 		} else if (p.tokens[p.i] == "\n") {
-			p.lines += 1
+			p.line += 1
 			return skip()
 		} else if (p.tokens[p.i] == "*/") {
 			return nil
@@ -92,15 +93,15 @@ func (p *mysqlParser) skipMultiLineComment() error {
 	return skip()
 }
 
-const (p *mysqlParser) isValidName(string name) bool {
+func (p *mysqlParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
-	return pattern.MatchString(tableName) && 
+	return pattern.MatchString(name) && 
 		!contains(ReservedWords_MySQL, strings.ToUpper(name))
 }
 
-const (p *mysqlParser) isValidQuotedName(string name) bool {
+func (p *mysqlParser) isValidQuotedName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
-	return pattern.MatchString(tableName)
+	return pattern.MatchString(name)
 }
 
 func (p *mysqlParser) Validate() error {
@@ -115,7 +116,7 @@ func (p *mysqlParser) Parse() ([]Table, error) {
 }
 
 
-const ReservedWords_MySQL = []string{
+var ReservedWords_MySQL = []string{
 	"ACCESSIBLE",
 	"ADD",
 	"ALL",

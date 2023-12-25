@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"errors"
 	"strings"
-	"regexp"
 )
 
 type Rdbms string
@@ -41,7 +40,7 @@ func NewValidateError(line int, near string) error {
 }
 
 func (e ValidateError) Error() string {
-	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near e.Line)
+	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near, e.Line)
 }
 
 
@@ -108,21 +107,21 @@ func Validate(ddl string, rdbms Rdbms) error {
 	}
 }
 
-func ValidateSQLite(ddl string) ([]Table, error) {
+func ValidateSQLite(ddl string) error {
 	tokens := tokenize(ddl)
 	parser := newSQLiteParser(tokens)
 
 	return parser.Validate()
 }
 
-func ValidatePostgreSQL(ddl string) ([]Table, error) {
+func ValidatePostgreSQL(ddl string) error {
 	tokens := tokenize(ddl)
 	parser := newPostgreSQLParser(tokens)
 
 	return parser.Validate()
 }
 
-func ValidateMySQL(ddl string) ([]Table, error) {
+func ValidateMySQL(ddl string) error {
 	tokens := tokenize(ddl)
 	parser := newMySQLParser(tokens)
 
