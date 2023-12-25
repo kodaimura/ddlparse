@@ -71,6 +71,7 @@ func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	}
 }
 
+
 type parser interface {
 	Validate() error
 	Parse() ([]Table, error)
@@ -105,6 +106,42 @@ func ParseMySQL(ddl string) ([]Table, error) {
 	}
 	return parser.Parse()
 }
+
+
+func Validate(ddl string, rdbms Rdbms) error {
+	switch rdbms {
+	case SQLite:
+		return ValidateSQLite(ddl)
+	case PostgreSQL:
+		return ValidatePostgreSQL(ddl)
+	case MySQL:
+		return ValidateMySQL(ddl)
+	default:
+		return errors.New("Not yet supported.")
+	}
+}
+
+func ValidateSQLite(ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
+	parser := newSQLiteParser(tokens)
+
+	return parser.Validate()
+}
+
+func ValidatePostgreSQL(ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
+	parser := newPostgreSQLParser(tokens)
+
+	return parser.Validate()
+}
+
+func ValidateMySQL(ddl string) ([]Table, error) {
+	tokens := tokenize(ddl)
+	parser := newMySQLParser(tokens)
+
+	return parser.Validate()
+}
+
 
 func tokenize(ddl string) []string {
 	ddl = strings.Replace(ddl, "(", " ( ", -1)
