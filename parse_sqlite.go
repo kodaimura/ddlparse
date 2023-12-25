@@ -12,6 +12,17 @@ func newSQLiteParser(tokens []string) parser {
 	return &sqliteParser{tokens, len(tokens), 0, 0}
 }
 
+func (p *sqliteParser) isOutOfRange() {
+	return p.i > p.size - 1
+}
+
+func (p *sqliteParser) syntaxError() {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, p.tokens[p.size - 1])
+	}
+	return NewValidateError(p.line, p.tokens[0])
+}
+
 func (p *sqliteParser) init() {
 	p.i = -1
 	p.lines = 0
@@ -20,7 +31,7 @@ func (p *sqliteParser) init() {
 
 func (p *sqliteParser) next() error {
 	p.i += 1
-	if (p.i > p.size) {
+	if (p.isOutOfRange()) {
 		return nil;
 	}
 	if (p.tokens[p.i] == "\n") {
@@ -46,7 +57,7 @@ func (p *sqliteParser) skipSingleLineComment() {
 	var skip func()
 	skip = func() {
 		p.i += 1
-		if (p.i > p.size) {
+		if (p.isOutOfRange()) {
 			return
 		} else if (p.tokens[p.i] == "\n") {
 			p.lines += 1
@@ -64,8 +75,8 @@ func (p *sqliteParser) skipMultiLineComment() error {
 	var skip func() error
 	skip = func() error {
 		p.i += 1
-		if (p.i > p.size) {
-			return NewValidateError(p.lines, "*/", "")
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
 		} else if (p.tokens[p.i] == "\n") {
 			p.lines += 1
 			return skip()
@@ -79,8 +90,75 @@ func (p *sqliteParser) skipMultiLineComment() error {
 }
 
 func (p *sqliteParser) Validate() error {
-	p.init()	
-	return nil
+	p.init()
+	return p.validate()
+}
+
+func (p *sqliteParser) validate() error {
+	if (p.isOutOfRange()) {
+		return nil
+	}
+	if err := p.validateCreateTable(); err != nil {
+		return err
+	}
+	return p.validate()
+}
+
+func (p *sqliteParser) validateCreateTable() error {
+	if (p.tokens[p.i] != "create" && p.tokens[p.i] != "CREATE") {
+		return p.syntaxError()
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if (p.tokens[p.i] != "table" && p.tokens[p.i] != "TABLE") {
+		return p.syntaxError()
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if (p.tokens[p.i] == "if" || p.tokens[p.i] == "IF") {
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.tokens[p.i] != "not" && p.tokens[p.i] != "NOT") {
+			return p.syntaxError()
+		}
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.tokens[p.i] != "exists" && p.tokens[p.i] != "EXISTS") {
+			return p.syntaxError()
+		}
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if (p.tokens[p.i] = "") {
+		p.validateTableName
+	}
+}
+
+func (p *sqliteParser) validateTableName() error {
+	if (p.tokens[p.i] == "\"") {
+		p.i += 1
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !isValidTableName(p.tokens[p.i]) {
+			return p.syntaxError()
+		}
+		p.i += 1
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+	}
+
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {

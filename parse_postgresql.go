@@ -12,6 +12,17 @@ func newPostgreSQLParser(tokens []string) parser {
 	return &postgresqlParser{tokens, len(tokens), 0, 0}
 }
 
+func (p *postgresqlParser) isOutOfRange() {
+	return p.i > p.size - 1
+}
+
+func (p *postgresqlParser) syntaxError() {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, p.tokens[p.size - 1])
+	}
+	return NewValidateError(p.line, p.tokens[0])
+}
+
 func (p *postgresqlParser) init() {
 	p.i = -1
 	p.lines = 0
@@ -20,7 +31,7 @@ func (p *postgresqlParser) init() {
 
 func (p *postgresqlParser) next() error {
 	p.i += 1
-	if (p.i > p.size) {
+	if (p.isOutOfRange()) {
 		return nil;
 	}
 	if (p.tokens[p.i] == "\n") {
@@ -46,7 +57,7 @@ func (p *postgresqlParser) skipSingleLineComment() {
 	var skip func()
 	skip = func() {
 		p.i += 1
-		if (p.i > p.size) {
+		if (p.isOutOfRange()) {
 			return
 		} else if (p.tokens[p.i] == "\n") {
 			p.lines += 1
@@ -64,8 +75,8 @@ func (p *postgresqlParser) skipMultiLineComment() error {
 	var skip func() error
 	skip = func() error {
 		p.i += 1
-		if (p.i > p.size) {
-			return NewValidateError(p.lines, "*/", "")
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
 		} else if (p.tokens[p.i] == "\n") {
 			p.lines += 1
 			return skip()

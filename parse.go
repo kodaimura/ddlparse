@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"errors"
 	"strings"
+	"regexp"
 )
 
 type Rdbms string
@@ -32,29 +33,15 @@ type Column struct {
 
 type ValidateError struct {
 	Line int
-	Expected string
-	Found string
+	Near string
 }
 
-func NewValidateError(line int, expected string, found string) error {
-	return ValidateError{line, expected, found}
+func NewValidateError(line int, near string) error {
+	return ValidateError{line, near}
 }
 
 func (e ValidateError) Error() string {
-	msg := fmt.Sprintf("ValidateError: (line:%d) ", e.Line)
-	if (e.Expected == "" && e.Found != "") {
-		msg += fmt.Sprintf("Unexpected characters '%s' found.", e.Found)
-
-	} else if (e.Expected != "" && e.Found == "") {
-		msg += fmt.Sprintf("Eexpected '%s', but not found.", e.Expected)
-
-	} else if (e.Expected != "" && e.Found == "") {
-		msg += fmt.Sprintf("Eexpected '%s', but found '%s'.", e.Expected, e.Found)
-
-	} else {
-		msg += "validate failed."
-	}
-	return fmt.Sprintf(msg)
+	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near e.Line)
 }
 
 
@@ -162,6 +149,16 @@ func tokenize(ddl string) []string {
 		strings.Split(ddl, " "), 
 		func(s string) bool {return s != " " && s != ""},
 	)
+}
+
+const isValidTableName(string name) {
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return pattern.MatchString(tableName)
+}
+
+const isValidColumnName(string name) {
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return pattern.MatchString(tableName)
 }
 
 const ReservedWords_SQLite = []string{
