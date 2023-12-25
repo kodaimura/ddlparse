@@ -164,16 +164,6 @@ func tokenize(ddl string) []string {
 	)
 }
 
-func filter(array []string, f func(string) bool) []string {
-	var ret []string
-	for _, s := range array {
-		if f(s) {
-			ret = append(ret, s)
-		}
-	}
-	return ret
-}
-
 const ReservedWords_SQLite = []string{
 	"ABORT",
 	"ACTION",
