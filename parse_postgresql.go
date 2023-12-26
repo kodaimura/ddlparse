@@ -13,7 +13,7 @@ type postgresqlParser struct {
 }
 
 func newPostgreSQLParser(tokens []string) parser {
-	return &postgresqlParser{tokens, len(tokens), 0, 0}
+	return &postgresqlParser{tokens, len(tokens), -1, 1}
 }
 
 func (p *postgresqlParser) token() string {
@@ -28,12 +28,12 @@ func (p *postgresqlParser) syntaxError() error {
 	if p.isOutOfRange() {
 		return NewValidateError(p.line, p.tokens[p.size - 1])
 	}
-	return NewValidateError(p.line, p.tokens[0])
+	return NewValidateError(p.line, p.tokens[p.i])
 }
 
 func (p *postgresqlParser) init() {
 	p.i = -1
-	p.line = 0
+	p.line = 1
 	p.next()
 }
 

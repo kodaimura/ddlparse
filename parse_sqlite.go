@@ -13,7 +13,7 @@ type sqliteParser struct {
 }
 
 func newSQLiteParser(tokens []string) parser {
-	return &sqliteParser{tokens, len(tokens), 0, 0}
+	return &sqliteParser{tokens, len(tokens), -1, 1}
 }
 
 func (p *sqliteParser) token() string {
@@ -33,7 +33,7 @@ func (p *sqliteParser) syntaxError() error {
 
 func (p *sqliteParser) init() {
 	p.i = -1
-	p.line = 0
+	p.line = 1
 	p.next()
 }
 
