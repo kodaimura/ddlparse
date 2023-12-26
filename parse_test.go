@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -73,6 +74,47 @@ func TestNext(t *testing.T) {
 	}
 	parser.next()
 	if parser.line !=  7 {
+		t.Errorf("failed")
+	}
+}
+
+func TestValidate(t *testing.T) {
+	tokens := tokenize(`CREATE TABLE IF NOT EXISTS users (
+
+	);`,
+	)
+
+	parser := newSQLiteParser(tokens)
+	if parser.Validate() != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREAT TABLE IF NOT EXISTS users ();`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+	tokens = tokenize(`CREATE TABL IF NOT EXISTS users ();`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS "users ();`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS AUTOINCREMENT ();`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
 		t.Errorf("failed")
 	}
 }
