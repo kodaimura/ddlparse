@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 )
@@ -40,7 +41,7 @@ func (p *mysqlParser) init() {
 func (p *mysqlParser) next() error {
 	p.i += 1
 	if (p.isOutOfRange()) {
-		return nil;
+		return errors.New("out of range")
 	}
 	if (p.token() == "\n") {
 		p.line += 1
@@ -84,7 +85,7 @@ func (p *mysqlParser) skipMultiLineComment() error {
 	skip = func() error {
 		p.i += 1
 		if (p.isOutOfRange()) {
-			return p.syntaxError()
+			return errors.New("out of range")
 		} else if (p.token() == "\n") {
 			p.line += 1
 			return skip()

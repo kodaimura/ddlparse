@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 )
@@ -40,7 +41,7 @@ func (p *postgresqlParser) init() {
 func (p *postgresqlParser) next() error {
 	p.i += 1
 	if (p.isOutOfRange()) {
-		return nil;
+		return errors.New("out of range")
 	}
 	if (p.token() == "\n") {
 		p.line += 1
@@ -84,7 +85,7 @@ func (p *postgresqlParser) skipMultiLineComment() error {
 	skip = func() error {
 		p.i += 1
 		if (p.isOutOfRange()) {
-			return p.syntaxError()
+			return errors.New("out of range")
 		} else if (p.token() == "\n") {
 			p.line += 1
 			return skip()
