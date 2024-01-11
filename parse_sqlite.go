@@ -284,10 +284,29 @@ func (p *sqliteParser) validateColumnConstraint() error {
 			return err
 		}
 	}
+
+	return p.validateColumnConstraintAux([]string{"pk", "nn", "uq", "ck", "de", "co", "fk", "ga"})
+}
+
+func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 	if p.token() == "PRIMARY" || p.token() == "primary" {
+		if !contains(ls, "pk") {
+			return p.syntaxError()
+		}
 		if err := p.validateConstraintPrimaryKey(); err != nil {
 			return err
 		}
+		return p.validateColumnConstraintAux(remove(ls, "pk"))
+	}
+
+	if p.token() == "NOT" || p.token() == "not" {
+		if !contains(ls, "nn") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintNotNull(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(remove(ls, "nn"))
 	}
 	return nil
 }
@@ -319,6 +338,26 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 			if (p.isOutOfRange()) {
 				return p.syntaxError()
 			}
+		}
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateConstraintNotNull() error {
+	if p.token() == "NOT" || p.token() == "not" {
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !(p.token() == "NULL" || p.token() == "null") {
+			return p.syntaxError()
+		}
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if err := p.validateConflictClause(); err != nil {
+			return err
 		}
 	}
 	return nil
