@@ -123,120 +123,7 @@ func (p *sqliteParser) validate() error {
 	return p.validate()
 }
 
-func (p *sqliteParser) validateCreateTable() error {
-	if (p.token() != "create" && p.token() != "CREATE") {
-		return p.syntaxError()
-	}
-	p.next()
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
-	if (p.token() != "table" && p.token() != "TABLE") {
-		return p.syntaxError()
-	}
-	p.next()
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
-	if (p.token() == "if" || p.token() == "IF") {
-		p.next()
-		if (p.isOutOfRange()) {
-			return p.syntaxError()
-		}
-		if (p.token() != "not" && p.token() != "NOT") {
-			return p.syntaxError()
-		}
-		p.next()
-		if (p.isOutOfRange()) {
-			return p.syntaxError()
-		}
-		if (p.token() != "exists" && p.token() != "EXISTS") {
-			return p.syntaxError()
-		}
-	}
-	p.next()
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
-
-	if err := p.validateTableName(); err != nil {
-		return err
-	}
-	if (p.token() != "(") {
-		return p.syntaxError()
-	}
-	p.next()
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
-
-	if err := p.validateColumns(); err != nil {
-		return err
-	}
-	if (p.token() != ")") {
-		return p.syntaxError()
-	}
-	p.next()
-	if (p.token() != ";") {
-		return p.syntaxError()
-	}
-	p.next()
-
-	return nil
-}
-
-func (p *sqliteParser) validateTableName() error {
-	if (p.token() == "\"") {
-		p.i += 1
-		if (p.isOutOfRange()) {
-			return p.syntaxError()
-		}
-		if !p.isValidQuotedName(p.token()) {
-			return p.syntaxError()
-		}
-		p.i += 1
-		if (p.isOutOfRange()) {
-			return p.syntaxError()
-		}
-		if (p.token() != "\"") {
-			return p.syntaxError()
-		}
-	} else {
-		if !p.isValidName(p.token()) {
-			return p.syntaxError()
-		}
-	}
-	p.next()
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
-	return nil
-}
-
-func (p *sqliteParser) validateColumns() error {
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
-	if err := p.validateColumn(); err != nil {
-		return err
-	}
-	if (p.token() != ",") {
-		return p.validateColumns()
-	}
-	return nil
-}
-
-func (p *sqliteParser) validateColumn() error {
-	if err := p.validateColumnName(); err != nil {
-		return err
-	}
-	if err := p.validateColumnType(); err != nil {
-		return err
-	}
-	return p.validateColumns()
-}
-
-func (p *sqliteParser) validateColumnName() error {
+func (p *sqliteParser) validateName() error {
 	if (p.token() == "\"") {
 		p.i += 1
 		if (p.isOutOfRange()) {
@@ -279,9 +166,184 @@ func (p *sqliteParser) validateColumnName() error {
 	return nil
 }
 
+func (p *sqliteParser) validateCreateTable() error {
+	if (p.token() != "create" && p.token() != "CREATE") {
+		return p.syntaxError()
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if (p.token() != "table" && p.token() != "TABLE") {
+		return p.syntaxError()
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if (p.token() == "if" || p.token() == "IF") {
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.token() != "not" && p.token() != "NOT") {
+			return p.syntaxError()
+		}
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.token() != "exists" && p.token() != "EXISTS") {
+			return p.syntaxError()
+		}
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+
+	if err := p.validateName(); err != nil {
+		return err
+	}
+	if (p.token() != "(") {
+		return p.syntaxError()
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+
+	if err := p.validateColumns(); err != nil {
+		return err
+	}
+	if (p.token() != ")") {
+		return p.syntaxError()
+	}
+	p.next()
+	if (p.token() != ";") {
+		return p.syntaxError()
+	}
+	p.next()
+
+	return nil
+}
+
+func (p *sqliteParser) validateTableName() error {
+	return p.validateName()
+}
+
+func (p *sqliteParser) validateColumns() error {
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if err := p.validateColumn(); err != nil {
+		return err
+	}
+	if (p.token() != ",") {
+		return p.validateColumns()
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateColumn() error {
+	if err := p.validateColumnName(); err != nil {
+		return err
+	}
+	if err := p.validateColumnType(); err != nil {
+		return err
+	}
+	if err := p.validateColumnConstraint(); err != nil {
+		return err
+	}
+	return p.validateColumns()
+}
+
+func (p *sqliteParser) validateColumnName() error {
+	return p.validateName()
+}
+
+//Omitting data types is not supported.
 func (p *sqliteParser) validateColumnType() error {
 	if !contains(DataType_SQLite, strings.ToUpper(p.token())) {
 		return p.syntaxError()
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateColumnConstraint() error {
+	if p.token() == "CONSTRAINT" || p.token() == "constraint" {
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+	if p.token() == "PRIMARY" || p.token() == "primary" {
+		if err := p.validateConstraintPrimaryKey(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateConstraintPrimaryKey() error {
+	if p.token() == "PRIMARY" || p.token() == "primary" {
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !(p.token() == "KEY" || p.token() == "key") {
+			return p.syntaxError()
+		}
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.token() == "ASC" || p.token() == "DESC" || p.token() == "asc" || p.token() == "desc") {
+			p.next()
+			if (p.isOutOfRange()) {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateConflictClause(); err != nil {
+			return err
+		}
+		if (p.token() == "AUTOINCREMENT" || p.token() == "autoincrement") {
+			p.next()
+			if (p.isOutOfRange()) {
+				return p.syntaxError()
+			}
+		}
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateConflictClause() error {
+	if p.token() == "ON" || p.token() == "on" {
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !(p.token() == "CONFLICT" || p.token() == "conflict") {
+			return p.syntaxError()
+		}
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !contains(ConflictAction_SQLite, strings.ToUpper(p.token())) {
+			return p.syntaxError()
+		}
+		p.next()
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
 	}
 	return nil
 }
@@ -298,6 +360,14 @@ var DataType_SQLite = []string{
 	"INTEGER",
 	"REAL",
 	"NONE",
+}
+
+var ConflictAction_SQLite = []string{
+	"ROLLBACK",
+	"ABORT",
+	"FAIL",
+	"IGNORE",
+	"REPLACE",
 }
 
 var ReservedWords_SQLite = []string{
