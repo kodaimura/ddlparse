@@ -214,6 +214,75 @@ func (p *sqliteParser) validateTableName() error {
 }
 
 func (p *sqliteParser) validateColumns() error {
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	if err := p.validateColumn(); err != nil {
+		return err
+	}
+	if (p.token() != ",") {
+		return p.validateColumns()
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateColumn() error {
+	if err := p.validateColumnName(); err != nil {
+		return err
+	}
+	if err := p.validateColumnType(); err != nil {
+		return err
+	}
+	return p.validateColumns()
+}
+
+func (p *sqliteParser) validateColumnName() error {
+	if (p.token() == "\"") {
+		p.i += 1
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !p.isValidQuotedName(p.token()) {
+			return p.syntaxError()
+		}
+		p.i += 1
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.token() != "\"") {
+			return p.syntaxError()
+		}
+	} else if (p.token() == "`") {
+		p.i += 1
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if !p.isValidQuotedName(p.token()) {
+			return p.syntaxError()
+		}
+		p.i += 1
+		if (p.isOutOfRange()) {
+			return p.syntaxError()
+		}
+		if (p.token() != "`") {
+			return p.syntaxError()
+		}
+	} else {
+		if !p.isValidName(p.token()) {
+			return p.syntaxError()
+		}
+	}
+	p.next()
+	if (p.isOutOfRange()) {
+		return p.syntaxError()
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateColumnType() error {
+	if !contains(DataType_SQLite, strings.ToUpper(p.token())) {
+		return p.syntaxError()
+	}
 	return nil
 }
 
@@ -223,6 +292,13 @@ func (p *sqliteParser) Parse() ([]Table, error) {
 	return tables, nil
 }
 
+var DataType_SQLite = []string{
+	"TEXT",
+	"NUMERIC",
+	"INTEGER",
+	"REAL",
+	"NONE",
+}
 
 var ReservedWords_SQLite = []string{
 	"ABORT",
