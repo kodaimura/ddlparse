@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 )
@@ -40,7 +41,7 @@ func (p *sqliteParser) init() {
 func (p *sqliteParser) next() error {
 	p.i += 1
 	if (p.isOutOfRange()) {
-		return nil;
+		return errors.New("out of range")
 	}
 	if (p.token() == "\n") {
 		p.line += 1
@@ -84,7 +85,7 @@ func (p *sqliteParser) skipMultiLineComment() error {
 	skip = func() error {
 		p.i += 1
 		if (p.isOutOfRange()) {
-			return p.syntaxError()
+			return errors.New("out of range")
 		} else if (p.token() == "\n") {
 			p.line += 1
 			return skip()
@@ -159,8 +160,7 @@ func (p *sqliteParser) validateName() error {
 			return p.syntaxError()
 		}
 	}
-	p.next()
-	if (p.isOutOfRange()) {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 	return nil
@@ -170,35 +170,30 @@ func (p *sqliteParser) validateCreateTable() error {
 	if (p.token() != "create" && p.token() != "CREATE") {
 		return p.syntaxError()
 	}
-	p.next()
-	if (p.isOutOfRange()) {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 	if (p.token() != "table" && p.token() != "TABLE") {
 		return p.syntaxError()
 	}
-	p.next()
-	if (p.isOutOfRange()) {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 	if (p.token() == "if" || p.token() == "IF") {
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if (p.token() != "not" && p.token() != "NOT") {
 			return p.syntaxError()
 		}
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if (p.token() != "exists" && p.token() != "EXISTS") {
 			return p.syntaxError()
 		}
 	}
-	p.next()
-	if (p.isOutOfRange()) {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 
@@ -208,8 +203,7 @@ func (p *sqliteParser) validateCreateTable() error {
 	if (p.token() != "(") {
 		return p.syntaxError()
 	}
-	p.next()
-	if (p.isOutOfRange()) {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 
@@ -219,8 +213,7 @@ func (p *sqliteParser) validateCreateTable() error {
 	if (p.token() != ")") {
 		return p.syntaxError()
 	}
-	p.next()
-	if (p.token() != ";") {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 	p.next()
@@ -267,8 +260,7 @@ func (p *sqliteParser) validateColumnType() error {
 	if !contains(DataType_SQLite, strings.ToUpper(p.token())) {
 		return p.syntaxError()
 	}
-	p.next()
-	if (p.isOutOfRange()) {
+	if p.next() != nil {
 		return p.syntaxError()
 	}
 	return nil
@@ -276,8 +268,7 @@ func (p *sqliteParser) validateColumnType() error {
 
 func (p *sqliteParser) validateColumnConstraint() error {
 	if p.token() == "CONSTRAINT" || p.token() == "constraint" {
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if err := p.validateName(); err != nil {
@@ -313,20 +304,17 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 
 func (p *sqliteParser) validateConstraintPrimaryKey() error {
 	if p.token() == "PRIMARY" || p.token() == "primary" {
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if !(p.token() == "KEY" || p.token() == "key") {
 			return p.syntaxError()
 		}
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if (p.token() == "ASC" || p.token() == "DESC" || p.token() == "asc" || p.token() == "desc") {
-			p.next()
-			if (p.isOutOfRange()) {
+			if p.next() != nil {
 				return p.syntaxError()
 			}
 		}
@@ -334,8 +322,7 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 			return err
 		}
 		if (p.token() == "AUTOINCREMENT" || p.token() == "autoincrement") {
-			p.next()
-			if (p.isOutOfRange()) {
+			if p.next() != nil {
 				return p.syntaxError()
 			}
 		}
@@ -345,15 +332,13 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 
 func (p *sqliteParser) validateConstraintNotNull() error {
 	if p.token() == "NOT" || p.token() == "not" {
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if !(p.token() == "NULL" || p.token() == "null") {
 			return p.syntaxError()
 		}
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if err := p.validateConflictClause(); err != nil {
@@ -365,22 +350,19 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 
 func (p *sqliteParser) validateConflictClause() error {
 	if p.token() == "ON" || p.token() == "on" {
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if !(p.token() == "CONFLICT" || p.token() == "conflict") {
 			return p.syntaxError()
 		}
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if !contains(ConflictAction_SQLite, strings.ToUpper(p.token())) {
 			return p.syntaxError()
 		}
-		p.next()
-		if (p.isOutOfRange()) {
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 	}
