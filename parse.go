@@ -143,6 +143,8 @@ func tokenize(ddl string) []string {
 	ddl = strings.Replace(ddl, "*/", " */ ", -1)
 	ddl = strings.Replace(ddl, "--", " -- ", -1)
 	ddl = strings.Replace(ddl, "#", " # ", -1)
+	ddl = strings.Replace(ddl, "+", " + ", -1)
+	ddl = strings.Replace(ddl, "-", " - ", -1)
 
 	return filter(
 		strings.Split(ddl, " "), 

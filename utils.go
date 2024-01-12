@@ -1,5 +1,8 @@
 package ddlparse
 
+import (
+	"strconv"
+)
 
 func filter(slice []string, f func(string) bool) []string {
 	var ret []string
@@ -30,4 +33,9 @@ func remove(slice []string, element string) []string {
     }
 
     return ret
+}
+
+func isNumeric(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
 }

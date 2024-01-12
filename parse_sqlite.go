@@ -310,6 +310,16 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "uq"))
 	}
 
+	if p.token() == "CHECK" || p.token() == "check" {
+		if !contains(ls, "ck") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintCheck(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(remove(ls, "ck"))
+	}
+
 	if p.token() == "DEFAULT" || p.token() == "default" {
 		if !contains(ls, "de") {
 			return p.syntaxError()
@@ -347,7 +357,7 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 			}
 		}
 	}
-	return nil
+	return p.syntaxError()
 }
 
 func (p *sqliteParser) validateConstraintNotNull() error {
@@ -365,7 +375,7 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 			return err
 		}
 	}
-	return nil
+	return p.syntaxError()
 }
 
 func (p *sqliteParser) validateConstraintUnique() error {
@@ -377,7 +387,38 @@ func (p *sqliteParser) validateConstraintUnique() error {
 			return err
 		}
 	}
-	return nil
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateConstraintCheck() error {
+	if p.token() == "CHECK" || p.token() == "check" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateExpr(); err != nil {
+			return err
+		}
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateConstraintDefault() error {
+	if p.token() == "DEFAULT" || p.token() == "default" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.token() == "(" {
+			if err := p.validateExpr(); err != nil {
+				return err
+			}
+		} else {
+			if err := p.validateLiteralValue(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return p.syntaxError()
 }
 
 func (p *sqliteParser) validateConflictClause() error {
@@ -401,6 +442,119 @@ func (p *sqliteParser) validateConflictClause() error {
 	return nil
 }
 
+func (p *sqliteParser) validateExpr() error {
+	if p.token() == "(" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateExprAux(); err != nil {
+			return err
+		}
+		if p.token() != ")" {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateExprAux() error {
+	// TODO
+	if p.token() == ")" {
+		return nil
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return p.validateExprAux()
+}
+
+func (p *sqliteParser) validateLiteralValue() error {
+	if isNumeric(p.token()) {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	if contains(LiteralValue_SQLite, strings.ToUpper(p.token())) {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	if p.token() == "'" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateStringLiteral(); err != nil {
+			return err
+		}
+		return nil
+	}
+	if p.token() == "+" || p.token() == "-" {
+		if err := p.validateSignedNumber(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateStringLiteral() error {
+	if p.token() == "'" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateStringLiteralAux(); err != nil {
+			return err
+		}
+		if p.token() != "'" {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateStringLiteralAux() error {
+	if p.token() == "'" {
+		return nil
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return p.validateStringLiteralAux()
+}
+
+func (p *sqliteParser) validateSignedNumber() error {
+	if isNumeric(p.token()) {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	if p.token() == "+" || p.token() == "-" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !isNumeric(p.token()) {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
 func (p *sqliteParser) Parse() ([]Table, error) {
 	p.init()
 	var tables []Table
@@ -421,6 +575,15 @@ var ConflictAction_SQLite = []string{
 	"FAIL",
 	"IGNORE",
 	"REPLACE",
+}
+
+var LiteralValue_SQLite = []string{
+	"NULL",
+	"TRUE",
+	"FALSE",
+	"CURRENT_TIME",
+	"CURRENT_DATE",
+	"CURRENT_TIMESTAMP",
 }
 
 var ReservedWords_SQLite = []string{
