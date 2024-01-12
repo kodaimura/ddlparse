@@ -299,6 +299,26 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		}
 		return p.validateColumnConstraintAux(remove(ls, "nn"))
 	}
+
+	if p.token() == "UNIQUE" || p.token() == "unique" {
+		if !contains(ls, "uq") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintUnique(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(remove(ls, "uq"))
+	}
+
+	if p.token() == "DEFAULT" || p.token() == "default" {
+		if !contains(ls, "de") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintDefault(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(remove(ls, "de"))
+	}
 	return nil
 }
 
@@ -338,6 +358,18 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 		if !(p.token() == "NULL" || p.token() == "null") {
 			return p.syntaxError()
 		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateConflictClause(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateConstraintUnique() error {
+	if p.token() == "UNIQUE" || p.token() == "unique" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
