@@ -500,4 +500,24 @@ func TestValidate(t *testing.T) {
 	} else {
 		t.Errorf("failed")
 	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		PRIMARY KEY (a),
+		CONSTRAINT const_name PRIMARY KEY (a, b, "c"),
+		CONSTRAINT const_name PRIMARY KEY (a, b, "c") ON CONFLICT ROLLBACK,
+		constraint const_name primary key (a, b, "c") on conflict rollback,
+		UNIQUE (a),
+		CONSTRAINT const_name UNIQUE (a, b, "c"),
+		CONSTRAINT const_name UNIQUE (a, b, "c") ON CONFLICT ROLLBACK,
+		constraint const_name unique (a, b, "c") on conflict rollback,
+		CHECK (a),
+		CONSTRAINT const_name CHECK (aaa(aa(a)a())aa),
+		CONSTRAINT const_name check (aaa(aa(a)a())aa)
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
 }

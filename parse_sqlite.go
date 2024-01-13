@@ -254,6 +254,10 @@ func (p *sqliteParser) validateColumns() error {
 }
 
 func (p *sqliteParser) validateColumn() error {
+	if contains(TableConstraint_SQLite, strings.ToUpper(p.token())) {
+		return p.validateTableConstraint()
+	}
+
 	if err := p.validateColumnName(); err != nil {
 		return err
 	}
@@ -282,7 +286,7 @@ func (p *sqliteParser) validateColumnType() error {
 	return nil
 }
 
-// collate, foreign key, and generated are not supported.
+// foreign key, and generated are not supported.
 func (p *sqliteParser) validateColumnConstraint() error {
 	if p.token() == "constraint" || p.token() == "CONSTRAINT" {
 		if p.next() != nil {
@@ -577,6 +581,123 @@ func (p *sqliteParser) validateStringLiteralAux() error {
 	return p.validateStringLiteralAux()
 }
 
+func (p *sqliteParser) validateTableConstraint() error {
+	if p.token() == "constraint" || p.token() == "CONSTRAINT" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+
+	return p.validateTableConstraintAux()
+}
+
+func (p *sqliteParser) validateTableConstraintAux() error {
+	if p.token() == "primary" || p.token() == "PRIMARY" {
+		return p.validateTablePrimaryKey()
+	}
+
+	if p.token() == "unique" || p.token() == "UNIQUE" {
+		return p.validateTableUnique()
+	}
+
+	if p.token() == "check" || p.token() == "CHECK" {
+		return p.validateTableCheck()
+	}
+
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateTablePrimaryKey() error {
+	if p.token() == "primary" || p.token() == "PRIMARY" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == "key" || p.token() == "KEY") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == "(") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateCommaSeparatedColumnNames(); err != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == ")") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateConflictClause(); err != nil {
+			return err
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateTableUnique() error {
+	if p.token() == "unique" || p.token() == "UNIQUE" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == "(") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateCommaSeparatedColumnNames(); err != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == ")") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateConflictClause(); err != nil {
+			return err
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateTableCheck() error {
+	if p.token() == "check" || p.token() == "CHECK" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateExpr(); err != nil {
+			return err
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateCommaSeparatedColumnNames() error {
+	if err := p.validateColumnName(); err != nil {
+		return p.syntaxError()
+	}
+	if p.token() == "," {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return p.validateCommaSeparatedColumnNames()
+	}
+	return nil
+}
+
 func (p *sqliteParser) Parse() ([]Table, error) {
 	p.init()
 	var tables []Table
@@ -612,6 +733,14 @@ var LiteralValue_SQLite = []string{
 	"CURRENT_TIME",
 	"CURRENT_DATE",
 	"CURRENT_TIMESTAMP",
+}
+
+var TableConstraint_SQLite = []string{
+	"CONSTRAINT",
+	"PRIMARY",
+	"UNIQUE",
+	"CHECK",
+	"FOREIGN",
 }
 
 var ReservedWords_SQLite = []string{
