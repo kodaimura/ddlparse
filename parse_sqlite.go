@@ -284,7 +284,7 @@ func (p *sqliteParser) validateColumnType() error {
 
 // collate, foreign key, and generated are not supported.
 func (p *sqliteParser) validateColumnConstraint() error {
-	if p.token() == "CONSTRAINT" || p.token() == "constraint" {
+	if p.token() == "constraint" || p.token() == "CONSTRAINT" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -297,7 +297,7 @@ func (p *sqliteParser) validateColumnConstraint() error {
 }
 
 func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
-	if p.token() == "PRIMARY" || p.token() == "primary" {
+	if p.token() == "primary" || p.token() == "PRIMARY" {
 		if !contains(ls, "pk") {
 			return p.syntaxError()
 		}
@@ -307,7 +307,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "pk"))
 	}
 
-	if p.token() == "NOT" || p.token() == "not" {
+	if p.token() == "not" || p.token() == "NOT" {
 		if !contains(ls, "nn") {
 			return p.syntaxError()
 		}
@@ -317,7 +317,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "nn"))
 	}
 
-	if p.token() == "UNIQUE" || p.token() == "unique" {
+	if p.token() == "unique" || p.token() == "UNIQUE" {
 		if !contains(ls, "uq") {
 			return p.syntaxError()
 		}
@@ -327,7 +327,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "uq"))
 	}
 
-	if p.token() == "CHECK" || p.token() == "check" {
+	if p.token() == "check" || p.token() == "CHECK" {
 		if !contains(ls, "ck") {
 			return p.syntaxError()
 		}
@@ -337,7 +337,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "ck"))
 	}
 
-	if p.token() == "DEFAULT" || p.token() == "default" {
+	if p.token() == "default" || p.token() == "DEFAULT" {
 		if !contains(ls, "de") {
 			return p.syntaxError()
 		}
@@ -351,17 +351,17 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 }
 
 func (p *sqliteParser) validateConstraintPrimaryKey() error {
-	if p.token() == "PRIMARY" || p.token() == "primary" {
+	if p.token() == "primary" || p.token() == "PRIMARY" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if !(p.token() == "KEY" || p.token() == "key") {
+		if !(p.token() == "key" || p.token() == "KEY") {
 			return p.syntaxError()
 		}
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if (p.token() == "ASC" || p.token() == "DESC" || p.token() == "asc" || p.token() == "desc") {
+		if (p.token() == "asc" || p.token() == "desc" || p.token() == "ASC" || p.token() == "DESC") {
 			if p.next() != nil {
 				return p.syntaxError()
 			}
@@ -369,7 +369,7 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 		if err := p.validateConflictClause(); err != nil {
 			return err
 		}
-		if (p.token() == "AUTOINCREMENT" || p.token() == "autoincrement") {
+		if (p.token() == "autoincrement" || p.token() == "AUTOINCREMENT") {
 			if p.next() != nil {
 				return p.syntaxError()
 			}
@@ -380,11 +380,11 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 }
 
 func (p *sqliteParser) validateConstraintNotNull() error {
-	if p.token() == "NOT" || p.token() == "not" {
+	if p.token() == "not" || p.token() == "NOT" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if !(p.token() == "NULL" || p.token() == "null") {
+		if !(p.token() == "null" || p.token() == "NULL") {
 			return p.syntaxError()
 		}
 		if p.next() != nil {
@@ -399,7 +399,7 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 }
 
 func (p *sqliteParser) validateConstraintUnique() error {
-	if p.token() == "UNIQUE" || p.token() == "unique" {
+	if p.token() == "unique" || p.token() == "UNIQUE" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -412,7 +412,7 @@ func (p *sqliteParser) validateConstraintUnique() error {
 }
 
 func (p *sqliteParser) validateConstraintCheck() error {
-	if p.token() == "CHECK" || p.token() == "check" {
+	if p.token() == "check" || p.token() == "CHECK" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -425,7 +425,7 @@ func (p *sqliteParser) validateConstraintCheck() error {
 }
 
 func (p *sqliteParser) validateConstraintDefault() error {
-	if p.token() == "DEFAULT" || p.token() == "default" {
+	if p.token() == "default" || p.token() == "DEFAULT" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -444,11 +444,11 @@ func (p *sqliteParser) validateConstraintDefault() error {
 }
 
 func (p *sqliteParser) validateConflictClause() error {
-	if p.token() == "ON" || p.token() == "on" {
+	if p.token() == "on" || p.token() == "ON" {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if !(p.token() == "CONFLICT" || p.token() == "conflict") {
+		if !(p.token() == "conflict" || p.token() == "CONFLICT") {
 			return p.syntaxError()
 		}
 		if p.next() != nil {
