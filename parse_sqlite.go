@@ -192,9 +192,9 @@ func (p *sqliteParser) validateCreateTable() error {
 		if (p.token() != "exists" && p.token() != "EXISTS") {
 			return p.syntaxError()
 		}
-	}
-	if p.next() != nil {
-		return p.syntaxError()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
 	}
 
 	if err := p.validateTableName(); err != nil {
@@ -226,7 +226,18 @@ func (p *sqliteParser) validateCreateTable() error {
 }
 
 func (p *sqliteParser) validateTableName() error {
-	return p.validateName()
+	if err := p.validateName(); err != nil {
+		return err
+	}
+	if (p.token() == ".") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *sqliteParser) validateColumns() error {

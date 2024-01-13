@@ -137,6 +137,7 @@ func tokenize(ddl string) []string {
 	ddl = strings.Replace(ddl, "'", " ' ", -1)
 	ddl = strings.Replace(ddl, "`", " ` ", -1)
 	ddl = strings.Replace(ddl, ",", " , ", -1)
+	ddl = strings.Replace(ddl, ".", " . ", -1)
 	ddl = strings.Replace(ddl, "\n", " \n ", -1)
 	ddl = strings.Replace(ddl, "\t", " ", -1)
 	ddl = strings.Replace(ddl, "/*", " /* ", -1)

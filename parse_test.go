@@ -128,6 +128,56 @@ func TestValidate(t *testing.T) {
 		t.Errorf("failed")
 	}
 
+	tokens = tokenize(`CREATE TABLE users (
+		user_id INTEGER
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`create table if not exists users (
+		user_id INTEGER
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE "users" (
+		user_id INTEGER
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE aaaa.users (
+		user_id INTEGER
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE "aaaa"."users" (
+		user_id INTEGER
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE aaaa. (
+		user_id INTEGER
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
 	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 	);`)
