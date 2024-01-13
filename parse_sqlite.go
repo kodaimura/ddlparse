@@ -197,7 +197,7 @@ func (p *sqliteParser) validateCreateTable() error {
 		return p.syntaxError()
 	}
 
-	if err := p.validateName(); err != nil {
+	if err := p.validateTableName(); err != nil {
 		return err
 	}
 	if (p.token() != "(") {
@@ -214,11 +214,15 @@ func (p *sqliteParser) validateCreateTable() error {
 		return p.syntaxError()
 	}
 	if p.next() != nil {
-		return p.syntaxError()
+		return nil
 	}
-	p.next()
+	if (p.token() == ";") {
+		if p.next() != nil {
+			return nil
+		}
+	}
 
-	return nil
+	return p.validateCreateTable()
 }
 
 func (p *sqliteParser) validateTableName() error {
@@ -226,13 +230,13 @@ func (p *sqliteParser) validateTableName() error {
 }
 
 func (p *sqliteParser) validateColumns() error {
-	if (p.isOutOfRange()) {
-		return p.syntaxError()
-	}
 	if err := p.validateColumn(); err != nil {
 		return err
 	}
-	if (p.token() != ",") {
+	if (p.token() == ",") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
 		return p.validateColumns()
 	}
 	return nil
@@ -248,14 +252,15 @@ func (p *sqliteParser) validateColumn() error {
 	if err := p.validateColumnConstraint(); err != nil {
 		return err
 	}
-	return p.validateColumns()
+	
+	return nil
 }
 
 func (p *sqliteParser) validateColumnName() error {
 	return p.validateName()
 }
 
-//Omitting data types is not supported.
+// Omitting data types is not supported.
 func (p *sqliteParser) validateColumnType() error {
 	if !contains(DataType_SQLite, strings.ToUpper(p.token())) {
 		return p.syntaxError()
@@ -266,6 +271,7 @@ func (p *sqliteParser) validateColumnType() error {
 	return nil
 }
 
+// collate, foreign key, and generated are not supported.
 func (p *sqliteParser) validateColumnConstraint() error {
 	if p.token() == "CONSTRAINT" || p.token() == "constraint" {
 		if p.next() != nil {
@@ -329,6 +335,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		}
 		return p.validateColumnConstraintAux(remove(ls, "de"))
 	}
+
 	return nil
 }
 
@@ -356,6 +363,7 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 				return p.syntaxError()
 			}
 		}
+		return nil
 	}
 	return p.syntaxError()
 }
@@ -374,6 +382,7 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 		if err := p.validateConflictClause(); err != nil {
 			return err
 		}
+		return nil
 	}
 	return p.syntaxError()
 }
@@ -386,6 +395,7 @@ func (p *sqliteParser) validateConstraintUnique() error {
 		if err := p.validateConflictClause(); err != nil {
 			return err
 		}
+		return nil
 	}
 	return p.syntaxError()
 }
@@ -398,6 +408,7 @@ func (p *sqliteParser) validateConstraintCheck() error {
 		if err := p.validateExpr(); err != nil {
 			return err
 		}
+		return nil
 	}
 	return p.syntaxError()
 }
@@ -494,12 +505,6 @@ func (p *sqliteParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if p.token() == "+" || p.token() == "-" {
-		if err := p.validateSignedNumber(); err != nil {
-			return err
-		}
-		return nil
-	}
 
 	return p.syntaxError()
 }
@@ -531,28 +536,6 @@ func (p *sqliteParser) validateStringLiteralAux() error {
 		return p.syntaxError()
 	}
 	return p.validateStringLiteralAux()
-}
-
-func (p *sqliteParser) validateSignedNumber() error {
-	if isNumeric(p.token()) {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		return nil
-	}
-	if p.token() == "+" || p.token() == "-" {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		if !isNumeric(p.token()) {
-			return p.syntaxError()
-		}
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		return nil
-	}
-	return p.syntaxError()
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {

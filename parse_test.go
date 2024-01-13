@@ -32,7 +32,7 @@ func TestInit(t *testing.T) {
 			a`,
 	)
 
-	parser := &postgresqlParser{tokens, len(tokens), 100, 100}
+	parser := &sqliteParser{tokens, len(tokens), 100, 100}
 	parser.init()
 	if parser.tokens[parser.i] != "a" {
 		t.Errorf("failed")
@@ -40,7 +40,7 @@ func TestInit(t *testing.T) {
 	if parser.size != len(tokens) {
 		t.Errorf("failed")
 	}
-	if parser.line != 1 {
+	if parser.line != 2 {
 		t.Errorf("failed")
 	}
 }
@@ -58,7 +58,7 @@ func TestNext(t *testing.T) {
 		);`,
 	)
 
-	parser := &postgresqlParser{tokens, len(tokens), 100, 100}
+	parser := &sqliteParser{tokens, len(tokens), 100, 100}
 	parser.init()
 	parser.next()
 	if parser.tokens[parser.i] != "a" {
@@ -73,7 +73,7 @@ func TestNext(t *testing.T) {
 		t.Errorf("failed")
 	}
 	parser.next()
-	if parser.line !=  7 {
+	if parser.line !=  8 {
 		t.Errorf("failed")
 	}
 }
@@ -85,7 +85,17 @@ func TestValidate(t *testing.T) {
 	)
 
 	parser := newSQLiteParser(tokens)
-	if parser.Validate() != nil {
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF EXISTS users ();`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
 		t.Errorf("failed")
 	}
 
@@ -115,6 +125,24 @@ func TestValidate(t *testing.T) {
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY AUTOINCREMENT
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 }
