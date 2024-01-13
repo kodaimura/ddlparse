@@ -387,7 +387,6 @@ func TestValidate(t *testing.T) {
 	);`)
 	parser = newSQLiteParser(tokens)
 	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
 		t.Errorf("failed")
 	}
 
@@ -428,13 +427,49 @@ func TestValidate(t *testing.T) {
 	}
 
 	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER COLLATE BINARY,
+		aaaa INTEGER COLLATE NOCASE,
+		aaaa INTEGER COLLATE RTRIM,
+		aaaa INTEGER collate binary,
+		aaaa INTEGER collate nocase,
+		aaaa INTEGER collate rtrim
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER COLLATE BINARY,
+		aaaa INTEGER COLLATEEE NOCASE
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER COLLATE BINARY,
+		aaaa INTEGER COLLATE NOCASEEE
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY,
 		aaaa INTEGER CONSTRAINT const_uq UNIQUE,
 		aaaa INTEGER CONSTRAINT const_nn NOT NULL,
 		aaaa INTEGER CONSTRAINT const_de DEFAULT 10,
 		aaaa INTEGER CONSTRAINT const_ch CHECK (aaaa),
+		aaaa INTEGER CONSTRAINT const_ch  COLLATE BINARY,
 		aaaa integer constraint const_ch primary key,
-		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY UNIQUE NOT NULL,
+		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY UNIQUE NOT NULL COLLATE BINARY,
 		aaaa INTEGER NOT NULL DEFAULT 10
 	);`)
 	parser = newSQLiteParser(tokens)

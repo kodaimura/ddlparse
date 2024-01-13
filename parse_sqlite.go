@@ -347,6 +347,16 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "de"))
 	}
 
+	if p.token() == "collate" || p.token() == "COLLATE" {
+		if !contains(ls, "co") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintCollate(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(remove(ls, "co"))
+	}
+
 	return nil
 }
 
@@ -437,6 +447,22 @@ func (p *sqliteParser) validateConstraintDefault() error {
 			if err := p.validateLiteralValue(); err != nil {
 				return err
 			}
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateConstraintCollate() error {
+	if p.token() == "collate" || p.token() == "COLLATE" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !contains(CollatingFunction_SQLite, strings.ToUpper(p.token())) {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
 		}
 		return nil
 	}
@@ -571,6 +597,12 @@ var ConflictAction_SQLite = []string{
 	"FAIL",
 	"IGNORE",
 	"REPLACE",
+}
+
+var CollatingFunction_SQLite = []string{
+	"BINARY",
+	"NOCASE",
+	"RTRIM",
 }
 
 var LiteralValue_SQLite = []string{
