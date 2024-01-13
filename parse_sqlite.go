@@ -497,9 +497,6 @@ func (p *sqliteParser) validateLiteralValue() error {
 		return nil
 	}
 	if p.token() == "'" {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
 		if err := p.validateStringLiteral(); err != nil {
 			return err
 		}
