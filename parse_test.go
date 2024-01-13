@@ -345,6 +345,7 @@ func TestValidate(t *testing.T) {
 	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CHECK (),
 		aaaa INTEGER CHECK (aaaaaaaaa),
+		aaaa INTEGER CHECK (aaa(aa(a)a())aa),
 		aaaa integer check (aaaaaaaaa)
 	);`)
 	parser = newSQLiteParser(tokens)
@@ -366,6 +367,7 @@ func TestValidate(t *testing.T) {
 	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER DEFAULT (),
 		aaaa INTEGER DEFAULT (aaaaaaaaa),
+		aaaa INTEGER DEFAULT (aaa(aa(a)a())aa),
 		aaaa INTEGER DEFAULT +10,
 		aaaa INTEGER DEFAULT -10,
 		aaaa INTEGER DEFAULT 10,

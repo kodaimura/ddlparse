@@ -484,9 +484,14 @@ func (p *sqliteParser) validateExpr() error {
 }
 
 func (p *sqliteParser) validateExprAux() error {
-	// TODO
 	if p.token() == ")" {
 		return nil
+	}
+	if p.token() == "(" {
+		if err := p.validateExpr(); err != nil {
+			return err
+		}
+		return p.validateExprAux()
 	}
 	if p.next() != nil {
 		return p.syntaxError()
