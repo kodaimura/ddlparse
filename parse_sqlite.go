@@ -650,6 +650,10 @@ func (p *sqliteParser) validateTableConstraintAux() error {
 		return p.validateTableCheck()
 	}
 
+	if p.matchKeyword("FOREIGN") {
+		return p.validateTableForeignKey()
+	}
+
 	return p.syntaxError()
 }
 
@@ -699,6 +703,28 @@ func (p *sqliteParser) validateTableCheck() error {
 		return err
 	}
 	if err := p.validateExpr(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateTableForeignKey() error {
+	if err := p.validateKeyword("FOREIGN"); err != nil {
+		return err
+	}
+	if err := p.validateKeyword("KEY"); err != nil {
+		return err
+	}
+	if err := p.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := p.validateCommaSeparatedColumnNames(); err != nil {
+		return p.syntaxError()
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	if err := p.validateConstraintForeignKey(); err != nil {
 		return err
 	}
 	return nil

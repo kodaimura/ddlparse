@@ -547,11 +547,13 @@ func TestValidate(t *testing.T) {
 		constraint const_name unique (a, b, "c") on conflict rollback,
 		CHECK (a),
 		CONSTRAINT const_name CHECK (aaa(aa(a)a())aa),
-		CONSTRAINT const_name check (aaa(aa(a)a())aa)
+		CONSTRAINT const_name check (aaa(aa(a)a())aa),
+		FOREIGN KEY (a) REFERENCES bbb(ccc) ON DELETE SET NULL,
+		CONSTRAINT const_name FOREIGN KEY (a, b, "c") REFERENCES bbb(ccc) ON DELETE SET NULL,
+		constraint const_name foreign key (a, b, "c") references bbb(ccc) on delete set null
 	);`)
 	parser = newSQLiteParser(tokens)
 	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
 		t.Errorf("failed")
 	}
 }
