@@ -226,6 +226,9 @@ func (p *sqliteParser) validateCreateTable() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	if err := p.validateTableOptions(); err != nil {
+		return err
+	}
 	if (p.token() == ";") {
 		if p.next() != nil {
 			return nil
@@ -739,6 +742,41 @@ func (p *sqliteParser) validateCommaSeparatedColumnNames() error {
 			return p.syntaxError()
 		}
 		return p.validateCommaSeparatedColumnNames()
+	}
+	return nil
+}
+
+func (p *sqliteParser) validateTableOptions() error {
+	if p.matchKeyword("WITHOUT") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("ROWID"); err != nil {
+			return err
+		}
+		if p.matchSymbol(",") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if err := p.validateKeyword("STRICT"); err != nil {
+				return err
+			}
+		}
+	} else if p.matchKeyword("STRICT") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol(",") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if err := p.validateKeyword("WITHOUT"); err != nil {
+				return err
+			}
+			if err := p.validateKeyword("ROWID"); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
