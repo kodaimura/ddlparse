@@ -263,10 +263,9 @@ func (p *sqliteParser) validateColumns() error {
 }
 
 func (p *sqliteParser) validateColumn() error {
-	if contains(TableConstraint_SQLite, strings.ToUpper(p.token())) {
+	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
 		return p.validateTableConstraint()
 	}
-
 	if err := p.validateColumnName(); err != nil {
 		return err
 	}
@@ -286,7 +285,7 @@ func (p *sqliteParser) validateColumnName() error {
 
 // Omitting data types is not supported.
 func (p *sqliteParser) validateColumnType() error {
-	return p.validateKeyword(DataType_SQLite...)
+	return p.validateKeyword("TEXT", "NUMERIC", "INTEGER", "REAL", "NONE")
 }
 
 func (p *sqliteParser) validateColumnConstraint() error {
@@ -459,7 +458,7 @@ func (p *sqliteParser) validateConstraintCollate() error {
 	if err := p.validateKeyword("COLLATE"); err != nil {
 		return err
 	}
-	if err := p.validateKeyword(CollatingFunction_SQLite...); err != nil {
+	if err := p.validateKeyword("BINARY","NOCASE", "RTRIM"); err != nil {
 		return err
 	}
 	return nil
@@ -559,7 +558,7 @@ func (p *sqliteParser) validateConflictClause() error {
 		if err := p.validateKeyword("CONFLICT"); err != nil {
 			return err
 		}
-		if err := p.validateKeyword(ConflictAction_SQLite...); err != nil {
+		if err := p.validateKeyword("ROLLBACK", "ABORT", "FAIL", "IGNORE","REPLACE"); err != nil {
 			return err
 		}
 	}
@@ -605,7 +604,11 @@ func (p *sqliteParser) validateLiteralValue() error {
 	if p.matchSymbol("'") {
 		return p.validateStringLiteral()
 	}
-	return p.validateKeyword(LiteralValue_SQLite...)
+	ls := []string{"NULL", "TRUE", "FALSE", "CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}
+	if err := p.validateKeyword(ls...); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *sqliteParser) validateStringLiteral() error {
@@ -787,44 +790,6 @@ func (p *sqliteParser) Parse() ([]Table, error) {
 	return tables, nil
 }
 
-var DataType_SQLite = []string{
-	"TEXT",
-	"NUMERIC",
-	"INTEGER",
-	"REAL",
-	"NONE",
-}
-
-var ConflictAction_SQLite = []string{
-	"ROLLBACK",
-	"ABORT",
-	"FAIL",
-	"IGNORE",
-	"REPLACE",
-}
-
-var CollatingFunction_SQLite = []string{
-	"BINARY",
-	"NOCASE",
-	"RTRIM",
-}
-
-var LiteralValue_SQLite = []string{
-	"NULL",
-	"TRUE",
-	"FALSE",
-	"CURRENT_TIME",
-	"CURRENT_DATE",
-	"CURRENT_TIMESTAMP",
-}
-
-var TableConstraint_SQLite = []string{
-	"CONSTRAINT",
-	"PRIMARY",
-	"UNIQUE",
-	"CHECK",
-	"FOREIGN",
-}
 
 var ReservedWords_SQLite = []string{
 	"ABORT",
