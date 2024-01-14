@@ -14,6 +14,14 @@ func filter(slice []string, f func(string) bool) []string {
 	return ret
 }
 
+func mapSlice(slice []string, f func(string) string) []string {
+	var ret []string
+	for _, s := range slice {
+		ret = append(ret, f(s))
+	}
+	return ret
+}
+
 func contains(slice []string, key string) bool {
 	for _, s := range slice {
 		if s == key {
