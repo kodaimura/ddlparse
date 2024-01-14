@@ -286,7 +286,6 @@ func (p *sqliteParser) validateColumnType() error {
 	return p.validateKeyword(DataType_SQLite...)
 }
 
-// foreign key, and generated are not supported.
 func (p *sqliteParser) validateColumnConstraint() error {
 	if p.validateKeyword("CONSTRAINT") == nil {
 		if err := p.validateName(); err != nil {
@@ -366,6 +365,16 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 			return err
 		}
 		return p.validateColumnConstraintAux(append(ls, "REFERENCES"))
+	}
+
+	if p.matchKeyword("GENERATED", "AS") {
+		if contains(ls, "GENERATED") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintGenerated(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(append(ls, "GENERATED"))
 	}
 
 	return nil
@@ -519,6 +528,26 @@ func (p *sqliteParser) validateConstraintForeignKeyAux() error {
 		return p.validateConstraintForeignKeyAux()
 	}
 
+	return nil
+}
+
+func (p *sqliteParser) validateConstraintGenerated() error {
+	if p.validateKeyword("GENERATED") == nil {
+		if err := p.validateKeyword("ALWAYS"); err != nil {
+			return err
+		}
+	}
+	if err := p.validateKeyword("AS"); err != nil {
+		return err
+	}
+	if err := p.validateExpr(); err != nil {
+		return err
+	}
+	if p.matchKeyword("STORED", "VIRTUAL") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
 	return nil
 }
 

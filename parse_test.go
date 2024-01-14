@@ -485,6 +485,17 @@ func TestValidate(t *testing.T) {
 	}
 
 	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER GENERATED ALWAYS AS (aaa),
+		aaaa INTEGER GENERATED ALWAYS AS (aaa) STORED,
+		aaaa INTEGER GENERATED ALWAYS AS (aaa) VIRTUAL,
+		aaaa INTEGER AS (aaa)
+	);`)
+	parser = newSQLiteParser(tokens)
+	if err := parser.Validate(); err != nil {
+		t.Errorf("failed")
+	}
+
+	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY,
 		aaaa INTEGER CONSTRAINT const_uq UNIQUE,
 		aaaa INTEGER CONSTRAINT const_nn NOT NULL,
