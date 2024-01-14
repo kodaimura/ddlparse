@@ -361,6 +361,16 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(remove(ls, "co"))
 	}
 
+	if p.token() == "references" || p.token() == "REFERENCES" {
+		if !contains(ls, "fk") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintForeignKey(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(remove(ls, "fk"))
+	}
+
 	return nil
 }
 
@@ -471,6 +481,114 @@ func (p *sqliteParser) validateConstraintCollate() error {
 		return nil
 	}
 	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateConstraintForeignKey() error {
+	if p.token() == "references" || p.token() == "REFERENCES" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTableName(); err != nil {
+			return err
+		}
+		if (p.token() == "(") {
+			if err := p.validateCommaSeparatedColumnNames(); err != nil {
+				return err
+			}
+		}
+		if !(p.token() == ")") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintForeignKeyAux(); err != nil {
+			return p.syntaxError()
+		}
+		return nil
+	}
+	return p.syntaxError()
+}
+
+func (p *sqliteParser) validateConstraintForeignKeyAux() error {
+	if p.token() == "on" || p.token() == "ON" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.token() == "delete" || p.token() == "DELETE" || p.token() == "update" || p.token() == "UPDATE" {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if p.token() == "set" || p.token() == "SET" {
+				if p.next() != nil {
+					return p.syntaxError()
+				}
+				if !(p.token() == "null" || p.token() == "NULL" || p.token() == "default" || p.token() == "DEFAULT") {
+					return p.syntaxError()
+				}
+				if p.next() != nil {
+					return p.syntaxError()
+				}
+			} else if p.token() == "cascade" || p.token() == "CASCADE" || p.token() == "restrict" || p.token() == "RESTRICT" {
+				if p.next() != nil {
+					return p.syntaxError()
+				}
+			} else if p.token() == "no" || p.token() == "NO" {
+				if p.next() != nil {
+					return p.syntaxError()
+				}
+				if !(p.token() == "action" || p.token() == "ACTION") {
+					return p.syntaxError()
+				}
+				if p.next() != nil {
+					return p.syntaxError()
+				}
+			} else {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		return p.validateConstraintForeignKeyAux()
+	}
+
+	if p.token() == "match" || p.token() == "MATCH" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == "simple" || p.token() == "SIMPLE" || p.token() == "partial" || p.token() == "PARTIAL" || p.token() == "full" || p.token() == "FULL") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return p.validateConstraintForeignKeyAux()
+	}
+
+	if p.token() == "not" || p.token() == "NOT" || p.token() == "deferrable" || p.token() == "DEFERRABLE" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if !(p.token() == "deferrable" || p.token() == "DEFERRABLE") {
+			return p.syntaxError()
+		}
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.token() == "initially" || p.token() == "INITIALLY" {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if !(p.token() == "deferred" || p.token() == "DEFERRED" || p.token() == "immediate" || p.token() == "IMMEDIATE") {
+				return p.syntaxError()
+			}
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		return p.validateConstraintForeignKeyAux()
+	}
+	return nil
 }
 
 func (p *sqliteParser) validateConflictClause() error {
