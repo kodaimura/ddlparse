@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"strconv"
 	"errors"
 	"regexp"
 	"strings"
@@ -878,7 +879,7 @@ func (p *sqliteParser) parse() error {
 }
 
 func (p *sqliteParser) parseTable() (Table, err) {
-	var table Table{}
+	var table Table
 	p.i += 2
 
 	schemaName, tableName = p.parseTableName()
@@ -900,7 +901,7 @@ func (p *sqliteParser) parseTableName() (string, string) {
 	tableName := ""
 
 	tmp := ""
-	if p.token() == "\"" || p.token() == "`" {
+	if p.matchSymbol("\"", "`") {
 		p.i += 1
 		tmp = p.token()
 		p.i += 1
@@ -911,7 +912,7 @@ func (p *sqliteParser) parseTableName() (string, string) {
 	if p.token() == "." {
 		p.i += 1
 		schemaName = tmp
-		if p.token() == "\"" || p.token() == "`" {
+		if p.matchSymbol("\"", "`") {
 			p.i += 1
 			tableName = p.token()
 			p.i += 1
@@ -927,16 +928,143 @@ func (p *sqliteParser) parseTableName() (string, string) {
 
 func (p *sqliteParser) parseColumns() ([]Column, error) {
 	p.i += 1
-	var columns []Column{}
-	for p.token() != ")" {
-		
-		columns = append(columns, p.parseColumn())
-	}
-	table.Columns = p.parseColumns()
+	var columns []Column
+	for p.matchSymbol(")") {
+		if p.matchSymbol(",") {
+			p.i += 1
+			continue
+		}
+		err := nil
+		if (p.matchKeyword("PRIMARY", "UNIQUE", "NOT", "DEFAULT")) {
+			err = p.parseTableConstraint(columns)
+		} else {
+			err = p.parseColumn(columns)
+		}
 
-	return table
+		if err != nil {
+			return err
+		}
+	}
+	p.i += 1
+	return columns
 }
 
+func (p *sqliteParser) parseColumn(columns []Column) error {
+	name := ""
+	if p.matchSymbol("\"", "`") {
+		p.i += 1
+		name = p.token()
+		p.i += 1
+	} else {
+		name = p.token()
+	}
+
+	for _, column := range columns {
+		if column.Name == name {
+			return errors.New("")
+		}
+	}
+	
+	var column Column
+	column.Name = name
+	p.i += 1
+	column.DataType = p.token()
+	p.i += 1
+	p.parseConstraint(&column)
+
+	columns = append(columns, column)
+}
+
+func (p *sqliteParser) parseConstrainte(column *Column) error {
+	if p.matchSymbol(",") {
+		p.i += 1
+		return nil
+	}
+	if p.matchSymbol(")") {
+		return nil
+	}
+
+	if p.matchKeyword("PRIMARY") {
+		p.i += 2
+		column.IsPK = true
+		if p.matchKeyword("AUTOINCREMENT") {
+			p.i += 1
+			column.IsAutoIncrement = true
+		}
+		return p.parseConstraint(&column)
+	}
+
+	if p.matchKeyword("NOT") {
+		p.i += 2
+		column.IsNotNull = true
+		return p.parseConstraint(&column)
+	}
+
+	if p.matchKeyword("UNIQUE") {
+		p.i += 1
+		column.IsUnique = true
+		return p.parseConstraint(&column)
+	}
+
+	if p.matchKeyword("DEFAULT") {
+		p.i += 1
+		column.Default = p.parseDefaultValue()
+		return p.parseConstraint(&column)
+	}
+
+	return errors.New("")
+}
+
+func (p *sqliteParser) parseDefaultValue() interface{} {
+	if p.matchSymbol("(") {
+		p.skipExpr()
+		return func(){}
+	} else {
+		return p.parseLiteralValue()
+	}
+}
+
+func (p *sqliteParser) skipExpr() {
+	p.i += 1
+	p.parseExprAux()
+	p.i += 1
+}
+
+func (p *sqliteParser) skipExprAux() {
+	if p.matchSymbol(")") {
+		return
+	}
+	if p.matchSymbol("(") {
+		p.skipExpr()
+	}
+	p.i += 1
+	p.skipExprAux()
+}
+
+func (p *sqliteParser) parseLiteralValue() interface{} {
+	token := p.token()
+	if isNumeric(token) {
+		p.i += 1
+		n, _ := strconv.ParseFloat(token, 64)
+		return n
+	}
+	if p.matchSymbol("'") {
+		return p.parseStringLiteral()
+	}
+	p.i += 1
+	return token
+}
+
+func (p *sqliteParser) parseStringLiteral() string {
+	p.i += 1
+	ret := ""
+	for p.token() != "'" {
+		ret += " " + p.token()
+	}
+	p.i += 1
+
+	return ret
+}
 
 var ReservedWords_SQLite = []string{
 	"ABORT",
