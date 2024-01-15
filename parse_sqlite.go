@@ -1136,33 +1136,6 @@ func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 	return ls, nil
 }
 
-func (p *sqliteParser) getColumn() ([]string, error) {
-	p.i += 1
-
-	ls := []string{}
-	for {
-		if p.matchSymbol("'") {
-			p.i += 1
-			ls = append(ls, p.token())
-			p.i += 1
-		} else {
-			ls = append(ls, p.token())
-		}
-
-		if p.matchSymbol(")") {
-			break
-		} else if p.matchSymbol(",") {
-			p.i += 1
-			continue
-		} else {
-			return nil, errors.New("")
-		}
-	}
-
-	p.i += 1
-	return ls, nil
-}
-
 var ReservedWords_SQLite = []string{
 	"ABORT",
 	"ACTION",
