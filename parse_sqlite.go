@@ -11,12 +11,27 @@ type sqliteParser struct {
 	size int
 	i int
 	line int
-	validatedTokens []string
 	flg bool
+	validatedTokens []string
+	tables []Table
 }
 
 func newSQLiteParser(tokens []string) parser {
-	return &sqliteParser{tokens, len(tokens), -1, 1, []string{}, false}
+	return &sqliteParser{tokens, 0, 0, 0, false, []string{}}
+}
+
+func (p *sqliteParser) Parse() ([]Table, error) {
+	p.initV()
+	if err := p.validate(); err != nil {
+		return nil, err
+	}
+	p.initP()
+	return p.parse()
+}
+
+func (p *sqliteParser) Validate() error {
+	p.initV()
+	return p.validate()
 }
 
 func (p *sqliteParser) token() string {
@@ -42,10 +57,21 @@ func (p *sqliteParser) flgOff() {
 	p.flg = false
 }
 
-func (p *sqliteParser) init() {
+func (p *sqliteParser) initV() {
 	p.i = -1
 	p.line = 1
+	p.size = len(tokens)
+	p.validatedTokens = []string{}
+	p.flg = false
 	p.next()
+}
+
+func (p *sqliteParser) initP() {
+	p.i = 0
+	p.line = 0
+	p.size = len(p.validatedTokens)
+	p.validatedTokens = []string{}
+	p.flg = false
 }
 
 func (p *sqliteParser) next() error {
@@ -124,11 +150,6 @@ func (p *sqliteParser) isValidName(name string) bool {
 func (p *sqliteParser) isValidQuotedName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name)
-}
-
-func (p *sqliteParser) Validate() error {
-	p.init()
-	return p.validate()
 }
 
 func (p *sqliteParser) validate() error {
@@ -842,15 +863,78 @@ func (p *sqliteParser) validateTableOptions() error {
 	return nil
 }
 
-func (p *sqliteParser) Parse() ([]Table, error) {
-	p.init()
+func (p *sqliteParser) parse() error {
+	if (p.size <= p.i) {
+		return tables
+	} else {
+		table, err := p.parseTable()
+		if err != nil {
+			return err
+		}
+		p.tables = append(p.tables, table)
+	}
+
 	return p.parse()
 }
 
-func (p *sqliteParser) parse() ([]Table, error) {
-	p.init()
-	var tables []Table
-	return tables, nil
+func (p *sqliteParser) parseTable() (Table, err) {
+	var table Table{}
+	p.i += 2
+
+	schemaName, tableName = p.parseTableName()
+
+	table.Schema = schemaName
+	table.Name = tableName
+
+	columns, err := p.parseColumns()
+	if err != nil {
+		return nil, err
+	}
+	table.Columns = columns
+
+	return table
+}
+
+func (p *sqliteParser) parseTableName() (string, string) {
+	schemaName := ""
+	tableName := ""
+
+	tmp := ""
+	if p.token() == "\"" || p.token() == "`" {
+		p.i += 1
+		tmp = p.token()
+		p.i += 1
+	} else {
+		tmp = p.token()
+	}
+
+	if p.token() == "." {
+		p.i += 1
+		schemaName = tmp
+		if p.token() == "\"" || p.token() == "`" {
+			p.i += 1
+			tableName = p.token()
+			p.i += 1
+		} else {
+			tableName = p.token()
+		}
+	} else {
+		tableName = tmp
+	}
+
+	return schemaName, tableName 
+}
+
+func (p *sqliteParser) parseColumns() ([]Column, error) {
+	p.i += 1
+	var columns []Column{}
+	for p.token() != ")" {
+		
+		columns = append(columns, p.parseColumn())
+	}
+	table.Columns = p.parseColumns()
+
+	return table
 }
 
 

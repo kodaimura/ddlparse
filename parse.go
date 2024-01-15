@@ -15,6 +15,7 @@ const (
 )
 
 type Table struct {
+	Schema string
 	Name string
 	Columns []Column
 }
