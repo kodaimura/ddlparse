@@ -929,13 +929,13 @@ func (p *sqliteParser) parseTableName() (string, string) {
 func (p *sqliteParser) parseColumns() ([]Column, error) {
 	p.i += 1
 	var columns []Column
-	for p.matchSymbol(")") {
+	for !p.matchSymbol(")") {
 		if p.matchSymbol(",") {
 			p.i += 1
 			continue
 		}
 		err := nil
-		if (p.matchKeyword("PRIMARY", "UNIQUE", "NOT", "DEFAULT")) {
+		if (p.matchKeyword("PRIMARY", "UNIQUE")) {
 			err = p.parseTableConstraint(columns)
 		} else {
 			err = p.parseColumn(columns)
@@ -1058,12 +1058,109 @@ func (p *sqliteParser) parseLiteralValue() interface{} {
 func (p *sqliteParser) parseStringLiteral() string {
 	p.i += 1
 	ret := ""
-	for p.token() != "'" {
+	for !p.matchSymbol("'") {
 		ret += " " + p.token()
 	}
 	p.i += 1
 
 	return ret
+}
+
+func (p *sqliteParser) parseTableConstraint(columns []Column) error {
+	c := strings.ToUpper(p.token())
+	if p.matchKeyword("PRIMARY") {
+		p.i += 2
+	}
+	if p.matchKeyword("UNIQUE") {
+		p.i += 1
+	}
+
+	columnNames, err := p.parseCommaSeparatedColumnNames()
+	if err != nil {
+		return err
+	}
+
+	for _, name := range columnNames {
+		exists := false
+		for i, column := range columns {
+			if column.Name != name {
+				continue
+			}
+			exists = true
+			if c == "PRIMARY" {
+				if column.IsPK {
+					return errors.New("")
+				}
+				columns[i].IsPK = true
+				break
+			}
+			if c == "UNIQUE" {
+				if column.IsUnique {
+					return errors.New("")
+				}
+				columns[i].IsUnique = true
+				break
+			}
+		}
+		if !exists {
+			return errors.New("")
+		}
+	}
+	return nil
+}
+
+func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
+	p.i += 1
+
+	ls := []string{}
+	for {
+		if p.matchSymbol("'") {
+			p.i += 1
+			ls = append(ls, p.token())
+			p.i += 1
+		} else {
+			ls = append(ls, p.token())
+		}
+
+		if p.matchSymbol(")") {
+			break
+		} else if p.matchSymbol(",") {
+			p.i += 1
+			continue
+		} else {
+			return nil, errors.New("")
+		}
+	}
+
+	p.i += 1
+	return ls, nil
+}
+
+func (p *sqliteParser) getColumn() ([]string, error) {
+	p.i += 1
+
+	ls := []string{}
+	for {
+		if p.matchSymbol("'") {
+			p.i += 1
+			ls = append(ls, p.token())
+			p.i += 1
+		} else {
+			ls = append(ls, p.token())
+		}
+
+		if p.matchSymbol(")") {
+			break
+		} else if p.matchSymbol(",") {
+			p.i += 1
+			continue
+		} else {
+			return nil, errors.New("")
+		}
+	}
+
+	p.i += 1
+	return ls, nil
 }
 
 var ReservedWords_SQLite = []string{
