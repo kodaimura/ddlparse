@@ -8,6 +8,8 @@ import (
 )
 
 type sqliteParser struct {
+	ddl string
+	ddlr []rune
 	tokens []string
 	size int
 	i int
@@ -17,8 +19,212 @@ type sqliteParser struct {
 	tables []Table
 }
 
-func newSQLiteParser(tokens []string) parser {
-	return &sqliteParser{tokens, 0, 0, 0, false, []string{}, []Table{}}
+func newSQLiteParser(ddl string) parser {
+	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
+}
+
+func (p *sqliteParser) char() error {
+	return p.ddlr[p.i]
+}
+
+func (p *sqliteParser) appendToken(token string) error {
+	if (token != "") {
+		p.tokens = append(p.tokens, token)
+	}
+}
+
+func (p *sqliteParser) Tokenize() error {
+	p.initT()
+	token := ""
+	pre := ""
+	cur := ""
+	for p.size > p.i {
+		cur = p.char()
+		if cur == "-" && pre == "-" {
+			p.appendToken(token)
+			token = ""
+			p.skipComment()
+		} else if cur == "*" && pre == "/" {
+			p.appendToken(token)
+			token = ""
+			p.skipMultilineComment()
+		} else if cur == "\"" {
+			if token != "" {
+				return errors.New("")
+			}
+			str, err := p.tokenizeStringDoubleQuote()
+			if err != nil {
+				return err
+			}
+			p.appendToken(str)
+		} else if cur == "'" {
+			if token != "" {
+				return errors.New("")
+			}
+			str, err := p.tokenizeStringSingleQuote()
+			if err != nil {
+				return err
+			}
+			p.appendToken(str)
+		} else if cur == "`" {
+			if token != "" {
+				return errors.New("")
+			}
+			str, err := p.tokenizeStringBackQuote()
+			if err != nil {
+				return err
+			}
+			p.appendToken(str)
+		} else if cur == " " {
+			p.appendToken(token)
+			token = ""
+		} else if cur == "\n" {
+			p.line += 1
+			p.appendToken(token)
+			p.appendToken(cur)
+			token = ""
+		} else if cur == "(" || cur == ")" || cur == "," || cur == "." || cur == ";" {
+			p.appendToken(token)
+			p.appendToken(cur)
+			token = ""
+		} else if cur == "　" {
+			return errors.New("")
+		} else if cur == "/" && pre == "*" {
+			return errors.New("")
+		} else {
+			token += cur
+		}
+		pre = cur
+	}
+}
+
+func (p *sqliteParser) skipComment() {
+	p.i += 1
+	for p.size > p.i {
+		if p.char() == "\n" {
+			p.line += 1
+			p.appendToken("\n")
+			break
+		}
+		p.i += 1
+	}
+	return
+}
+
+func (p *sqliteParser) skipMultiLineComment() error {
+	p.i += 1
+	pre := ""
+	cur := ""
+	for p.size > p.i {
+		cur = p.char()
+		if cur == "\n" {
+			p.appendToken("\n")
+		}
+		if p.char() == "*/" {
+			return nil
+		}
+		if p.char() == "/*" {
+			return p.skipMultiLineComment()
+		}
+		p.i += 1
+	}
+	return errors.New("")
+}
+
+func (p *sqliteParser) tokenizeStringDoubleQuote() (string, error) {
+	p.i += 1
+	str := "\""
+	cur := ""
+	for p.size > p.i {
+		cur = p.char()
+		if cur == "\'" {
+			return str + cur, nil			
+		} else if cur == "'" {
+			s, err := p.tokenizeStringSingleQuote()
+			str += s
+			if err != nil {
+				return str, err
+			}
+		} else if cur == "`" {
+			s, err := p.tokenizeStringBackQuote()
+			str += s
+			if err != nil {
+				return str, err
+			}
+		} else {
+			str += cur
+		}
+		p.i += 1
+	}
+	return str, errors.New("")
+}
+
+func (p *sqliteParser) tokenizeStringSingleQuote() (string, error) {
+	p.i += 1
+	str := "'"
+	cur := ""
+	for p.size > p.i {
+		cur = p.char()
+		if cur == "'" {
+			return str + cur, nil			
+		} else if cur == "\"" {
+			s, err := p.tokenizeStringDoubleQuote()
+			str += s
+			if err != nil {
+				return str, err
+			}
+		} else if cur == "`" {
+			s, err := p.tokenizeStringBackQuote()
+			str += s
+			if err != nil {
+				return str, err
+			}
+		} else {
+			str += cur
+		}
+		p.i += 1
+	}
+	return str, errors.New("")
+}
+
+func (p *sqliteParser) tokenizeStringBackQuote() error {
+	p.i += 1
+	str := "`"
+	cur := ""
+	for p.size > p.i {
+		cur = p.char()
+		if cur == "`" {
+			return str + cur, nil			
+		} else if cur == "\"" {
+			s, err := p.tokenizeStringDoubleQuote()
+			str += s
+			if err != nil {
+				return str, err
+			}
+		} else if cur == "'" {
+			s, err := p.tokenizeStringSingleQuote()
+			str += s
+			if err != nil {
+				return str, err
+			}
+		} else {
+			str += cur
+		}
+		p.i += 1
+	}
+	return str, errors.New("")
+}
+
+func (p *sqliteParser) Parse() ([]Table, error) {
+	p.initV()
+	if err := p.validate(); err != nil {
+		return nil, err
+	}
+	p.initP()
+	if err := p.parse(); err != nil {
+		return nil, err
+	}
+	return p.tables, nil
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {
@@ -76,6 +282,13 @@ func (p *sqliteParser) initP() {
 	p.size = len(p.validatedTokens)
 	p.flg = false
 	p.tokens = p.validatedTokens
+}
+
+func (p *sqliteParser) initT() {
+	p.i = 0
+	p.line = 1
+	p.size = len(p.ddlr)
+	p.tokens = []string{}
 }
 
 func (p *sqliteParser) next() error {
