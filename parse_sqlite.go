@@ -18,7 +18,7 @@ type sqliteParser struct {
 }
 
 func newSQLiteParser(tokens []string) parser {
-	return &sqliteParser{tokens, 0, 0, 0, false, []string{}}
+	return &sqliteParser{tokens, 0, 0, 0, false, []string{}, []Table{}}
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {
@@ -27,7 +27,10 @@ func (p *sqliteParser) Parse() ([]Table, error) {
 		return nil, err
 	}
 	p.initP()
-	return p.parse()
+	if err := p.parse(); err != nil {
+		return nil, err
+	}
+	return p.tables, nil
 }
 
 func (p *sqliteParser) Validate() error {
@@ -61,7 +64,7 @@ func (p *sqliteParser) flgOff() {
 func (p *sqliteParser) initV() {
 	p.i = -1
 	p.line = 1
-	p.size = len(tokens)
+	p.size = len(p.tokens)
 	p.validatedTokens = []string{}
 	p.flg = false
 	p.next()
@@ -71,8 +74,8 @@ func (p *sqliteParser) initP() {
 	p.i = 0
 	p.line = 0
 	p.size = len(p.validatedTokens)
-	p.validatedTokens = []string{}
 	p.flg = false
+	p.tokens = p.validatedTokens
 }
 
 func (p *sqliteParser) next() error {
@@ -865,8 +868,8 @@ func (p *sqliteParser) validateTableOptions() error {
 }
 
 func (p *sqliteParser) parse() error {
-	if (p.size <= p.i) {
-		return tables
+	if (p.size - 1 <= p.i) {
+		return nil
 	} else {
 		table, err := p.parseTable()
 		if err != nil {
@@ -878,22 +881,22 @@ func (p *sqliteParser) parse() error {
 	return p.parse()
 }
 
-func (p *sqliteParser) parseTable() (Table, err) {
+func (p *sqliteParser) parseTable() (Table, error) {
 	var table Table
 	p.i += 2
 
-	schemaName, tableName = p.parseTableName()
+	schemaName, tableName := p.parseTableName()
 
 	table.Schema = schemaName
 	table.Name = tableName
 
 	columns, err := p.parseColumns()
 	if err != nil {
-		return nil, err
+		return Table{}, err
 	}
 	table.Columns = columns
 
-	return table
+	return table, nil
 }
 
 func (p *sqliteParser) parseTableName() (string, string) {
@@ -927,29 +930,29 @@ func (p *sqliteParser) parseTableName() (string, string) {
 }
 
 func (p *sqliteParser) parseColumns() ([]Column, error) {
-	p.i += 1
+	p.i += 2
 	var columns []Column
 	for !p.matchSymbol(")") {
 		if p.matchSymbol(",") {
 			p.i += 1
 			continue
 		}
-		err := nil
+		var err error
 		if (p.matchKeyword("PRIMARY", "UNIQUE")) {
-			err = p.parseTableConstraint(columns)
+			err = p.parseTableConstraint(&columns)
 		} else {
-			err = p.parseColumn(columns)
+			err = p.parseColumn(&columns)
 		}
 
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	p.i += 1
-	return columns
+	return columns, nil
 }
 
-func (p *sqliteParser) parseColumn(columns []Column) error {
+func (p *sqliteParser) parseColumn(columns *[]Column) error {
 	name := ""
 	if p.matchSymbol("\"", "`") {
 		p.i += 1
@@ -959,7 +962,7 @@ func (p *sqliteParser) parseColumn(columns []Column) error {
 		name = p.token()
 	}
 
-	for _, column := range columns {
+	for _, column := range *columns {
 		if column.Name == name {
 			return errors.New("")
 		}
@@ -972,10 +975,11 @@ func (p *sqliteParser) parseColumn(columns []Column) error {
 	p.i += 1
 	p.parseConstraint(&column)
 
-	columns = append(columns, column)
+	*columns = append(*columns, column)
+	return nil
 }
 
-func (p *sqliteParser) parseConstrainte(column *Column) error {
+func (p *sqliteParser) parseConstraint(column *Column) error {
 	if p.matchSymbol(",") {
 		p.i += 1
 		return nil
@@ -991,25 +995,25 @@ func (p *sqliteParser) parseConstrainte(column *Column) error {
 			p.i += 1
 			column.IsAutoIncrement = true
 		}
-		return p.parseConstraint(&column)
+		return p.parseConstraint(column)
 	}
 
 	if p.matchKeyword("NOT") {
 		p.i += 2
 		column.IsNotNull = true
-		return p.parseConstraint(&column)
+		return p.parseConstraint(column)
 	}
 
 	if p.matchKeyword("UNIQUE") {
 		p.i += 1
 		column.IsUnique = true
-		return p.parseConstraint(&column)
+		return p.parseConstraint(column)
 	}
 
 	if p.matchKeyword("DEFAULT") {
 		p.i += 1
 		column.Default = p.parseDefaultValue()
-		return p.parseConstraint(&column)
+		return p.parseConstraint(column)
 	}
 
 	return errors.New("")
@@ -1017,28 +1021,29 @@ func (p *sqliteParser) parseConstrainte(column *Column) error {
 
 func (p *sqliteParser) parseDefaultValue() interface{} {
 	if p.matchSymbol("(") {
-		p.skipExpr()
+		p.parseExpr()
 		return func(){}
 	} else {
 		return p.parseLiteralValue()
 	}
 }
 
-func (p *sqliteParser) skipExpr() {
+func (p *sqliteParser) parseExpr() {
 	p.i += 1
 	p.parseExprAux()
 	p.i += 1
 }
 
-func (p *sqliteParser) skipExprAux() {
+func (p *sqliteParser) parseExprAux() {
 	if p.matchSymbol(")") {
 		return
 	}
 	if p.matchSymbol("(") {
-		p.skipExpr()
+		p.parseExpr()
+		return
 	}
 	p.i += 1
-	p.skipExprAux()
+	p.parseExprAux()
 }
 
 func (p *sqliteParser) parseLiteralValue() interface{} {
@@ -1066,7 +1071,7 @@ func (p *sqliteParser) parseStringLiteral() string {
 	return ret
 }
 
-func (p *sqliteParser) parseTableConstraint(columns []Column) error {
+func (p *sqliteParser) parseTableConstraint(columns *[]Column) error {
 	c := strings.ToUpper(p.token())
 	if p.matchKeyword("PRIMARY") {
 		p.i += 2
@@ -1082,7 +1087,7 @@ func (p *sqliteParser) parseTableConstraint(columns []Column) error {
 
 	for _, name := range columnNames {
 		exists := false
-		for i, column := range columns {
+		for i, column := range *columns {
 			if column.Name != name {
 				continue
 			}
@@ -1091,14 +1096,14 @@ func (p *sqliteParser) parseTableConstraint(columns []Column) error {
 				if column.IsPK {
 					return errors.New("")
 				}
-				columns[i].IsPK = true
+				(*columns)[i].IsPK = true
 				break
 			}
 			if c == "UNIQUE" {
 				if column.IsUnique {
 					return errors.New("")
 				}
-				columns[i].IsUnique = true
+				(*columns)[i].IsUnique = true
 				break
 			}
 		}
