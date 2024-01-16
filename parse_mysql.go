@@ -7,14 +7,19 @@ import (
 )
 
 type mysqlParser struct {
+	ddl string
+	ddlr []rune
 	tokens []string
 	size int
 	i int
 	line int
+	flg bool
+	validatedTokens []string
+	tables []Table
 }
 
-func newMySQLParser(tokens []string) parser {
-	return &mysqlParser{tokens, len(tokens), -1, 1}
+func newMySQLParser(ddl string) parser {
+	return &mysqlParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
 func (p *mysqlParser) token() string {

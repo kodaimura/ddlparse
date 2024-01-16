@@ -65,8 +65,7 @@ type parser interface {
 }
 
 func ParseSQLite(ddl string) ([]Table, error) {
-	tokens := tokenize(ddl)
-	parser := newSQLiteParser(tokens)
+	parser := newSQLiteParser(ddl)
 
 	if err := parser.Validate(); err != nil {
 		return []Table{}, err
@@ -75,8 +74,7 @@ func ParseSQLite(ddl string) ([]Table, error) {
 }
 
 func ParsePostgreSQL(ddl string) ([]Table, error) {
-	tokens := tokenize(ddl)
-	parser := newPostgreSQLParser(tokens)
+	parser := newPostgreSQLParser(ddl)
 
 	if err := parser.Validate(); err != nil {
 		return []Table{}, err
@@ -85,8 +83,7 @@ func ParsePostgreSQL(ddl string) ([]Table, error) {
 }
 
 func ParseMySQL(ddl string) ([]Table, error) {
-	tokens := tokenize(ddl)
-	parser := newMySQLParser(tokens)
+	parser := newMySQLParser(ddl)
 
 	if err := parser.Validate(); err != nil {
 		return []Table{}, err
@@ -109,22 +106,19 @@ func Validate(ddl string, rdbms Rdbms) error {
 }
 
 func ValidateSQLite(ddl string) error {
-	tokens := tokenize(ddl)
-	parser := newSQLiteParser(tokens)
+	parser := newSQLiteParser(ddl)
 
 	return parser.Validate()
 }
 
 func ValidatePostgreSQL(ddl string) error {
-	tokens := tokenize(ddl)
-	parser := newPostgreSQLParser(tokens)
+	parser := newPostgreSQLParser(ddl)
 
 	return parser.Validate()
 }
 
 func ValidateMySQL(ddl string) error {
-	tokens := tokenize(ddl)
-	parser := newMySQLParser(tokens)
+	parser := newMySQLParser(ddl)
 
 	return parser.Validate()
 }

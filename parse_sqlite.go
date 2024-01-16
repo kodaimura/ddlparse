@@ -23,11 +23,11 @@ func newSQLiteParser(ddl string) parser {
 	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
-func (p *sqliteParser) char() error {
-	return p.ddlr[p.i]
+func (p *sqliteParser) char() string {
+	return string(p.ddlr[p.i])
 }
 
-func (p *sqliteParser) appendToken(token string) error {
+func (p *sqliteParser) appendToken(token string) {
 	if (token != "") {
 		p.tokens = append(p.tokens, token)
 	}
@@ -47,7 +47,7 @@ func (p *sqliteParser) Tokenize() error {
 		} else if cur == "*" && pre == "/" {
 			p.appendToken(token)
 			token = ""
-			p.skipMultilineComment()
+			p.skipMultiLineComment()
 		} else if cur == "\"" {
 			if token != "" {
 				return errors.New("")
@@ -96,6 +96,7 @@ func (p *sqliteParser) Tokenize() error {
 		}
 		pre = cur
 	}
+	return nil
 }
 
 func (p *sqliteParser) skipComment() {
@@ -113,7 +114,6 @@ func (p *sqliteParser) skipComment() {
 
 func (p *sqliteParser) skipMultiLineComment() error {
 	p.i += 1
-	pre := ""
 	cur := ""
 	for p.size > p.i {
 		cur = p.char()
@@ -137,7 +137,7 @@ func (p *sqliteParser) tokenizeStringDoubleQuote() (string, error) {
 	cur := ""
 	for p.size > p.i {
 		cur = p.char()
-		if cur == "\'" {
+		if cur == "\"" {
 			return str + cur, nil			
 		} else if cur == "'" {
 			s, err := p.tokenizeStringSingleQuote()
@@ -187,7 +187,7 @@ func (p *sqliteParser) tokenizeStringSingleQuote() (string, error) {
 	return str, errors.New("")
 }
 
-func (p *sqliteParser) tokenizeStringBackQuote() error {
+func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
 	p.i += 1
 	str := "`"
 	cur := ""
@@ -213,18 +213,6 @@ func (p *sqliteParser) tokenizeStringBackQuote() error {
 		p.i += 1
 	}
 	return str, errors.New("")
-}
-
-func (p *sqliteParser) Parse() ([]Table, error) {
-	p.initV()
-	if err := p.validate(); err != nil {
-		return nil, err
-	}
-	p.initP()
-	if err := p.parse(); err != nil {
-		return nil, err
-	}
-	return p.tables, nil
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {
@@ -306,57 +294,57 @@ func (p *sqliteParser) nextAux() error {
 	if (p.token() == "\n") {
 		p.line += 1
 		return p.nextAux()
-	} else if (p.token() == "--") {
-		p.skipSingleLineComment()
-		return p.nextAux()
-	} else if (p.token() == "/*") {
-		if err := p.skipMultiLineComment(); err != nil {
-			return err
-		}
-		return p.nextAux()
+//	} else if (p.token() == "--") {
+//		p.skipSingleLineComment()
+//		return p.nextAux()
+//	} else if (p.token() == "/*") {
+//		if err := p.skipMultiLineComment(); err != nil {
+//			return err
+//		}
+//		return p.nextAux()
 	} else {
 		return nil
 	}
 }
 
-func (p *sqliteParser) skipSingleLineComment() {
-	if (p.token() != "--") {
-		return
-	}
-	var skip func()
-	skip = func() {
-		p.i += 1
-		if (p.isOutOfRange()) {
-			return
-		} else if (p.token() == "\n") {
-			p.line += 1
-		} else {
-			skip()
-		}
-	}
-	skip()
-}
+//func (p *sqliteParser) skipSingleLineComment() {
+//	if (p.token() != "--") {
+//		return
+//	}
+//	var skip func()
+//	skip = func() {
+//		p.i += 1
+//		if (p.isOutOfRange()) {
+//			return
+//		} else if (p.token() == "\n") {
+//			p.line += 1
+//		} else {
+//			skip()
+//		}
+//	}
+//	skip()
+//}
 
-func (p *sqliteParser) skipMultiLineComment() error {
-	if (p.token() != "/*") {
-		return nil
-	}
-	var skip func() error
-	skip = func() error {
-		p.i += 1
-		if (p.isOutOfRange()) {
-			return errors.New("out of range")
-		} else if (p.token() == "\n") {
-			p.line += 1
-			return skip()
-		} else if (p.token() == "*/") {
-			return nil
-		} else {
-			return skip()
-		}
-	}
-	return skip()
-}
+//func (p *sqliteParser) skipMultiLineComment() error {
+//	if (p.token() != "/*") {
+//		return nil
+//	}
+//	var skip func() error
+//	skip = func() error {
+//		p.i += 1
+//		if (p.isOutOfRange()) {
+//			return errors.New("out of range")
+//		} else if (p.token() == "\n") {
+//			p.line += 1
+//			return skip()
+//		} else if (p.token() == "*/") {
+//			return nil
+//		} else {
+//			return skip()
+//		}
+//	}
+//	return skip()
+//}
 
 func (p *sqliteParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)

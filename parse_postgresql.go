@@ -7,14 +7,19 @@ import (
 )
 
 type postgresqlParser struct {
+	ddl string
+	ddlr []rune
 	tokens []string
 	size int
 	i int
 	line int
+	flg bool
+	validatedTokens []string
+	tables []Table
 }
 
-func newPostgreSQLParser(tokens []string) parser {
-	return &postgresqlParser{tokens, len(tokens), -1, 1}
+func newPostgreSQLParser(ddl string) parser {
+	return &postgresqlParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
 func (p *postgresqlParser) token() string {
