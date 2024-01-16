@@ -604,11 +604,22 @@ func TestParse(t *testing.T) {
 		email TEXT NOT NULL UNIQUE,
 		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+	);
+	
+	CREATE TABLE IF NOT EXISTS project (
+		project_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		project_name TEXT NOT NULL,
+		project_memo TEXT,
+		user_id INTEGER NOT NULL,
+		username TEXT NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		UNIQUE(project_name, username)
 	);`)
 	parser := newSQLiteParser(tokens)
 	tables, err := parser.Parse();
 	if err != nil {
 		t.Errorf("failed")
 	}
-	fmt.Println(tables[0].Columns)
+	fmt.Println(tables)
 }

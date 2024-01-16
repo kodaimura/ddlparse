@@ -868,7 +868,7 @@ func (p *sqliteParser) validateTableOptions() error {
 }
 
 func (p *sqliteParser) parse() error {
-	if (p.size - 1 <= p.i) {
+	if p.size <= p.i {
 		return nil
 	} else {
 		table, err := p.parseTable()
@@ -896,6 +896,11 @@ func (p *sqliteParser) parseTable() (Table, error) {
 	}
 	table.Columns = columns
 
+	if (p.size > p.i) {
+		if p.matchSymbol(";") {
+			p.i += 1
+		}
+	}
 	return table, nil
 }
 
@@ -1116,7 +1121,6 @@ func (p *sqliteParser) parseTableConstraint(columns *[]Column) error {
 
 func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 	p.i += 1
-
 	ls := []string{}
 	for {
 		if p.matchSymbol("'") {
@@ -1126,7 +1130,7 @@ func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 		} else {
 			ls = append(ls, p.token())
 		}
-
+		p.i += 1
 		if p.matchSymbol(")") {
 			break
 		} else if p.matchSymbol(",") {
@@ -1136,7 +1140,6 @@ func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 			return nil, errors.New("")
 		}
 	}
-
 	p.i += 1
 	return ls, nil
 }
