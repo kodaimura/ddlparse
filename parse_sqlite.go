@@ -272,8 +272,7 @@ func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {
-	p.initV()
-	if err := p.validate(); err != nil {
+	if err := p.Validate(); err != nil {
 		return nil, err
 	}
 	p.initP()
@@ -1087,22 +1086,20 @@ func (p *sqliteParser) parseTableName() (string, string) {
 	schemaName := ""
 	tableName := ""
 
-	tmp := ""
-	if p.matchSymbol("\"", "`") {
-		p.i += 1
-		tmp = p.token()
-		p.i += 1
+	tmp := p.token()[0:1]
+	if tmp == "\"" || tmp == "'" || tmp == "`" {
+		tmp = p.token()[1 : len(p.token())-1]
 	} else {
 		tmp = p.token()
 	}
+	p.i += 1
 
 	if p.token() == "." {
 		p.i += 1
 		schemaName = tmp
-		if p.matchSymbol("\"", "`") {
-			p.i += 1
-			tableName = p.token()
-			p.i += 1
+		tmp = p.token()[0:1]
+		if tmp == "\"" || tmp == "'" || tmp == "`" {
+			tableName = p.token()[1 : len(p.token())-1]
 		} else {
 			tableName = p.token()
 		}
@@ -1138,10 +1135,9 @@ func (p *sqliteParser) parseColumns() ([]Column, error) {
 
 func (p *sqliteParser) parseColumn(columns *[]Column) error {
 	name := ""
-	if p.matchSymbol("\"", "`") {
-		p.i += 1
-		name = p.token()
-		p.i += 1
+	tmp := p.token()[0:1]
+	if tmp == "\"" || tmp == "'" || tmp == "`" {
+		name = p.token()[1 : len(p.token())-1]
 	} else {
 		name = p.token()
 	}
@@ -1237,22 +1233,13 @@ func (p *sqliteParser) parseLiteralValue() interface{} {
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
 	}
-	if p.matchSymbol("'") {
-		return p.parseStringLiteral()
+	tmp := token[0:1]
+	if tmp == "\"" || tmp == "'" || tmp == "`" {
+		p.i += 1
+		return token[1 : len(token)-1]
 	}
 	p.i += 1
 	return token
-}
-
-func (p *sqliteParser) parseStringLiteral() string {
-	p.i += 1
-	ret := ""
-	for !p.matchSymbol("'") {
-		ret += " " + p.token()
-	}
-	p.i += 1
-
-	return ret
 }
 
 func (p *sqliteParser) parseTableConstraint(columns *[]Column) error {
@@ -1302,13 +1289,7 @@ func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 	p.i += 1
 	ls := []string{}
 	for {
-		if p.matchSymbol("'") {
-			p.i += 1
-			ls = append(ls, p.token())
-			p.i += 1
-		} else {
-			ls = append(ls, p.token())
-		}
+		ls = append(ls, p.token())
 		p.i += 1
 		if p.matchSymbol(")") {
 			break

@@ -597,7 +597,7 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-/*
+
 func TestParse(t *testing.T) {
 	ddl := `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -608,10 +608,10 @@ func TestParse(t *testing.T) {
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
 	);
 	
-	CREATE TABLE IF NOT EXISTS project (
+	CREATE TABLE IF NOT EXISTS 'sch'."project" (
 		project_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		project_name TEXT NOT NULL,
-		project_memo TEXT,
+		project_memo TEXT DEFAULT "aaaaa'bbb'aaaaa",
 		user_id INTEGER NOT NULL,
 		username TEXT NOT NULL,
 		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
@@ -625,4 +625,3 @@ func TestParse(t *testing.T) {
 	}
 	fmt.Println(tables)
 }
-*/
