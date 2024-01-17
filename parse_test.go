@@ -74,178 +74,125 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
-//func TestInit(t *testing.T) {
-//	tokens := tokenize(`--XXXXX
-//			a`,
-//	)
-//
-//	parser := &sqliteParser{tokens, len(tokens), 100, 100}
-//	parser.init()
-//	if parser.tokens[parser.i] != "a" {
-//		t.Errorf("failed")
-//	}
-//	if parser.size != len(tokens) {
-//		t.Errorf("failed")
-//	}
-//	if parser.line != 2 {
-//		t.Errorf("failed")
-//	}
-//}
-
-//func TestNext(t *testing.T) {
-//	tokens := tokenize(`,--XXXXX
-//			a
-//			/*
-//			password TEXT NOT NULL,
-//			email TEXT NOT NULL UNIQUE,
-//			*/
-//			--XXXXX
-//			created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-//			updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
-//		);`,
-//	)
-//
-//	parser := &sqliteParser{tokens, len(tokens), 100, 100,}
-//	parser.init()
-//	parser.next()
-//	if parser.tokens[parser.i] != "a" {
-//		t.Errorf("failed")
-//	}
-//	parser.next()
-//	if parser.tokens[parser.i] != "created_at" {
-//		t.Errorf("failed")
-//	}
-//	parser.next()
-//	if parser.tokens[parser.i] != "TEXT" {
-//		t.Errorf("failed")
-//	}
-//	parser.next()
-//	if parser.line !=  8 {
-//		t.Errorf("failed")
-//	}
-//}
-
 
 func TestValidate(t *testing.T) {
-	/*
-	tokens := tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl := `CREATE TABLE IF NOT EXISTS users (
 
-	);`,
-	)
+	);`
 
-	parser := newSQLiteParser(tokens)
+	parser := newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF EXISTS users ();`)
-	parser = newSQLiteParser(tokens)
+	ddl = `CREATE TABLE IF EXISTS users ();`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREAT TABLE IF NOT EXISTS users ();`)
-	parser = newSQLiteParser(tokens)
+	ddl = `CREAT TABLE IF NOT EXISTS users ();`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
-	tokens = tokenize(`CREATE TABL IF NOT EXISTS users ();`)
-	parser = newSQLiteParser(tokens)
+	ddl = `CREATE TABL IF NOT EXISTS users ();`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS "users ();`)
-	parser = newSQLiteParser(tokens)
+	ddl = `CREATE TABLE IF NOT EXISTS "users ();`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS AUTOINCREMENT ();`)
-	parser = newSQLiteParser(tokens)
+	ddl = `CREATE TABLE IF NOT EXISTS AUTOINCREMENT ();`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE users (
+	ddl = `CREATE TABLE users (
 		user_id INTEGER
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`create table if not exists users (
+	ddl = `create table if not exists users (
 		user_id INTEGER
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE "users" (
+	ddl = `CREATE TABLE "users" (
 		user_id INTEGER
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE aaaa.users (
+	ddl = `CREATE TABLE aaaa.users (
 		user_id INTEGER
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE "aaaa"."users" (
+	ddl = `CREATE TABLE "aaaa"."users" (
 		user_id INTEGER
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE aaaa. (
+	ddl = `CREATE TABLE aaaa. (
 		user_id INTEGER
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER,
 		bbbb TEXT,
 		cccc NUMERIC,
@@ -258,25 +205,25 @@ func TestValidate(t *testing.T) {
 		dddd integer,
 		eeee real,
 		ffff none
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER,
 		bbbb TEXT,
 		cccc NUMERICCC
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER PRIMARY KEY,
 		aaaa INTEGER PRIMARY KEY AUTOINCREMENT,
 		aaaa INTEGER PRIMARY KEY ASC AUTOINCREMENT,
@@ -288,49 +235,49 @@ func TestValidate(t *testing.T) {
 		aaaa INTEGER PRIMARY KEY ON CONFLICT REPLACE AUTOINCREMENT,
 		aaaa integer primary key on conflict rollback autoincrement,
 		aaaa INTEGER PRIMARY KEY ON CONFLICT ROLLBACK
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER PRIMARY KEY,
 		aaaa INTEGER PRIMARY AUTOINCREMENT,
 		aaaa INTEGER PRIMARY KEY ASC AUTOINCREMENT
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER PRIMARY KEY,
 		aaaa INTEGER PRIMARY KEY AUTOINCREMENT,
 		aaaa INTEGER PRIMARY KEY ON ROLLBACK
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER PRIMARY KEY,
 		aaaa INTEGER PRIMARY KEY AUTOINCREMENT,
 		aaaa INTEGER PRIMARY KEY ON CONFLICT ROLLBACKKK
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER NOT NULL,
 		aaaa INTEGER NOT NULL ON CONFLICT ROLLBACK,
 		aaaa INTEGER NOT NULL ON CONFLICT ABORT,
@@ -338,35 +285,35 @@ func TestValidate(t *testing.T) {
 		aaaa INTEGER NOT NULL ON CONFLICT IGNORE,
 		aaaa INTEGER NOT NULL ON CONFLICT REPLACE,
 		aaaa integer not null on conflict rollback
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER NOT NULL,
 		aaaa INTEGER NOT ON CONFLICT ROLLBACK
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER NOT NULL,
 		aaaa INTEGER NOT NULL IN CONFLICT ROLLBACK
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER UNIQUE,
 		aaaa INTEGER UNIQUE ON CONFLICT ROLLBACK,
 		aaaa INTEGER UNIQUE ON CONFLICT ABORT,
@@ -374,46 +321,46 @@ func TestValidate(t *testing.T) {
 		aaaa INTEGER UNIQUE ON CONFLICT IGNORE,
 		aaaa INTEGER UNIQUE ON CONFLICT REPLACE,
 		aaaa integer unique on conflict rollback
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER UNIQUE,
 		aaaa INTEGER UNIQUEEEE ON CONFLICT ROLLBACK
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CHECK (),
 		aaaa INTEGER CHECK (aaaaaaaaa),
 		aaaa INTEGER CHECK (aaa(aa(a)a())aa),
 		aaaa integer check (aaaaaaaaa)
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CHECK (),
 		aaaa INTEGER CHECKKK (aaaaaaaaa)
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER DEFAULT (),
 		aaaa INTEGER DEFAULT (aaaaaaaaa),
 		aaaa INTEGER DEFAULT (aaa(aa(a)a())aa),
@@ -433,84 +380,85 @@ func TestValidate(t *testing.T) {
 		aaaa integer default current_time,
 		aaaa integer default current_date,
 		aaaa integer default current_timestamp
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER DEFAULT (),
 		aaaa INTEGER DEFAULT (aaaaaaaaa),
 		aaaa INTEGER DEFAULTTT +10
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER DEFAULT (),
 		aaaa INTEGER DEFAULT (aaaaaaaaa),
 		aaaa INTEGER DEFAULT =10
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER DEFAULT (),
 		aaaa INTEGER DEFAULT (aaaaaaaaa),
 		aaaa INTEGER DEFAULT aaa
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER COLLATE BINARY,
 		aaaa INTEGER COLLATE NOCASE,
 		aaaa INTEGER COLLATE RTRIM,
 		aaaa INTEGER collate binary,
 		aaaa INTEGER collate nocase,
 		aaaa INTEGER collate rtrim
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER COLLATE BINARY,
 		aaaa INTEGER COLLATEEE NOCASE
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER COLLATE BINARY,
 		aaaa INTEGER COLLATE NOCASEEE
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER REFERENCES bbb(ccc),
 		aaaa INTEGER REFERENCES bbb(ccc, ddd),
 		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET NULL,
@@ -527,24 +475,24 @@ func TestValidate(t *testing.T) {
 		aaaa INTEGER REFERENCES bbb(ccc) NOT DEFERRABLE INITIALLY IMMEDIATE,
 		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET NULL MATCH SIMPLE DEFERRABLE INITIALLY IMMEDIATE,
 		aaaa INTEGER REFERENCES bbb ON DELETE SET NULL MATCH SIMPLE DEFERRABLE INITIALLY IMMEDIATE
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER GENERATED ALWAYS AS (aaa),
 		aaaa INTEGER GENERATED ALWAYS AS (aaa) STORED,
 		aaaa INTEGER GENERATED ALWAYS AS (aaa) VIRTUAL,
 		aaaa INTEGER AS (aaa)
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY,
 		aaaa INTEGER CONSTRAINT const_uq UNIQUE,
 		aaaa INTEGER CONSTRAINT const_nn NOT NULL,
@@ -554,37 +502,37 @@ func TestValidate(t *testing.T) {
 		aaaa integer constraint const_ch primary key,
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY UNIQUE NOT NULL COLLATE BINARY,
 		aaaa INTEGER NOT NULL DEFAULT 10
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY,
 		aaaa INTEGER CONSTRAINT const_uq UNIQUE,
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY PRIMARY KEY
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER CONSTRAINT const_pk PRIMARY KEY,
 		aaaa INTEGER CONSTRAINT const_uq UNIQUE,
 		aaaa INTEGER CONSTRAINT const_pk NOT NULL NOT NULL
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		PRIMARY KEY (a),
 		CONSTRAINT const_name PRIMARY KEY (a, b, "c"),
@@ -600,48 +548,48 @@ func TestValidate(t *testing.T) {
 		FOREIGN KEY (a) REFERENCES bbb(ccc) ON DELETE SET NULL,
 		CONSTRAINT const_name FOREIGN KEY (a, b, "c") REFERENCES bbb(ccc) ON DELETE SET NULL,
 		constraint const_name foreign key (a, b, "c") references bbb(ccc) on delete set null
-	);`)
-	parser = newSQLiteParser(tokens)
+	);`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT
-	) WITHOUT ROWID;`)
-	parser = newSQLiteParser(tokens)
+	) WITHOUT ROWID;`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT
-	) STRICT;`)
-	parser = newSQLiteParser(tokens)
+	) STRICT;`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT
-	) STRICT, WITHOUT ROWID;`)
-	parser = newSQLiteParser(tokens)
+	) STRICT, WITHOUT ROWID;`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT
-	) WITHOUT ROWID, STRICT;`)
-	parser = newSQLiteParser(tokens)
+	) WITHOUT ROWID, STRICT;`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		t.Errorf("failed")
 	}
 
-	tokens = tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT
-	) WITHOUT ROWID`)
-	parser = newSQLiteParser(tokens)
+	) WITHOUT ROWID`
+	parser = newTestParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -649,8 +597,9 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+/*
 func TestParse(t *testing.T) {
-	tokens := tokenize(`CREATE TABLE IF NOT EXISTS users (
+	ddl := `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
@@ -668,12 +617,12 @@ func TestParse(t *testing.T) {
 		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		UNIQUE(project_name, username)
-	);`)
-	parser := newSQLiteParser(tokens)
+	);`
+	parser := newTestParser(ddl)
 	tables, err := parser.Parse();
 	if err != nil {
 		t.Errorf("failed")
 	}
 	fmt.Println(tables)
-	*/
 }
+*/

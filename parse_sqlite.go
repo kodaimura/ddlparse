@@ -284,6 +284,10 @@ func (p *sqliteParser) Parse() ([]Table, error) {
 }
 
 func (p *sqliteParser) Validate() error {
+	p.initT()
+	if err := p.tokenize(); err != nil {
+		return err
+	}
 	p.initV()
 	return p.validate()
 }
@@ -350,57 +354,10 @@ func (p *sqliteParser) nextAux() error {
 	if (p.token() == "\n") {
 		p.line += 1
 		return p.nextAux()
-//	} else if (p.token() == "--") {
-//		p.skipSingleLineComment()
-//		return p.nextAux()
-//	} else if (p.token() == "/*") {
-//		if err := p.skipMultiLineComment(); err != nil {
-//			return err
-//		}
-//		return p.nextAux()
 	} else {
 		return nil
 	}
 }
-
-//func (p *sqliteParser) skipSingleLineComment() {
-//	if (p.token() != "--") {
-//		return
-//	}
-//	var skip func()
-//	skip = func() {
-//		p.i += 1
-//		if (p.isOutOfRange()) {
-//			return
-//		} else if (p.token() == "\n") {
-//			p.line += 1
-//		} else {
-//			skip()
-//		}
-//	}
-//	skip()
-//}
-
-//func (p *sqliteParser) skipMultiLineComment() error {
-//	if (p.token() != "/*") {
-//		return nil
-//	}
-//	var skip func() error
-//	skip = func() error {
-//		p.i += 1
-//		if (p.isOutOfRange()) {
-//			return errors.New("out of range")
-//		} else if (p.token() == "\n") {
-//			p.line += 1
-//			return skip()
-//		} else if (p.token() == "*/") {
-//			return nil
-//		} else {
-//			return skip()
-//		}
-//	}
-//	return skip()
-//}
 
 func (p *sqliteParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
@@ -409,8 +366,7 @@ func (p *sqliteParser) isValidName(name string) bool {
 }
 
 func (p *sqliteParser) isValidQuotedName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name)
+	return true
 }
 
 func (p *sqliteParser) validate() error {
@@ -462,27 +418,12 @@ func (p *sqliteParser) validateSymbol(symbols ...string) error {
 }
 
 func (p *sqliteParser) validateName() error {
-	if p.validateSymbol("\"") == nil {
+	tmp := p.token()[0:1]
+	if tmp == "\"" || tmp == "'" || tmp == "`" {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
 		if p.next() != nil {
-			return p.syntaxError()
-		}
-		if err := p.validateSymbol("\""); err != nil {
-			return p.syntaxError()
-		}
-	} else if p.validateSymbol("`") == nil {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		if !p.isValidQuotedName(p.token()) {
-			return p.syntaxError()
-		}
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		if err := p.validateSymbol("`"); err != nil {
 			return p.syntaxError()
 		}
 	} else {
@@ -927,37 +868,18 @@ func (p *sqliteParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if p.matchSymbol("'") {
-		return p.validateStringLiteral()
+	tmp := p.token()[0:1]
+	if tmp == "\"" || tmp == "'" || tmp == "`" {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return nil
 	}
 	ls := []string{"NULL", "TRUE", "FALSE", "CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}
 	if err := p.validateKeyword(ls...); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (p *sqliteParser) validateStringLiteral() error {
-	if err := p.validateSymbol("'"); err != nil {
-		return err
-	}
-	if err := p.validateStringLiteralAux(); err != nil {
-		return err
-	}
-	if err := p.validateSymbol("'"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *sqliteParser) validateStringLiteralAux() error {
-	if p.matchSymbol("'") {
-		return nil
-	}
-	if p.next() != nil {
-		return p.syntaxError()
-	}
-	return p.validateStringLiteralAux()
 }
 
 func (p *sqliteParser) validateTableConstraint() error {
