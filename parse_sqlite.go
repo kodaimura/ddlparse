@@ -23,6 +23,13 @@ func newSQLiteParser(ddl string) parser {
 	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
+func (p *sqliteParser) tokenizeError() error {
+	if p.size <= p.i {
+		return NewValidateError(p.line, string(p.ddlr[p.size - 1]))
+	}
+	return NewValidateError(p.line, string(p.ddlr[p.i]))
+}
+
 func (p *sqliteParser) char() string {
 	return string(p.ddlr[p.i])
 }
@@ -42,7 +49,7 @@ func (p *sqliteParser) tokenize() error {
 
 		if cur == "-" {
 			if (p.size == p.i + 1) {
-				return errors.New("")
+				return p.tokenizeError()
 			}
 			p.i += 1
 			if p.char() == "-" {
@@ -56,7 +63,7 @@ func (p *sqliteParser) tokenize() error {
 			}
 		} else if cur == "/" {
 			if (p.size == p.i + 1) {
-				return errors.New("")
+				return p.tokenizeError()
 			}
 			p.i += 1
 			if p.char() == "*" {
@@ -72,11 +79,12 @@ func (p *sqliteParser) tokenize() error {
 			}
 		} else if cur == "*" {
 			if (p.size == p.i + 1) {
-				return errors.New("")
+				return p.tokenizeError()
 			}
 			p.i += 1
 			if p.char() == "/" {
-				return errors.New("")
+				p.i -= 1
+				return p.tokenizeError()
 			} else {
 				token += cur
 			}
@@ -86,7 +94,7 @@ func (p *sqliteParser) tokenize() error {
 		
 		if cur == "\"" {
 			if token != "" {
-				return errors.New("")
+				return p.tokenizeError()
 			}
 			str, err := p.tokenizeStringDoubleQuote()
 			if err != nil {
@@ -95,7 +103,7 @@ func (p *sqliteParser) tokenize() error {
 			p.appendToken(str)
 		} else if cur == "'" {
 			if token != "" {
-				return errors.New("")
+				return p.tokenizeError()
 			}
 			str, err := p.tokenizeStringSingleQuote()
 			if err != nil {
@@ -104,7 +112,7 @@ func (p *sqliteParser) tokenize() error {
 			p.appendToken(str)
 		} else if cur == "`" {
 			if token != "" {
-				return errors.New("")
+				return p.tokenizeError()
 			}
 			str, err := p.tokenizeStringBackQuote()
 			if err != nil {
@@ -124,7 +132,7 @@ func (p *sqliteParser) tokenize() error {
 			p.appendToken(cur)
 			token = ""
 		} else if cur == "　" {
-			return errors.New("")
+			return p.tokenizeError()
 		} else {
 			token += cur
 		}
@@ -132,7 +140,7 @@ func (p *sqliteParser) tokenize() error {
 	}
 
 	if token != "" {
-		return errors.New("")
+		return p.tokenizeError()
 	}
 	return nil
 }
@@ -176,7 +184,7 @@ func (p *sqliteParser) skipMultiLineComment() error {
 		}
 		p.i += 1
 	}
-	return errors.New("")
+	return p.tokenizeError()
 }
 
 func (p *sqliteParser) tokenizeStringDoubleQuote() (string, error) {
@@ -204,7 +212,7 @@ func (p *sqliteParser) tokenizeStringDoubleQuote() (string, error) {
 		}
 		p.i += 1
 	}
-	return str, errors.New("")
+	return str, p.tokenizeError()
 }
 
 func (p *sqliteParser) tokenizeStringSingleQuote() (string, error) {
@@ -232,7 +240,7 @@ func (p *sqliteParser) tokenizeStringSingleQuote() (string, error) {
 		}
 		p.i += 1
 	}
-	return str, errors.New("")
+	return str, p.tokenizeError()
 }
 
 func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
@@ -260,7 +268,7 @@ func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
 		}
 		p.i += 1
 	}
-	return str, errors.New("")
+	return str, p.tokenizeError()
 }
 
 func (p *sqliteParser) Parse() ([]Table, error) {

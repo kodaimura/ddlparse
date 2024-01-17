@@ -44,6 +44,18 @@ func (e ValidateError) Error() string {
 	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near, e.Line)
 }
 
+type ParseError struct {
+	message string
+}
+
+func NewParseError(message string) error {
+	return ParseError{message}
+}
+
+func (e ParseError) Error() string {
+	return fmt.Sprintf("ParseError: %s", e.message)
+}
+
 
 func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	switch rdbms {
