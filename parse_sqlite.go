@@ -33,7 +33,7 @@ func (p *sqliteParser) appendToken(token string) {
 	}
 }
 
-func (p *sqliteParser) Tokenize() error {
+func (p *sqliteParser) tokenize() error {
 	p.initT()
 	token := ""
 	cur := ""
