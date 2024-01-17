@@ -131,7 +131,9 @@ func (p *postgresqlParser) Parse() ([]Table, error) {
 	return tables, nil
 }
 
-
+func (p *postgresqlParser) Tokenize() error {
+	return nil
+}
 
 var ReservedWords_PostgreSQL = []string{
 	"A",

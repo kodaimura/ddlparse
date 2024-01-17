@@ -125,6 +125,9 @@ func (p *mysqlParser) Parse() ([]Table, error) {
 	return tables, nil
 }
 
+func (p *mysqlParser) Tokenize() error {
+	return nil
+}
 
 var ReservedWords_MySQL = []string{
 	"ACCESSIBLE",

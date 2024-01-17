@@ -61,6 +61,7 @@ func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 
 type parser interface {
 	Validate() error
+	Tokenize() error
 	Parse() ([]Table, error)
 }
 

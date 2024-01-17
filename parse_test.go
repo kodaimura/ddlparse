@@ -1,23 +1,70 @@
 package ddlparse
 
 import (
-	//"fmt"
+	"fmt"
 	"testing"
 )
 
 func TestTokenize(t *testing.T) {
-	tokens := tokenize(
-		`CREATE TABLE IF NOT EXISTS users (
+	ddl := `CREATE TABLE IF NOT EXISTS users (
 			"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT NOT NULL UNIQUE,
-			password TEXT NOT NULL --XXX,
+			'username' TEXT NOT NULL UNIQUE, * -
+			password TEXT NOT NULL DEFAULT "aaaa'bbb'aaaa", --XXX
 			email TEXT NOT NULL UNIQUE, /*aaa*/
 			created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-			updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
-		);`,
-	)
+			updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
+		);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
 
-	if len(tokens) != 81 {
+	parser := newSQLiteParser(ddl)
+	if err := parser.Tokenize(); err != nil {
+		t.Errorf("failed")
+	}
+	
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		email TEXT NOT NULL UNIQUE */
+	);`;
+
+	parser = newSQLiteParser(ddl)
+	if err := parser.Tokenize(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT, /*
+		email TEXT NOT NULL UNIQUE
+	);`;
+
+	parser = newSQLiteParser(ddl)
+	if err := parser.Tokenize(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		email TEXT NOT NULL UNIQUE "
+	);`;
+
+	parser = newSQLiteParser(ddl)
+	if err := parser.Tokenize(); err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		email TEXT NOT NULL UNIQUE '
+	);`;
+
+	parser = newSQLiteParser(ddl)
+	if err := parser.Tokenize(); err != nil {
+		fmt.Println(err.Error())
+	} else {
 		t.Errorf("failed")
 	}
 }

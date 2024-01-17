@@ -36,19 +36,55 @@ func (p *sqliteParser) appendToken(token string) {
 func (p *sqliteParser) Tokenize() error {
 	p.initT()
 	token := ""
-	pre := ""
 	cur := ""
 	for p.size > p.i {
 		cur = p.char()
-		if cur == "-" && pre == "-" {
-			p.appendToken(token)
-			token = ""
-			p.skipComment()
-		} else if cur == "*" && pre == "/" {
-			p.appendToken(token)
-			token = ""
-			p.skipMultiLineComment()
-		} else if cur == "\"" {
+
+		if cur == "-" {
+			if (p.size == p.i + 1) {
+				return errors.New("")
+			}
+			p.i += 1
+			if p.char() == "-" {
+				p.appendToken(token)
+				token = ""
+				p.skipComment()
+				p.i += 1
+				continue
+			} else {
+				token += cur
+			}
+		} else if cur == "/" {
+			if (p.size == p.i + 1) {
+				return errors.New("")
+			}
+			p.i += 1
+			if p.char() == "*" {
+				p.appendToken(token)
+				token = ""
+				if err := p.skipMultiLineComment(); err != nil {
+					return err
+				}
+				p.i += 1
+				continue
+			} else {
+				token += cur
+			}
+		} else if cur == "*" {
+			if (p.size == p.i + 1) {
+				return errors.New("")
+			}
+			p.i += 1
+			if p.char() == "/" {
+				return errors.New("")
+			} else {
+				token += cur
+			}
+		} 
+
+		cur = p.char()
+		
+		if cur == "\"" {
 			if token != "" {
 				return errors.New("")
 			}
@@ -75,7 +111,7 @@ func (p *sqliteParser) Tokenize() error {
 				return err
 			}
 			p.appendToken(str)
-		} else if cur == " " {
+		} else if cur == " " || cur == "\t"{
 			p.appendToken(token)
 			token = ""
 		} else if cur == "\n" {
@@ -89,12 +125,14 @@ func (p *sqliteParser) Tokenize() error {
 			token = ""
 		} else if cur == "　" {
 			return errors.New("")
-		} else if cur == "/" && pre == "*" {
-			return errors.New("")
 		} else {
 			token += cur
 		}
-		pre = cur
+		p.i += 1
+	}
+
+	if token != "" {
+		return errors.New("")
 	}
 	return nil
 }
@@ -113,18 +151,28 @@ func (p *sqliteParser) skipComment() {
 }
 
 func (p *sqliteParser) skipMultiLineComment() error {
-	p.i += 1
+	p.i += 2
 	cur := ""
 	for p.size > p.i {
 		cur = p.char()
 		if cur == "\n" {
 			p.appendToken("\n")
-		}
-		if p.char() == "*/" {
-			return nil
-		}
-		if p.char() == "/*" {
-			return p.skipMultiLineComment()
+		} else if cur == "*" {
+			if p.size == p.i + 1 {
+				break
+			}
+			p.i += 1
+			if p.char() == "/" {
+				return nil
+			}
+		} else if cur == "/" {
+			if p.size == p.i + 1 {
+				break
+			}
+			p.i += 1
+			if p.char() == "*" {
+				return p.skipMultiLineComment()
+			}
 		}
 		p.i += 1
 	}
@@ -138,7 +186,7 @@ func (p *sqliteParser) tokenizeStringDoubleQuote() (string, error) {
 	for p.size > p.i {
 		cur = p.char()
 		if cur == "\"" {
-			return str + cur, nil			
+			return str + cur, nil
 		} else if cur == "'" {
 			s, err := p.tokenizeStringSingleQuote()
 			str += s
