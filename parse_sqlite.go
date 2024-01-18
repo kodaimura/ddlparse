@@ -12,11 +12,11 @@ type sqliteParser struct {
 	ddl string
 	ddlr []rune
 	tokens []string
+	validatedTokens []string
 	size int
 	i int
 	line int
 	flg bool
-	validatedTokens []string
 	tables []Table
 }
 
@@ -24,11 +24,31 @@ func newSQLiteParser(ddl string) parser {
 	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
-func (p *sqliteParser) tokenizeError() error {
-	if p.size <= p.i {
-		return NewValidateError(p.line, string(p.ddlr[p.size - 1]))
+func (p *sqliteParser) isOutOfRange() bool {
+	return p.i > p.size - 1
+}
+
+func (p *sqliteParser) token() string {
+	return p.tokens[p.i]
+}
+
+func (p *sqliteParser) Validate() error {
+	if err := p.tokenize(); err != nil {
+		return err
 	}
-	return NewValidateError(p.line, string(p.ddlr[p.i]))
+	return p.validate()
+}
+
+func (p *sqliteParser) tokenize() error {
+	p.initT()
+	return p.tokenizeProc()
+}
+
+func (p *sqliteParser) initT() {
+	p.tokens = []string{}
+	p.i = 0
+	p.line = 1
+	p.size = len(p.ddlr)
 }
 
 func (p *sqliteParser) char() string {
@@ -41,8 +61,14 @@ func (p *sqliteParser) appendToken(token string) {
 	}
 }
 
-func (p *sqliteParser) tokenize() error {
-	p.initT()
+func (p *sqliteParser) tokenizeError() error {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, string(p.ddlr[p.size - 1]))
+	}
+	return NewValidateError(p.line, string(p.ddlr[p.i]))
+}
+
+func (p *sqliteParser) tokenizeProc() error {
 	token := ""
 	cur := ""
 	for p.size > p.i {
@@ -272,39 +298,19 @@ func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
 	return str, p.tokenizeError()
 }
 
-func (p *sqliteParser) Parse() ([]Table, error) {
-	if err := p.Validate(); err != nil {
-		return nil, err
-	}
-	p.initP()
-	if err := p.parse(); err != nil {
-		return nil, err
-	}
-	return p.tables, nil
-}
 
-func (p *sqliteParser) Validate() error {
-	p.initT()
-	if err := p.tokenize(); err != nil {
-		return err
-	}
+func (p *sqliteParser) validate() error {
 	p.initV()
-	return p.validate()
+	return p.validateProc()
 }
 
-func (p *sqliteParser) token() string {
-	return p.tokens[p.i]
-}
-
-func (p *sqliteParser) isOutOfRange() bool {
-	return p.i > p.size - 1
-}
-
-func (p *sqliteParser) syntaxError() error {
-	if p.isOutOfRange() {
-		return NewValidateError(p.line, p.tokens[p.size - 1])
-	}
-	return NewValidateError(p.line, p.tokens[p.i])
+func (p *sqliteParser) initV() {
+	p.validatedTokens = []string{}
+	p.i = -1
+	p.line = 1
+	p.size = len(p.tokens)
+	p.flg = false
+	p.next()
 }
 
 func (p *sqliteParser) flgOn() {
@@ -313,30 +319,6 @@ func (p *sqliteParser) flgOn() {
 
 func (p *sqliteParser) flgOff() {
 	p.flg = false
-}
-
-func (p *sqliteParser) initV() {
-	p.i = -1
-	p.line = 1
-	p.size = len(p.tokens)
-	p.validatedTokens = []string{}
-	p.flg = false
-	p.next()
-}
-
-func (p *sqliteParser) initP() {
-	p.i = 0
-	p.line = 0
-	p.size = len(p.validatedTokens)
-	p.flg = false
-	p.tokens = p.validatedTokens
-}
-
-func (p *sqliteParser) initT() {
-	p.i = 0
-	p.line = 1
-	p.size = len(p.ddlr)
-	p.tokens = []string{}
 }
 
 func (p *sqliteParser) next() error {
@@ -359,26 +341,6 @@ func (p *sqliteParser) nextAux() error {
 	}
 }
 
-func (p *sqliteParser) isValidName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
-}
-
-func (p *sqliteParser) isValidQuotedName(name string) bool {
-	return true
-}
-
-func (p *sqliteParser) validate() error {
-	if (p.isOutOfRange()) {
-		return nil
-	}
-	if err := p.validateCreateTable(); err != nil {
-		return err
-	}
-	return p.validate()
-}
-
 func (p *sqliteParser) matchKeyword(keywords ...string) bool {
 	return contains(
 		append(
@@ -390,6 +352,24 @@ func (p *sqliteParser) matchKeyword(keywords ...string) bool {
 func (p *sqliteParser) matchSymbol(symbols ...string) bool {
 	return contains(symbols, p.token())
 }
+
+func (p *sqliteParser) validateProc() error {
+	if (p.isOutOfRange()) {
+		return nil
+	}
+	if err := p.validateCreateTable(); err != nil {
+		return err
+	}
+	return p.validateProc()
+}
+
+func (p *sqliteParser) syntaxError() error {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, p.tokens[p.size - 1])
+	}
+	return NewValidateError(p.line, p.tokens[p.i])
+}
+
 
 func (p *sqliteParser) validateKeyword(keywords ...string) error {
 	if (p.isOutOfRange()) {
@@ -415,6 +395,16 @@ func (p *sqliteParser) validateSymbol(symbols ...string) error {
 		return nil
 	}
 	return p.syntaxError()
+}
+
+func (p *sqliteParser) isValidName(name string) bool {
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return pattern.MatchString(name) && 
+		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+}
+
+func (p *sqliteParser) isValidQuotedName(name string) bool {
+	return true
 }
 
 func (p *sqliteParser) validateName() error {
@@ -1044,8 +1034,32 @@ func (p *sqliteParser) validateTableOptions() error {
 	return nil
 }
 
+func (p *sqliteParser) Parse() ([]Table, error) {
+	if err := p.Validate(); err != nil {
+		return nil, err
+	}
+	if err := p.parse(); err != nil {
+		return nil, err
+	}
+	return p.tables, nil
+}
+
+
 func (p *sqliteParser) parse() error {
-	if p.size <= p.i {
+	p.initP()
+	return p.parseProc()
+}
+
+func (p *sqliteParser) initP() {
+	p.tables = []Table{}
+	p.i = 0
+	p.line = 0
+	p.size = len(p.validatedTokens)
+	p.tokens = p.validatedTokens
+}
+
+func (p *sqliteParser) parseProc() error {
+	if p.isOutOfRange() {
 		return nil
 	} else {
 		table, err := p.parseTable()
@@ -1055,7 +1069,7 @@ func (p *sqliteParser) parse() error {
 		p.tables = append(p.tables, table)
 	}
 
-	return p.parse()
+	return p.parseProc()
 }
 
 func (p *sqliteParser) parseTable() (Table, error) {
