@@ -418,8 +418,7 @@ func (p *sqliteParser) validateSymbol(symbols ...string) error {
 }
 
 func (p *sqliteParser) validateName() error {
-	tmp := p.token()[0:1]
-	if tmp == "\"" || tmp == "'" || tmp == "`" {
+	if isStringToken(p.token()) {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
@@ -862,14 +861,13 @@ func (p *sqliteParser) validateExprAux() error {
 }
 
 func (p *sqliteParser) validateLiteralValue() error {
-	if isNumeric(p.token()) {
+	if isNumericToken(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
 		return nil
 	}
-	tmp := p.token()[0:1]
-	if tmp == "\"" || tmp == "'" || tmp == "`" {
+	if isStringToken(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -1083,32 +1081,28 @@ func (p *sqliteParser) parseTable() (Table, error) {
 }
 
 func (p *sqliteParser) parseTableName() (string, string) {
-	schemaName := ""
+	schemaName := p.parseName()
 	tableName := ""
-
-	tmp := p.token()[0:1]
-	if tmp == "\"" || tmp == "'" || tmp == "`" {
-		tmp = p.token()[1 : len(p.token())-1]
-	} else {
-		tmp = p.token()
-	}
-	p.i += 1
 
 	if p.token() == "." {
 		p.i += 1
-		schemaName = tmp
-		tmp = p.token()[0:1]
-		if tmp == "\"" || tmp == "'" || tmp == "`" {
-			tableName = p.token()[1 : len(p.token())-1]
-		} else {
-			tableName = p.token()
-		}
-		p.i += 1
+		tableName = p.parseName()
 	} else {
-		tableName = tmp
+		tableName = schemaName
+		schemaName = ""
 	}
 
 	return schemaName, tableName 
+}
+
+func (p *sqliteParser) parseName() string {
+	token := p.token()
+	p.i += 1
+	if isStringToken(token) {
+		return token[1 : len(token)-1]
+	} else {
+		return token
+	}
 }
 
 func (p *sqliteParser) parseColumns() ([]Column, error) {
@@ -1135,13 +1129,7 @@ func (p *sqliteParser) parseColumns() ([]Column, error) {
 }
 
 func (p *sqliteParser) parseColumn(columns *[]Column) error {
-	name := ""
-	tmp := p.token()[0:1]
-	if tmp == "\"" || tmp == "'" || tmp == "`" {
-		name = p.token()[1 : len(p.token())-1]
-	} else {
-		name = p.token()
-	}
+	name := p.parseName()
 
 	for _, column := range *columns {
 		if column.Name == name {
@@ -1151,7 +1139,6 @@ func (p *sqliteParser) parseColumn(columns *[]Column) error {
 	
 	var column Column
 	column.Name = name
-	p.i += 1
 	column.DataType = p.token()
 	p.i += 1
 	p.parseConstraint(&column)
@@ -1229,13 +1216,25 @@ func (p *sqliteParser) parseExprAux() {
 
 func (p *sqliteParser) parseLiteralValue() interface{} {
 	token := p.token()
-	if isNumeric(token) {
+	p.i += 1
+	if isNumericToken(token) {
+		n, _ := strconv.ParseFloat(token, 64)
+		return n
+	}
+	if isStringToken(token) {
+		return token[1 : len(token)-1]
+	}
+	return token
+}
+
+func (p *sqliteParser) parseStringValue() interface{} {
+	token := p.token()
+	if isNumericToken(token) {
 		p.i += 1
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
 	}
-	tmp := token[0:1]
-	if tmp == "\"" || tmp == "'" || tmp == "`" {
+	if isStringToken(token) {
 		p.i += 1
 		return token[1 : len(token)-1]
 	}

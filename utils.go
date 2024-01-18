@@ -43,7 +43,12 @@ func remove(slice []string, element string) []string {
     return ret
 }
 
-func isNumeric(s string) bool {
-	_, err := strconv.ParseFloat(s, 64)
+func isNumericToken(token string) bool {
+	_, err := strconv.ParseFloat(token, 64)
 	return err == nil
+}
+
+func isStringToken(token string) bool {
+	tmp := token[0:1]
+	return tmp == "\"" || tmp == "'" || tmp == "`"
 }
