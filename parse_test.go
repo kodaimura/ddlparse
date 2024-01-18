@@ -624,4 +624,52 @@ func TestParse(t *testing.T) {
 		t.Errorf("failed")
 	}
 	fmt.Println(tables)
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER,
+		aaaa INTEGER
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER PRIMARY KEY,
+		PRIMARY KEY(aaaa)
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER UNIQUE,
+		UNIQUE(aaaa)
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER UNIQUE,
+		UNIQUE(bbbb)
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
 }

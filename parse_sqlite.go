@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"fmt"
 	"strconv"
 	"errors"
 	"regexp"
@@ -1064,7 +1065,6 @@ func (p *sqliteParser) parseTable() (Table, error) {
 	p.i += 2
 
 	schemaName, tableName := p.parseTableName()
-
 	table.Schema = schemaName
 	table.Name = tableName
 
@@ -1103,6 +1103,7 @@ func (p *sqliteParser) parseTableName() (string, string) {
 		} else {
 			tableName = p.token()
 		}
+		p.i += 1
 	} else {
 		tableName = tmp
 	}
@@ -1111,7 +1112,7 @@ func (p *sqliteParser) parseTableName() (string, string) {
 }
 
 func (p *sqliteParser) parseColumns() ([]Column, error) {
-	p.i += 2
+	p.i += 1
 	var columns []Column
 	for !p.matchSymbol(")") {
 		if p.matchSymbol(",") {
@@ -1144,7 +1145,7 @@ func (p *sqliteParser) parseColumn(columns *[]Column) error {
 
 	for _, column := range *columns {
 		if column.Name == name {
-			return errors.New("")
+			return NewParseError(fmt.Sprintf("Duplicate column name: '%s'.", name))
 		}
 	}
 	
@@ -1196,7 +1197,7 @@ func (p *sqliteParser) parseConstraint(column *Column) error {
 		return p.parseConstraint(column)
 	}
 
-	return errors.New("")
+	return errors.New("program error")
 }
 
 func (p *sqliteParser) parseDefaultValue() interface{} {
@@ -1265,21 +1266,21 @@ func (p *sqliteParser) parseTableConstraint(columns *[]Column) error {
 			exists = true
 			if c == "PRIMARY" {
 				if column.IsPK {
-					return errors.New("")
+					return NewParseError(fmt.Sprintf("Multiple primary key defined: '%s'.", name))
 				}
 				(*columns)[i].IsPK = true
 				break
 			}
 			if c == "UNIQUE" {
 				if column.IsUnique {
-					return errors.New("")
+					return NewParseError(fmt.Sprintf("Multiple unique constraint defined: '%s'.", name))
 				}
 				(*columns)[i].IsUnique = true
 				break
 			}
 		}
 		if !exists {
-			return errors.New("")
+			return NewParseError(fmt.Sprintf("Unknown column: '%s'.", name))
 		}
 	}
 	return nil
@@ -1297,7 +1298,7 @@ func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 			p.i += 1
 			continue
 		} else {
-			return nil, errors.New("")
+			return nil, errors.New("program error")
 		}
 	}
 	p.i += 1
