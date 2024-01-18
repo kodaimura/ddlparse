@@ -24,12 +24,22 @@ func newSQLiteParser(ddl string) parser {
 	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
-func (p *sqliteParser) isOutOfRange() bool {
-	return p.i > p.size - 1
+func (p *sqliteParser) char() string {
+	return string(p.ddlr[p.i])
 }
 
 func (p *sqliteParser) token() string {
 	return p.tokens[p.i]
+}
+
+func (p *sqliteParser) appendToken(token string) {
+	if (token != "") {
+		p.tokens = append(p.tokens, token)
+	}
+}
+
+func (p *sqliteParser) isOutOfRange() bool {
+	return p.i > p.size - 1
 }
 
 func (p *sqliteParser) Validate() error {
@@ -38,6 +48,41 @@ func (p *sqliteParser) Validate() error {
 	}
 	return p.validate()
 }
+
+/*
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+  TOKENIZE: 
+    Transform ddl (string) to tokens([]string). 
+	And remove sql comments.
+	Return an ValidateError 
+	 if the closing part of a multiline comment or string is not found.
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+Example:
+
+***** ddl *****
+"CREATE TABLE IF NOT users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL,
+	password TEXT NOT NULL, --hashing
+	created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+	updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+	UNIQUE(name)
+);"
+
+***** tokens *****
+[CREATE TABLE IF NOT users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
+ name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
+ DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
+ DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n UNIQUE ( name ) \n ) ;]
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+*/
 
 func (p *sqliteParser) tokenize() error {
 	p.initT()
@@ -51,15 +96,6 @@ func (p *sqliteParser) initT() {
 	p.size = len(p.ddlr)
 }
 
-func (p *sqliteParser) char() string {
-	return string(p.ddlr[p.i])
-}
-
-func (p *sqliteParser) appendToken(token string) {
-	if (token != "") {
-		p.tokens = append(p.tokens, token)
-	}
-}
 
 func (p *sqliteParser) tokenizeError() error {
 	if p.isOutOfRange() {
@@ -82,7 +118,7 @@ func (p *sqliteParser) tokenizeProc() error {
 			if p.char() == "-" {
 				p.appendToken(token)
 				token = ""
-				p.skipComment()
+				p.tokenizeSkipComment()
 				p.i += 1
 				continue
 			} else {
@@ -96,7 +132,7 @@ func (p *sqliteParser) tokenizeProc() error {
 			if p.char() == "*" {
 				p.appendToken(token)
 				token = ""
-				if err := p.skipMultiLineComment(); err != nil {
+				if err := p.tokenizeSkipMultiLineComment(); err != nil {
 					return err
 				}
 				p.i += 1
@@ -172,7 +208,7 @@ func (p *sqliteParser) tokenizeProc() error {
 	return nil
 }
 
-func (p *sqliteParser) skipComment() {
+func (p *sqliteParser) tokenizeSkipComment() {
 	p.i += 1
 	for p.size > p.i {
 		if p.char() == "\n" {
@@ -185,7 +221,7 @@ func (p *sqliteParser) skipComment() {
 	return
 }
 
-func (p *sqliteParser) skipMultiLineComment() error {
+func (p *sqliteParser) tokenizeSkipMultiLineComment() error {
 	p.i += 2
 	cur := ""
 	for p.size > p.i {
@@ -206,7 +242,7 @@ func (p *sqliteParser) skipMultiLineComment() error {
 			}
 			p.i += 1
 			if p.char() == "*" {
-				return p.skipMultiLineComment()
+				return p.tokenizeSkipMultiLineComment()
 			}
 		}
 		p.i += 1
@@ -298,6 +334,36 @@ func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
 	return str, p.tokenizeError()
 }
 
+
+/*
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+  VALIDATE: 
+    Check the syntax of DDL (tokens). 
+    And eliminate unnecessary tokens during parsing.
+	Return an ValidateError if validation fails.
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+Example:
+
+***** tokens *****
+[CREATE TABLE IF NOT users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
+ name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
+ DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
+ DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n UNIQUE ( name ) \n ) ;]
+
+***** validatedTokens *****
+[CREATE TABLE users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
+ name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
+ DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
+ DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n UNIQUE ( name ) \n ) ;]
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+*/
 
 func (p *sqliteParser) validate() error {
 	p.initV()
@@ -1033,6 +1099,50 @@ func (p *sqliteParser) validateTableOptions() error {
 	p.flgOn()
 	return nil
 }
+
+/*
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+  PARSE: 
+    Tokenize, validate and convert to a Table object and return it.
+	Return an ParseError if there are errors other than syntax errors in the DDL.
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+Example:
+
+***** ddl *****
+"CREATE TABLE IF NOT users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NOT NULL,
+	password TEXT NOT NULL, --hashing
+	created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+	updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+	UNIQUE(name)
+);"
+
+***** Table *****
+{ 
+	Name: users 
+	Columns: [
+		{ Name: id, DataType: INTEGER, IsPK: true, IsNotNull: false, 
+			IsUnique: false, IsAutoIncrement: true, Default: nil },
+		{ Name: name, DataType: TEXT, IsPK: false, IsNotNull: true, 
+			IsUnique: true, IsAutoIncrement: false, Default: nil },
+		{ Name: password, DataType: TEXT, IsPK: false, IsNotNull: true, 
+			IsUnique: true, IsAutoIncrement: false, Default: nil },
+		{ Name: created_at, DataType: TEXT, IsPK: false, IsNotNull: true, 
+			IsUnique: true, IsAutoIncrement: false, Default: func(){} },
+		{ Name: updated_at, DataType: TEXT, IsPK: false, IsNotNull: true, 
+			IsUnique: true, IsAutoIncrement: false, Default: func(){} },
+	]
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+*/
 
 func (p *sqliteParser) Parse() ([]Table, error) {
 	if err := p.Validate(); err != nil {
