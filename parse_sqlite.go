@@ -10,7 +10,6 @@ import (
 
 type sqliteParser struct {
 	ddl string
-	ddlr []rune
 	tokens []string
 	validatedTokens []string
 	size int
@@ -20,17 +19,15 @@ type sqliteParser struct {
 	tables []Table
 }
 
-func newSQLiteParser(ddl string) parser {
-	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
-}
 
-func (p *sqliteParser) char() string {
-	return string(p.ddlr[p.i])
+func newSQLiteParser(ddl string) parser {
+	return &sqliteParser{ddl: ddl}
 }
 
 func (p *sqliteParser) token() string {
 	return p.tokens[p.i]
 }
+
 
 func (p *sqliteParser) appendToken(token string) {
 	if (token != "") {
@@ -38,300 +35,9 @@ func (p *sqliteParser) appendToken(token string) {
 	}
 }
 
+
 func (p *sqliteParser) isOutOfRange() bool {
 	return p.i > p.size - 1
-}
-
-func (p *sqliteParser) Validate() error {
-	if err := p.tokenize(); err != nil {
-		return err
-	}
-	return p.validate()
-}
-
-/*
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-
-  TOKENIZE: 
-    Transform ddl (string) to tokens([]string). 
-	And remove sql comments.
-	Return an ValidateError 
-	 if the closing part of a multiline comment or string is not found.
-
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-
-Example:
-
-***** ddl *****
-"CREATE TABLE IF NOT users (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT NOT NULL,
-	password TEXT NOT NULL, --hashing
-	created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-	updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-	UNIQUE(name)
-);"
-
-***** tokens *****
-[CREATE TABLE IF NOT users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
- name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
- DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
- DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n UNIQUE ( name ) \n ) ;]
-
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-*/
-
-func (p *sqliteParser) tokenize() error {
-	p.initT()
-	return p.tokenizeProc()
-}
-
-func (p *sqliteParser) initT() {
-	p.tokens = []string{}
-	p.i = 0
-	p.line = 1
-	p.size = len(p.ddlr)
-}
-
-
-func (p *sqliteParser) tokenizeError() error {
-	if p.isOutOfRange() {
-		return NewValidateError(p.line, string(p.ddlr[p.size - 1]))
-	}
-	return NewValidateError(p.line, string(p.ddlr[p.i]))
-}
-
-func (p *sqliteParser) tokenizeProc() error {
-	token := ""
-	cur := ""
-	for p.size > p.i {
-		cur = p.char()
-
-		if cur == "-" {
-			if (p.size == p.i + 1) {
-				return p.tokenizeError()
-			}
-			p.i += 1
-			if p.char() == "-" {
-				p.appendToken(token)
-				token = ""
-				p.tokenizeSkipComment()
-				p.i += 1
-				continue
-			} else {
-				token += cur
-			}
-		} else if cur == "/" {
-			if (p.size == p.i + 1) {
-				return p.tokenizeError()
-			}
-			p.i += 1
-			if p.char() == "*" {
-				p.appendToken(token)
-				token = ""
-				if err := p.tokenizeSkipMultiLineComment(); err != nil {
-					return err
-				}
-				p.i += 1
-				continue
-			} else {
-				token += cur
-			}
-		} else if cur == "*" {
-			if (p.size == p.i + 1) {
-				return p.tokenizeError()
-			}
-			p.i += 1
-			if p.char() == "/" {
-				p.i -= 1
-				return p.tokenizeError()
-			} else {
-				token += cur
-			}
-		} 
-
-		cur = p.char()
-		
-		if cur == "\"" {
-			if token != "" {
-				return p.tokenizeError()
-			}
-			str, err := p.tokenizeStringDoubleQuote()
-			if err != nil {
-				return err
-			}
-			p.appendToken(str)
-		} else if cur == "'" {
-			if token != "" {
-				return p.tokenizeError()
-			}
-			str, err := p.tokenizeStringSingleQuote()
-			if err != nil {
-				return err
-			}
-			p.appendToken(str)
-		} else if cur == "`" {
-			if token != "" {
-				return p.tokenizeError()
-			}
-			str, err := p.tokenizeStringBackQuote()
-			if err != nil {
-				return err
-			}
-			p.appendToken(str)
-		} else if cur == " " || cur == "\t"{
-			p.appendToken(token)
-			token = ""
-		} else if cur == "\n" {
-			p.line += 1
-			p.appendToken(token)
-			p.appendToken(cur)
-			token = ""
-		} else if cur == "(" || cur == ")" || cur == "," || cur == "." || cur == ";" {
-			p.appendToken(token)
-			p.appendToken(cur)
-			token = ""
-		} else if cur == "　" {
-			return p.tokenizeError()
-		} else {
-			token += cur
-		}
-		p.i += 1
-	}
-
-	if token != "" {
-		return p.tokenizeError()
-	}
-	return nil
-}
-
-func (p *sqliteParser) tokenizeSkipComment() {
-	p.i += 1
-	for p.size > p.i {
-		if p.char() == "\n" {
-			p.line += 1
-			p.appendToken("\n")
-			break
-		}
-		p.i += 1
-	}
-	return
-}
-
-func (p *sqliteParser) tokenizeSkipMultiLineComment() error {
-	p.i += 2
-	cur := ""
-	for p.size > p.i {
-		cur = p.char()
-		if cur == "\n" {
-			p.appendToken("\n")
-		} else if cur == "*" {
-			if p.size == p.i + 1 {
-				break
-			}
-			p.i += 1
-			if p.char() == "/" {
-				return nil
-			}
-		} else if cur == "/" {
-			if p.size == p.i + 1 {
-				break
-			}
-			p.i += 1
-			if p.char() == "*" {
-				return p.tokenizeSkipMultiLineComment()
-			}
-		}
-		p.i += 1
-	}
-	return p.tokenizeError()
-}
-
-func (p *sqliteParser) tokenizeStringDoubleQuote() (string, error) {
-	p.i += 1
-	str := "\""
-	cur := ""
-	for p.size > p.i {
-		cur = p.char()
-		if cur == "\"" {
-			return str + cur, nil
-		} else if cur == "'" {
-			s, err := p.tokenizeStringSingleQuote()
-			str += s
-			if err != nil {
-				return str, err
-			}
-		} else if cur == "`" {
-			s, err := p.tokenizeStringBackQuote()
-			str += s
-			if err != nil {
-				return str, err
-			}
-		} else {
-			str += cur
-		}
-		p.i += 1
-	}
-	return str, p.tokenizeError()
-}
-
-func (p *sqliteParser) tokenizeStringSingleQuote() (string, error) {
-	p.i += 1
-	str := "'"
-	cur := ""
-	for p.size > p.i {
-		cur = p.char()
-		if cur == "'" {
-			return str + cur, nil			
-		} else if cur == "\"" {
-			s, err := p.tokenizeStringDoubleQuote()
-			str += s
-			if err != nil {
-				return str, err
-			}
-		} else if cur == "`" {
-			s, err := p.tokenizeStringBackQuote()
-			str += s
-			if err != nil {
-				return str, err
-			}
-		} else {
-			str += cur
-		}
-		p.i += 1
-	}
-	return str, p.tokenizeError()
-}
-
-func (p *sqliteParser) tokenizeStringBackQuote() (string, error) {
-	p.i += 1
-	str := "`"
-	cur := ""
-	for p.size > p.i {
-		cur = p.char()
-		if cur == "`" {
-			return str + cur, nil			
-		} else if cur == "\"" {
-			s, err := p.tokenizeStringDoubleQuote()
-			str += s
-			if err != nil {
-				return str, err
-			}
-		} else if cur == "'" {
-			s, err := p.tokenizeStringSingleQuote()
-			str += s
-			if err != nil {
-				return str, err
-			}
-		} else {
-			str += cur
-		}
-		p.i += 1
-	}
-	return str, p.tokenizeError()
 }
 
 
@@ -365,10 +71,21 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
+func (p *sqliteParser) Validate() error {
+	tokens, err := Tokenize(p.ddl, SQLite)
+	if err != nil {
+		return err
+	}
+	p.tokens = tokens
+	return p.validate()
+}
+
+
 func (p *sqliteParser) validate() error {
 	p.initV()
 	return p.validateProc()
 }
+
 
 func (p *sqliteParser) initV() {
 	p.validatedTokens = []string{}
@@ -379,13 +96,16 @@ func (p *sqliteParser) initV() {
 	p.next()
 }
 
+
 func (p *sqliteParser) flgOn() {
 	p.flg = true
 }
 
+
 func (p *sqliteParser) flgOff() {
 	p.flg = false
 }
+
 
 func (p *sqliteParser) next() error {
 	if p.flg {
@@ -393,6 +113,7 @@ func (p *sqliteParser) next() error {
 	}
 	return p.nextAux()
 }
+
 
 func (p *sqliteParser) nextAux() error {
 	p.i += 1
@@ -407,6 +128,7 @@ func (p *sqliteParser) nextAux() error {
 	}
 }
 
+
 func (p *sqliteParser) matchKeyword(keywords ...string) bool {
 	return contains(
 		append(
@@ -415,9 +137,11 @@ func (p *sqliteParser) matchKeyword(keywords ...string) bool {
 		), p.token())
 }
 
+
 func (p *sqliteParser) matchSymbol(symbols ...string) bool {
 	return contains(symbols, p.token())
 }
+
 
 func (p *sqliteParser) validateProc() error {
 	if (p.isOutOfRange()) {
@@ -428,6 +152,7 @@ func (p *sqliteParser) validateProc() error {
 	}
 	return p.validateProc()
 }
+
 
 func (p *sqliteParser) syntaxError() error {
 	if p.isOutOfRange() {
@@ -450,6 +175,7 @@ func (p *sqliteParser) validateKeyword(keywords ...string) error {
 	return p.syntaxError()
 }
 
+
 func (p *sqliteParser) validateSymbol(symbols ...string) error {
 	if (p.isOutOfRange()) {
 		return p.syntaxError()
@@ -463,15 +189,18 @@ func (p *sqliteParser) validateSymbol(symbols ...string) error {
 	return p.syntaxError()
 }
 
+
 func (p *sqliteParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
 		!contains(ReservedWords_SQLite, strings.ToUpper(name))
 }
 
+
 func (p *sqliteParser) isValidQuotedName(name string) bool {
 	return true
 }
+
 
 func (p *sqliteParser) validateName() error {
 	if isStringToken(p.token()) {
@@ -492,6 +221,7 @@ func (p *sqliteParser) validateName() error {
 
 	return nil
 }
+
 
 func (p *sqliteParser) validateCreateTable() error {
 	p.flgOn()
@@ -537,6 +267,7 @@ func (p *sqliteParser) validateCreateTable() error {
 	return p.validateCreateTable()
 }
 
+
 func (p *sqliteParser) validateTableName() error {
 	if err := p.validateName(); err != nil {
 		return err
@@ -550,6 +281,7 @@ func (p *sqliteParser) validateTableName() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateColumns() error {
 	if err := p.validateColumn(); err != nil {
 		return err
@@ -560,6 +292,7 @@ func (p *sqliteParser) validateColumns() error {
 
 	return nil
 }
+
 
 func (p *sqliteParser) validateColumn() error {
 	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
@@ -578,14 +311,17 @@ func (p *sqliteParser) validateColumn() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateColumnName() error {
 	return p.validateName()
 }
+
 
 // Omitting data types is not supported.
 func (p *sqliteParser) validateColumnType() error {
 	return p.validateKeyword("TEXT", "NUMERIC", "INTEGER", "REAL", "NONE")
 }
+
 
 func (p *sqliteParser) validateColumnConstraint() error {
 	p.flgOff()
@@ -597,6 +333,7 @@ func (p *sqliteParser) validateColumnConstraint() error {
 	p.flgOn()
 	return p.validateColumnConstraintAux([]string{})
 }
+
 
 func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 	if p.matchKeyword("PRIMARY") {
@@ -682,6 +419,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConstraintPrimaryKey() error {
 	p.flgOn()
 	if err := p.validateKeyword("PRIMARY"); err != nil {
@@ -708,6 +446,7 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConstraintNotNull() error {
 	p.flgOn()
 	if err := p.validateKeyword("NOT"); err != nil {
@@ -724,6 +463,7 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConstraintUnique() error {
 	p.flgOn()
 	if err := p.validateKeyword("UNIQUE"); err != nil {
@@ -737,6 +477,7 @@ func (p *sqliteParser) validateConstraintUnique() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConstraintCheck() error {
 	p.flgOff()
 	if err := p.validateKeyword("CHECK"); err != nil {
@@ -748,6 +489,7 @@ func (p *sqliteParser) validateConstraintCheck() error {
 	p.flgOn()
 	return nil
 }
+
 
 func (p *sqliteParser) validateConstraintDefault() error {
 	p.flgOn()
@@ -766,6 +508,7 @@ func (p *sqliteParser) validateConstraintDefault() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConstraintCollate() error {
 	p.flgOff()
 	if err := p.validateKeyword("COLLATE"); err != nil {
@@ -777,6 +520,7 @@ func (p *sqliteParser) validateConstraintCollate() error {
 	p.flgOn()
 	return nil
 }
+
 
 func (p *sqliteParser) validateConstraintForeignKey() error {
 	p.flgOff()
@@ -800,6 +544,7 @@ func (p *sqliteParser) validateConstraintForeignKey() error {
 	p.flgOn()
 	return nil
 }
+
 
 func (p *sqliteParser) validateConstraintForeignKeyAux() error {
 	p.flgOff()
@@ -851,6 +596,7 @@ func (p *sqliteParser) validateConstraintForeignKeyAux() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConstraintGenerated() error {
 	p.flgOff()
 	if p.validateKeyword("GENERATED") == nil {
@@ -873,6 +619,7 @@ func (p *sqliteParser) validateConstraintGenerated() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateConflictClause() error {
 	p.flgOff()
 	if p.validateKeyword("ON") == nil {
@@ -887,6 +634,7 @@ func (p *sqliteParser) validateConflictClause() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateExpr() error {
 	if err := p.validateSymbol("("); err != nil {
 		return err
@@ -899,6 +647,7 @@ func (p *sqliteParser) validateExpr() error {
 	}
 	return nil
 }
+
 
 func (p *sqliteParser) validateExprAux() error {
 	if p.matchSymbol(")") {
@@ -915,6 +664,7 @@ func (p *sqliteParser) validateExprAux() error {
 	}
 	return p.validateExprAux()
 }
+
 
 func (p *sqliteParser) validateLiteralValue() error {
 	if isNumericToken(p.token()) {
@@ -936,6 +686,7 @@ func (p *sqliteParser) validateLiteralValue() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateTableConstraint() error {
 	p.flgOff()
 	if p.validateKeyword("CONSTRAINT") == nil{
@@ -946,6 +697,7 @@ func (p *sqliteParser) validateTableConstraint() error {
 	p.flgOn()
 	return p.validateTableConstraintAux()
 }
+
 
 func (p *sqliteParser) validateTableConstraintAux() error {
 	if p.matchKeyword("PRIMARY") {
@@ -966,6 +718,7 @@ func (p *sqliteParser) validateTableConstraintAux() error {
 
 	return p.syntaxError()
 }
+
 
 func (p *sqliteParser) validateTablePrimaryKey() error {
 	p.flgOn()
@@ -992,6 +745,7 @@ func (p *sqliteParser) validateTablePrimaryKey() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateTableUnique() error {
 	p.flgOn()
 	if err := p.validateKeyword("UNIQUE"); err != nil {
@@ -1014,6 +768,7 @@ func (p *sqliteParser) validateTableUnique() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateTableCheck() error {
 	p.flgOff()
 	if err := p.validateKeyword("CHECK"); err != nil {
@@ -1025,6 +780,7 @@ func (p *sqliteParser) validateTableCheck() error {
 	p.flgOn()
 	return nil
 }
+
 
 func (p *sqliteParser) validateTableForeignKey() error {
 	p.flgOff()
@@ -1050,6 +806,7 @@ func (p *sqliteParser) validateTableForeignKey() error {
 	return nil
 }
 
+
 func (p *sqliteParser) validateCommaSeparatedColumnNames() error {
 	if err := p.validateColumnName(); err != nil {
 		return err
@@ -1062,6 +819,7 @@ func (p *sqliteParser) validateCommaSeparatedColumnNames() error {
 	}
 	return nil
 }
+
 
 func (p *sqliteParser) validateTableOptions() error {
 	p.flgOff()
@@ -1099,6 +857,7 @@ func (p *sqliteParser) validateTableOptions() error {
 	p.flgOn()
 	return nil
 }
+
 
 /*
 ////////////////////////////////////////////////////////////////////////////////////
@@ -1160,6 +919,7 @@ func (p *sqliteParser) parse() error {
 	return p.parseProc()
 }
 
+
 func (p *sqliteParser) initP() {
 	p.tables = []Table{}
 	p.i = 0
@@ -1167,6 +927,7 @@ func (p *sqliteParser) initP() {
 	p.size = len(p.validatedTokens)
 	p.tokens = p.validatedTokens
 }
+
 
 func (p *sqliteParser) parseProc() error {
 	if p.isOutOfRange() {
@@ -1181,6 +942,7 @@ func (p *sqliteParser) parseProc() error {
 
 	return p.parseProc()
 }
+
 
 func (p *sqliteParser) parseTable() (Table, error) {
 	var table Table
@@ -1204,6 +966,7 @@ func (p *sqliteParser) parseTable() (Table, error) {
 	return table, nil
 }
 
+
 func (p *sqliteParser) parseTableName() (string, string) {
 	schemaName := p.parseName()
 	tableName := ""
@@ -1219,6 +982,7 @@ func (p *sqliteParser) parseTableName() (string, string) {
 	return schemaName, tableName 
 }
 
+
 func (p *sqliteParser) parseName() string {
 	token := p.token()
 	p.i += 1
@@ -1228,6 +992,7 @@ func (p *sqliteParser) parseName() string {
 		return token
 	}
 }
+
 
 func (p *sqliteParser) parseColumns() ([]Column, error) {
 	p.i += 1
@@ -1252,6 +1017,7 @@ func (p *sqliteParser) parseColumns() ([]Column, error) {
 	return columns, nil
 }
 
+
 func (p *sqliteParser) parseColumn(columns *[]Column) error {
 	name := p.parseName()
 
@@ -1270,6 +1036,7 @@ func (p *sqliteParser) parseColumn(columns *[]Column) error {
 	*columns = append(*columns, column)
 	return nil
 }
+
 
 func (p *sqliteParser) parseConstraint(column *Column) error {
 	if p.matchSymbol(",") {
@@ -1311,6 +1078,7 @@ func (p *sqliteParser) parseConstraint(column *Column) error {
 	return errors.New("program error")
 }
 
+
 func (p *sqliteParser) parseDefaultValue() interface{} {
 	if p.matchSymbol("(") {
 		expr := ""
@@ -1329,6 +1097,7 @@ func (p *sqliteParser) parseExpr(expr *string) {
 	p.i += 1
 }
 
+
 func (p *sqliteParser) parseExprAux(expr *string) {
 	if p.matchSymbol(")") {
 		return
@@ -1342,6 +1111,7 @@ func (p *sqliteParser) parseExprAux(expr *string) {
 	p.parseExprAux(expr)
 }
 
+
 func (p *sqliteParser) parseLiteralValue() interface{} {
 	token := p.token()
 	p.i += 1
@@ -1354,6 +1124,7 @@ func (p *sqliteParser) parseLiteralValue() interface{} {
 	}
 	return token
 }
+
 
 func (p *sqliteParser) parseStringValue() interface{} {
 	token := p.token()
@@ -1369,6 +1140,7 @@ func (p *sqliteParser) parseStringValue() interface{} {
 	p.i += 1
 	return token
 }
+
 
 func (p *sqliteParser) parseTableConstraint(columns *[]Column) error {
 	c := strings.ToUpper(p.token())
@@ -1413,6 +1185,7 @@ func (p *sqliteParser) parseTableConstraint(columns *[]Column) error {
 	return nil
 }
 
+
 func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 	p.i += 1
 	ls := []string{}
@@ -1431,6 +1204,7 @@ func (p *sqliteParser) parseCommaSeparatedColumnNames() ([]string, error) {
 	p.i += 1
 	return ls, nil
 }
+
 
 var ReservedWords_SQLite = []string{
 	"ABORT",
