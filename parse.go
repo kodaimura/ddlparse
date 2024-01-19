@@ -76,28 +76,16 @@ type parser interface {
 
 func ParseSQLite(ddl string) ([]Table, error) {
 	parser := newSQLiteParser(ddl)
-
-	if err := parser.Validate(); err != nil {
-		return []Table{}, err
-	}
 	return parser.Parse()
 }
 
 func ParsePostgreSQL(ddl string) ([]Table, error) {
 	parser := newPostgreSQLParser(ddl)
-
-	if err := parser.Validate(); err != nil {
-		return []Table{}, err
-	}
 	return parser.Parse()
 }
 
 func ParseMySQL(ddl string) ([]Table, error) {
 	parser := newMySQLParser(ddl)
-
-	if err := parser.Validate(); err != nil {
-		return []Table{}, err
-	}
 	return parser.Parse()
 }
 
@@ -117,18 +105,15 @@ func Validate(ddl string, rdbms Rdbms) error {
 
 func ValidateSQLite(ddl string) error {
 	parser := newSQLiteParser(ddl)
-
 	return parser.Validate()
 }
 
 func ValidatePostgreSQL(ddl string) error {
 	parser := newPostgreSQLParser(ddl)
-
 	return parser.Validate()
 }
 
 func ValidateMySQL(ddl string) error {
 	parser := newMySQLParser(ddl)
-
 	return parser.Validate()
 }
