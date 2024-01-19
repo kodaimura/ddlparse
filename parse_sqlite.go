@@ -1134,9 +1134,9 @@ Example:
 		{ Name: password, DataType: TEXT, IsPK: false, IsNotNull: true, 
 			IsUnique: true, IsAutoIncrement: false, Default: nil },
 		{ Name: created_at, DataType: TEXT, IsPK: false, IsNotNull: true, 
-			IsUnique: true, IsAutoIncrement: false, Default: func(){} },
+			IsUnique: true, IsAutoIncrement: false, Default: (DATETIME('now','localtime') },
 		{ Name: updated_at, DataType: TEXT, IsPK: false, IsNotNull: true, 
-			IsUnique: true, IsAutoIncrement: false, Default: func(){} },
+			IsUnique: true, IsAutoIncrement: false, Default: (DATETIME('now','localtime') },
 	]
 }
 
@@ -1313,29 +1313,33 @@ func (p *sqliteParser) parseConstraint(column *Column) error {
 
 func (p *sqliteParser) parseDefaultValue() interface{} {
 	if p.matchSymbol("(") {
-		p.parseExpr()
-		return func(){}
+		expr := ""
+		p.parseExpr(&expr)
+		return expr
 	} else {
 		return p.parseLiteralValue()
 	}
 }
 
-func (p *sqliteParser) parseExpr() {
+func (p *sqliteParser) parseExpr(expr *string) {
+	*expr +=  p.token()
 	p.i += 1
-	p.parseExprAux()
+	p.parseExprAux(expr)
+	*expr +=  p.token()
 	p.i += 1
 }
 
-func (p *sqliteParser) parseExprAux() {
+func (p *sqliteParser) parseExprAux(expr *string) {
 	if p.matchSymbol(")") {
 		return
 	}
 	if p.matchSymbol("(") {
-		p.parseExpr()
+		p.parseExpr(expr)
 		return
 	}
+	*expr += p.token()
 	p.i += 1
-	p.parseExprAux()
+	p.parseExprAux(expr)
 }
 
 func (p *sqliteParser) parseLiteralValue() interface{} {

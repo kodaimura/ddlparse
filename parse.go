@@ -28,7 +28,6 @@ type Column struct {
 	IsUnique bool
 	IsAutoIncrement bool
 	Default interface{}
-	//Check func(interface{}) bool
 }
 
 type ValidateError struct {
