@@ -249,14 +249,13 @@ func (l *lexer) lexSingleQuote(token *string) error {
 		}
 		l.appendToken(str)
 	}
-	l.next()
 	return nil
 }
 
 
 func (l *lexer) lexBackQuote(token *string) error {
 	c := l.char()
-	if c == "'" {
+	if c == "`" {
 		if *token != "" {
 			return l.lexError()
 		}
@@ -266,7 +265,6 @@ func (l *lexer) lexBackQuote(token *string) error {
 		}
 		l.appendToken(str)
 	}
-	l.next()
 	return nil
 }
 
