@@ -8,7 +8,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
-  TOKENIZE: 
+  lex: 
     Transform ddl (string) to tokens([]string). 
 	And remove sql comments.
 	Return an ValidateError 
@@ -19,7 +19,7 @@ import (
 
 Example:
 
-***** ddl *****
+***** DDL *****
 "CREATE TABLE IF NOT users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT NOT NULL,
@@ -29,7 +29,7 @@ Example:
 	UNIQUE(name)
 );"
 
-***** tokens *****
+***** Tokens *****
 [CREATE TABLE IF NOT users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
  name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
  DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
@@ -39,310 +39,335 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
+func Tokenize (ddl string, rdbms Rdbms) ([]string, error) {
 	lex := newLexer(ddl, rdbms)
-	if err := lex.tokenize(); err != nil {
-		return lex.tokens, err
+	if err := lex.Lex(); err != nil {
+		return lex.Tokens, err
 	}
-	return lex.tokens, nil
+	return lex.Tokens, nil
 }
 
+
 type lexer struct {
+	Tokens []string
 	rdbms Rdbms
 	ddlr []rune
-	tokens []string
 	size int
 	i int
 	line int
 }
 
+
 func newLexer(ddl string, rdbms Rdbms) *lexer {
 	return &lexer{ddlr: []rune(ddl), rdbms: rdbms}
 }
 
-func (p *lexer) next() error {
-	p.i += 1
-	if p.isOutOfRange() {
+
+func (l *lexer) next() error {
+	l.i += 1
+	if l.isOutOfRange() {
 		return errors.New("out of range")
 	}
 	return nil
 }
 
-func (p *lexer) char() string {
-	return string(p.ddlr[p.i])
+
+func (l *lexer) char() string {
+	return string(l.ddlr[l.i])
 }
 
-func (p *lexer) appendToken(token string) {
+
+func (l *lexer) appendToken(token string) {
 	if (token != "") {
-		p.tokens = append(p.tokens, token)
+		l.Tokens = append(l.Tokens, token)
 	}
 }
 
-func (p *lexer) isOutOfRange() bool {
-	return p.i > p.size - 1
+
+func (l *lexer) isOutOfRange() bool {
+	return l.i > l.size - 1
 }
 
-func (p *lexer) tokenizeError() error {
-	if p.isOutOfRange() {
-		return NewValidateError(p.line, string(p.ddlr[p.size - 1]))
+
+func (l *lexer) lexError() error {
+	if l.isOutOfRange() {
+		return NewValidateError(l.line, string(l.ddlr[l.size - 1]))
 	}
-	return NewValidateError(p.line, string(p.ddlr[p.i]))
+	return NewValidateError(l.line, string(l.ddlr[l.i]))
 }
 
-func (p *lexer) tokenize() error {
-	p.initT()
-	return p.tokenizeProc()
+
+func (l *lexer) Lex() error {
+	l.init()
+	return l.lexProc()
 }
 
-func (p *lexer) initT() {
-	p.tokens = []string{}
-	p.size = len(p.ddlr)
-	p.i = 0
-	p.line = 1
+
+func (l *lexer) init() {
+	l.Tokens = []string{}
+	l.size = len(l.ddlr)
+	l.i = 0
+	l.line = 1
 }
 
-func (p *lexer) tokenizeProc() error {
+
+func (l *lexer) lexProc() error {
 	token := ""
-	cur := ""
-	for p.size > p.i {
-		cur = p.char()
+	for l.size > l.i {
+		c := l.char()
 
-		if cur == "-" {
-			if err := p.tokenizeHyphen(&token); err != nil {
+		if c == "-" {
+			if err := l.lexHyphen(&token); err != nil {
 				return err
 			}
-		} else if cur == "/" {
-			if err := p.tokenizeSlash(&token); err != nil {
+		} else if c == "/" {
+			if err := l.lexSlash(&token); err != nil {
 				return err
 			}
-		} else if cur == "*" {
-			if err := p.tokenizeAsterisk(&token); err != nil {
+		} else if c == "*" {
+			if err := l.lexAsterisk(&token); err != nil {
 				return err
 			}
-		} else if cur == "\"" {
-			if err := p.tokenizeDoubleQuote(&token); err != nil {
+		} else if c == "\"" {
+			if err := l.lexDoubleQuote(&token); err != nil {
 				return err
 			}
-		} else if cur == "'" {
-			if err := p.tokenizeSingleQuote(&token); err != nil {
+		} else if c == "'" {
+			if err := l.lexSingleQuote(&token); err != nil {
 				return err
 			}
-		} else if cur == "`" {
-			if err := p.tokenizeBackQuote(&token); err != nil {
+		} else if c == "`" {
+			if err := l.lexBackQuote(&token); err != nil {
 				return err
 			}
-		} else if cur == " " || cur == "\t"{
-			p.tokenizeSpace(&token)
-		} else if cur == "\n" {
-			p.tokenizeEOL(&token)
-		} else if cur == "(" || cur == ")" || cur == "," || cur == "." || cur == ";" {
-			p.tokenizeSymbol(&token)
-		} else if cur == "　" {
-			return p.tokenizeError()
+		} else if c == " " || c == "\t"{
+			l.lexSpace(&token)
+
+		} else if c == "\n" {
+			l.lexEOL(&token)
+
+		} else if c == "(" || c == ")" || c == "," || c == "." || c == ";" {
+			l.lexSymbol(&token)
+
+		} else if c == "　" {
+			return l.lexError()
+
 		} else {
-			token += cur
-			p.next()
+			token += c
+			l.next()
 		}
 	}
-	p.appendToken(token)
+	l.appendToken(token)
 	return nil
 }
 
-func (p *lexer) tokenizeHyphen(token *string) error {
-	c := p.char()
+
+func (l *lexer) lexHyphen(token *string) error {
+	c := l.char()
 	if c == "-" {
-		if p.next() != nil {
-			return p.tokenizeError()
+		if l.next() != nil {
+			return l.lexError()
 		}
-		if p.char() == "-" {
-			p.appendToken(*token)
+		if l.char() == "-" {
+			l.appendToken(*token)
 			*token = ""
-			p.skipComment()
+			l.skipComment()
 		} else {
 			*token += c
 		}
-		p.next()
+		l.next()
 	}
 
 	return nil
 }
 
-func (p *lexer) tokenizeSlash(token *string) error {
-	c := p.char()
+
+func (l *lexer) lexSlash(token *string) error {
+	c := l.char()
 	if c == "/" {
-		if p.next() != nil {
-			return p.tokenizeError()
+		if l.next() != nil {
+			return l.lexError()
 		}
-		if p.char() == "*" {
-			p.appendToken(*token)
+		if l.char() == "*" {
+			l.appendToken(*token)
 			*token = ""
-			if err := p.skipMultiLineComment(); err != nil {
+			if err := l.skipMultiLineComment(); err != nil {
 				return err
 			}
 		} else {
 			*token += c
 		}
-		p.next()
+		l.next()
 	}
 	return nil
 }
 
-func (p *lexer) tokenizeAsterisk(token *string) error {
-	c := p.char()
+
+func (l *lexer) lexAsterisk(token *string) error {
+	c := l.char()
 	if c == "*" {
-		if p.next() != nil {
-			return p.tokenizeError()
+		if l.next() != nil {
+			return l.lexError()
 		}
-		if p.char() == "/" {
-			p.i -= 1
-			return p.tokenizeError()
+		if l.char() == "/" {
+			l.i -= 1
+			return l.lexError()
 		} else {
 			*token += c
 		}
-		p.next()
+		l.next()
 	} 
 	return nil
 }
 
-func (p *lexer) tokenizeDoubleQuote(token *string) error {
-	c := p.char()
+
+func (l *lexer) lexDoubleQuote(token *string) error {
+	c := l.char()
 	if c == "\"" {
 		if *token != "" {
-			return p.tokenizeError()
+			return l.lexError()
 		}
-		str, err := p.tokenizeStringDoubleQuote()
+		str, err := l.lexStringDoubleQuote()
 		if err != nil {
 			return err
 		}
-		p.appendToken(str)
+		l.appendToken(str)
 	}
 	return nil
 }
 
-func (p *lexer) tokenizeSingleQuote(token *string) error {
-	c := p.char()
+
+func (l *lexer) lexSingleQuote(token *string) error {
+	c := l.char()
 	if c == "'" {
 		if *token != "" {
-			return p.tokenizeError()
+			return l.lexError()
 		}
-		str, err := p.tokenizeStringSingleQuote()
+		str, err := l.lexStringSingleQuote()
 		if err != nil {
 			return err
 		}
-		p.appendToken(str)
+		l.appendToken(str)
 	}
-	p.next()
+	l.next()
 	return nil
 }
 
-func (p *lexer) tokenizeBackQuote(token *string) error {
-	c := p.char()
+
+func (l *lexer) lexBackQuote(token *string) error {
+	c := l.char()
 	if c == "'" {
 		if *token != "" {
-			return p.tokenizeError()
+			return l.lexError()
 		}
-		str, err := p.tokenizeStringBackQuote()
+		str, err := l.lexStringBackQuote()
 		if err != nil {
 			return err
 		}
-		p.appendToken(str)
+		l.appendToken(str)
 	}
-	p.next()
+	l.next()
 	return nil
 }
 
-func (p *lexer) tokenizeEOL(token *string) {
-	c := p.char()
+
+func (l *lexer) lexEOL(token *string) {
+	c := l.char()
 	if c == "\n" {
-		p.line += 1
-		p.appendToken(*token)
-		p.appendToken(c)
+		l.line += 1
+		l.appendToken(*token)
+		l.appendToken(c)
 		*token = ""
 	}
-	p.next()
+	l.next()
 	return
 }
 
-func (p *lexer) tokenizeSpace(token *string) {
-	c := p.char()
+
+func (l *lexer) lexSpace(token *string) {
+	c := l.char()
 	if c == " " || c == "\t" {
-		p.appendToken(*token)
+		l.appendToken(*token)
 		*token = ""
 	}
-	p.next()
+	l.next()
 	return
 }
 
-func (p *lexer) tokenizeSymbol(token *string) {
-	c := p.char()
+
+func (l *lexer) lexSymbol(token *string) {
+	c := l.char()
 	if c == "(" || c == ")" || c == "," || c == "." || c == ";" {
-		p.appendToken(*token)
-		p.appendToken(c)
+		l.appendToken(*token)
+		l.appendToken(c)
 		*token = ""
 	}
-	p.next()
+	l.next()
 	return
 }
 
-func (p *lexer) skipComment() {
-	p.next()
-	for !p.isOutOfRange() {
-		if p.char() == "\n" {
-			p.line += 1
-			p.appendToken("\n")
+
+func (l *lexer) skipComment() {
+	l.next()
+	for !l.isOutOfRange() {
+		if l.char() == "\n" {
+			l.line += 1
+			l.appendToken("\n")
 			break
 		}
-		p.next()
+		l.next()
 	}
 	return
 }
 
-func (p *lexer) skipMultiLineComment() error {
-	p.next()
+
+func (l *lexer) skipMultiLineComment() error {
+	l.next()
 	c := ""
-	for !p.isOutOfRange() {
-		c = p.char()
+	for !l.isOutOfRange() {
+		c = l.char()
 		if c == "\n" {
-			p.line += 1
-			p.appendToken("\n")
+			l.line += 1
+			l.appendToken("\n")
 		} else if c == "*" {
-			if p.next() != nil {
-				return p.tokenizeError()
+			if l.next() != nil {
+				return l.lexError()
 			}
-			if p.char() == "/" {
-				p.next()
+			if l.char() == "/" {
+				l.next()
 				return nil
 			}
 		} else if c == "/" {
-			if p.next() != nil {
-				return p.tokenizeError()
+			if l.next() != nil {
+				return l.lexError()
 			}
-			if p.char() == "*" {
-				return p.skipMultiLineComment()
+			if l.char() == "*" {
+				return l.skipMultiLineComment()
 			}
 		}
-		p.next()
+		l.next()
 	}
-	return p.tokenizeError()
+	return l.lexError()
 }
 
-func (p *lexer) tokenizeStringDoubleQuote() (string, error) {
-	p.next()
+
+func (l *lexer) lexStringDoubleQuote() (string, error) {
+	l.next()
 	str := "\""
 	c := ""
-	for !p.isOutOfRange() {
-		c = p.char()
+	for !l.isOutOfRange() {
+		c = l.char()
 		if c == "\"" {
-			p.next()
+			l.next()
 			return str + c, nil
 		} else if c == "'" {
-			s, err := p.tokenizeStringSingleQuote()
+			s, err := l.lexStringSingleQuote()
 			str += s
 			if err != nil {
 				return str, err
 			}
 		} else if c == "`" {
-			s, err := p.tokenizeStringBackQuote()
+			s, err := l.lexStringBackQuote()
 			str += s
 			if err != nil {
 				return str, err
@@ -350,28 +375,29 @@ func (p *lexer) tokenizeStringDoubleQuote() (string, error) {
 		} else {
 			str += c
 		}
-		p.next()
+		l.next()
 	}
-	return str, p.tokenizeError()
+	return str, l.lexError()
 }
 
-func (p *lexer) tokenizeStringSingleQuote() (string, error) {
-	p.next()
+
+func (l *lexer) lexStringSingleQuote() (string, error) {
+	l.next()
 	str := "'"
 	c := ""
-	for !p.isOutOfRange() {
-		c = p.char()
+	for !l.isOutOfRange() {
+		c = l.char()
 		if c == "'" {
-			p.next()
+			l.next()
 			return str + c, nil			
 		} else if c == "\"" {
-			s, err := p.tokenizeStringDoubleQuote()
+			s, err := l.lexStringDoubleQuote()
 			str += s
 			if err != nil {
 				return str, err
 			}
 		} else if c == "`" {
-			s, err := p.tokenizeStringBackQuote()
+			s, err := l.lexStringBackQuote()
 			str += s
 			if err != nil {
 				return str, err
@@ -379,28 +405,29 @@ func (p *lexer) tokenizeStringSingleQuote() (string, error) {
 		} else {
 			str += c
 		}
-		p.next()
+		l.next()
 	}
-	return str, p.tokenizeError()
+	return str, l.lexError()
 }
 
-func (p *lexer) tokenizeStringBackQuote() (string, error) {
-	p.next()
+
+func (l *lexer) lexStringBackQuote() (string, error) {
+	l.next()
 	str := "`"
 	c := ""
-	for !p.isOutOfRange() {
-		c = p.char()
+	for !l.isOutOfRange() {
+		c = l.char()
 		if c == "`" {
-			p.next()
+			l.next()
 			return str + c, nil			
 		} else if c == "\"" {
-			s, err := p.tokenizeStringDoubleQuote()
+			s, err := l.lexStringDoubleQuote()
 			str += s
 			if err != nil {
 				return str, err
 			}
 		} else if c == "'" {
-			s, err := p.tokenizeStringSingleQuote()
+			s, err := l.lexStringSingleQuote()
 			str += s
 			if err != nil {
 				return str, err
@@ -408,7 +435,7 @@ func (p *lexer) tokenizeStringBackQuote() (string, error) {
 		} else {
 			str += c
 		}
-		p.next()
+		l.next()
 	}
-	return str, p.tokenizeError()
+	return str, l.lexError()
 }

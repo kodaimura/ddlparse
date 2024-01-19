@@ -20,7 +20,7 @@ func TestTokenize(t *testing.T) {
 			updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
 		);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
 
-	tokens, err := tokenize(ddl, SQLite);
+	tokens, err := Tokenize(ddl, SQLite);
 	if err != nil {
 		fmt.Println(err.Error())
 		t.Errorf("failed")
@@ -32,7 +32,7 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE */
 	);`;
 
-	_, err = tokenize(ddl, SQLite);
+	_, err = Tokenize(ddl, SQLite);
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -44,7 +44,7 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE
 	);`;
 
-	_, err = tokenize(ddl, SQLite);
+	_, err = Tokenize(ddl, SQLite);
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -56,7 +56,7 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE "
 	);`;
 
-	_, err = tokenize(ddl, SQLite);
+	_, err = Tokenize(ddl, SQLite);
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -68,7 +68,7 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE '
 	);`;
 
-	_, err = tokenize(ddl, SQLite);
+	_, err = Tokenize(ddl, SQLite);
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
