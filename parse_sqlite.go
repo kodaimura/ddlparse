@@ -19,10 +19,10 @@ type sqliteParser struct {
 	tables []Table
 }
 
-
 func newSQLiteParser(ddl string) parser {
 	return &sqliteParser{ddl: ddl}
 }
+
 
 func (p *sqliteParser) token() string {
 	return p.tokens[p.i]
