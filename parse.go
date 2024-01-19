@@ -3,7 +3,6 @@ package ddlparse
 import (
 	"fmt"
 	"errors"
-	"strings"
 )
 
 type Rdbms string
@@ -132,27 +131,4 @@ func ValidateMySQL(ddl string) error {
 	parser := newMySQLParser(ddl)
 
 	return parser.Validate()
-}
-
-
-func tokenize(ddl string) []string {
-	ddl = strings.Replace(ddl, "(", " ( ", -1)
-	ddl = strings.Replace(ddl, ")", " ) ", -1)
-	ddl = strings.Replace(ddl, ";", " ; ", -1)
-	ddl = strings.Replace(ddl, "\"", " \" ", -1)
-	ddl = strings.Replace(ddl, "'", " ' ", -1)
-	ddl = strings.Replace(ddl, "`", " ` ", -1)
-	ddl = strings.Replace(ddl, ",", " , ", -1)
-	ddl = strings.Replace(ddl, ".", " . ", -1)
-	ddl = strings.Replace(ddl, "\n", " \n ", -1)
-	ddl = strings.Replace(ddl, "\t", " ", -1)
-	ddl = strings.Replace(ddl, "/*", " /* ", -1)
-	ddl = strings.Replace(ddl, "*/", " */ ", -1)
-	ddl = strings.Replace(ddl, "--", " -- ", -1)
-	ddl = strings.Replace(ddl, "#", " # ", -1)
-
-	return filter(
-		strings.Split(ddl, " "), 
-		func(s string) bool {return s != " " && s != ""},
-	)
 }

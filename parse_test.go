@@ -9,6 +9,7 @@ func newTestParser(ddl string) *sqliteParser {
 	return &sqliteParser{ddl: ddl, ddlr: []rune(ddl)}
 }
 
+
 func TestTokenize(t *testing.T) {
 	ddl := `CREATE TABLE IF NOT EXISTS users (
 			"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,19 +20,20 @@ func TestTokenize(t *testing.T) {
 			updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
 		);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
 
-	parser := newTestParser(ddl)
-	if err := parser.tokenize(); err != nil {
+	tokens, err := tokenize(ddl, SQLite);
+	if err != nil {
+		fmt.Println(err.Error())
 		t.Errorf("failed")
 	}
-	fmt.Println(parser.tokens)
+	fmt.Println(tokens)
 	
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE */
 	);`;
 
-	parser = newTestParser(ddl)
-	if err := parser.tokenize(); err != nil {
+	_, err = tokenize(ddl, SQLite);
+	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
@@ -42,8 +44,8 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE
 	);`;
 
-	parser = newTestParser(ddl)
-	if err := parser.tokenize(); err != nil {
+	_, err = tokenize(ddl, SQLite);
+	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
@@ -54,8 +56,8 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE "
 	);`;
 
-	parser = newTestParser(ddl)
-	if err := parser.tokenize(); err != nil {
+	_, err = tokenize(ddl, SQLite);
+	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
@@ -66,13 +68,78 @@ func TestTokenize(t *testing.T) {
 		email TEXT NOT NULL UNIQUE '
 	);`;
 
-	parser = newTestParser(ddl)
-	if err := parser.tokenize(); err != nil {
+	_, err = tokenize(ddl, SQLite);
+	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		t.Errorf("failed")
 	}
 }
+
+//func TestTokenize(t *testing.T) {
+//	ddl := `CREATE TABLE IF NOT EXISTS users (
+//			"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+//			'username' TEXT NOT NULL UNIQUE, * -
+//			password TEXT NOT NULL DEFAULT "aaaa'bbb'aaaa", --XXX
+//			email TEXT NOT NULL UNIQUE, /*aaa*/
+//			created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+//			updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
+//		);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
+//
+//	parser := newTestParser(ddl)
+//	if err := parser.tokenize(); err != nil {
+//		t.Errorf("failed")
+//	}
+//	fmt.Println(parser.tokens)
+//	
+//	ddl = `CREATE TABLE IF NOT EXISTS users (
+//		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+//		email TEXT NOT NULL UNIQUE */
+//	);`;
+//
+//	parser = newTestParser(ddl)
+//	if err := parser.tokenize(); err != nil {
+//		fmt.Println(err.Error())
+//	} else {
+//		t.Errorf("failed")
+//	}
+//
+//	ddl = `CREATE TABLE IF NOT EXISTS users (
+//		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT, /*
+//		email TEXT NOT NULL UNIQUE
+//	);`;
+//
+//	parser = newTestParser(ddl)
+//	if err := parser.tokenize(); err != nil {
+//		fmt.Println(err.Error())
+//	} else {
+//		t.Errorf("failed")
+//	}
+//
+//	ddl = `CREATE TABLE IF NOT EXISTS users (
+//		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+//		email TEXT NOT NULL UNIQUE "
+//	);`;
+//
+//	parser = newTestParser(ddl)
+//	if err := parser.tokenize(); err != nil {
+//		fmt.Println(err.Error())
+//	} else {
+//		t.Errorf("failed")
+//	}
+//
+//	ddl = `CREATE TABLE IF NOT EXISTS users (
+//		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+//		email TEXT NOT NULL UNIQUE '
+//	);`;
+//
+//	parser = newTestParser(ddl)
+//	if err := parser.tokenize(); err != nil {
+//		fmt.Println(err.Error())
+//	} else {
+//		t.Errorf("failed")
+//	}
+//}
 
 
 func TestValidate(t *testing.T) {

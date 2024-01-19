@@ -10,11 +10,11 @@ type mysqlParser struct {
 	ddl string
 	ddlr []rune
 	tokens []string
+	validatedTokens []string
 	size int
 	i int
 	line int
 	flg bool
-	validatedTokens []string
 	tables []Table
 }
 
