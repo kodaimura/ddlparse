@@ -827,7 +827,15 @@ func (p *postgresqlParser) validateExprAux() error {
 
 func (p *postgresqlParser) validateIndexParameters() error {
 	p.flgOff()
-	if p.matchKeyword("INCLUDE", "WITH") {
+	if p.matchKeyword("INCLUDE") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateCommaSeparatedColumnNames(); err != nil {
+			return err
+		}
+	}
+	if p.matchKeyword("WITH") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
