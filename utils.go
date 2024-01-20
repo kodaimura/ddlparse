@@ -55,8 +55,3 @@ func isNumericToken(token string) bool {
 	_, err := strconv.ParseFloat(token, 64)
 	return err == nil
 }
-
-func isQuotedToken(token string) bool {
-	tmp := token[0:1]
-	return tmp == "\"" || tmp == "'" || tmp == "`"
-}

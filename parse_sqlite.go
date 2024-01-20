@@ -129,6 +129,14 @@ func (p *sqliteParser) nextAux() error {
 }
 
 
+func (p *sqliteParser) syntaxError() error {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, p.tokens[p.size - 1])
+	}
+	return NewValidateError(p.line, p.tokens[p.i])
+}
+
+
 func (p *sqliteParser) matchKeyword(keywords ...string) bool {
 	return contains(
 		append(
@@ -143,11 +151,26 @@ func (p *sqliteParser) matchSymbol(symbols ...string) bool {
 }
 
 
-func (p *sqliteParser) syntaxError() error {
-	if p.isOutOfRange() {
-		return NewValidateError(p.line, p.tokens[p.size - 1])
-	}
-	return NewValidateError(p.line, p.tokens[p.i])
+func (p *sqliteParser) isStringValue(token string) bool {
+	return token[0:1] == "'"
+}
+
+
+func (p *sqliteParser) isIdentifier(token string) bool {
+	tmp := token[0:1]
+	return tmp == "\"" || tmp == "`"
+}
+
+
+func (p *sqliteParser) isValidName(name string) bool {
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return pattern.MatchString(name) && 
+		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+}
+
+
+func (p *sqliteParser) isValidQuotedName(name string) bool {
+	return true
 }
 
 
@@ -176,29 +199,6 @@ func (p *sqliteParser) validateSymbol(symbols ...string) error {
 		return nil
 	}
 	return p.syntaxError()
-}
-
-
-func (p *sqliteParser) isStringValue(token string) bool {
-	return token[0:1] == "'"
-}
-
-
-func (p *sqliteParser) isIdentifier(token string) bool {
-	tmp := token[0:1]
-	return tmp == "\"" || tmp == "`"
-}
-
-
-func (p *sqliteParser) isValidName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
-}
-
-
-func (p *sqliteParser) isValidQuotedName(name string) bool {
-	return true
 }
 
 

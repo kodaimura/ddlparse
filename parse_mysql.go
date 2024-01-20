@@ -127,6 +127,14 @@ func (p *mysqlParser) nextAux() error {
 }
 
 
+func (p *mysqlParser) syntaxError() error {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, p.tokens[p.size - 1])
+	}
+	return NewValidateError(p.line, p.tokens[p.i])
+}
+
+
 func (p *mysqlParser) matchKeyword(keywords ...string) bool {
 	return contains(
 		append(
@@ -141,22 +149,26 @@ func (p *mysqlParser) matchSymbol(symbols ...string) bool {
 }
 
 
-func (p *mysqlParser) validateProc() error {
-	if (p.isOutOfRange()) {
-		return nil
-	}
-	if err := p.validateCreateTable(); err != nil {
-		return err
-	}
-	return p.validateProc()
+func (p *mysqlParser) isStringValue(token string) bool {
+	tmp := token[0:1]
+	return tmp == "\"" || tmp == "'"
 }
 
 
-func (p *mysqlParser) syntaxError() error {
-	if p.isOutOfRange() {
-		return NewValidateError(p.line, p.tokens[p.size - 1])
-	}
-	return NewValidateError(p.line, p.tokens[p.i])
+func (p *mysqlParser) isIdentifier(token string) bool {
+	return token[0:1] == "`"
+}
+
+
+func (p *mysqlParser) isValidName(name string) bool {
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return pattern.MatchString(name) && 
+		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+}
+
+
+func (p *mysqlParser) isValidQuotedName(name string) bool {
+	return true
 }
 
 
@@ -188,20 +200,8 @@ func (p *mysqlParser) validateSymbol(symbols ...string) error {
 }
 
 
-func (p *mysqlParser) isValidName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
-}
-
-
-func (p *mysqlParser) isValidQuotedName(name string) bool {
-	return true
-}
-
-
 func (p *mysqlParser) validateName() error {
-	if isQuotedToken(p.token()) {
+	if p.isIdentifier(p.token()) {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
@@ -218,6 +218,36 @@ func (p *mysqlParser) validateName() error {
 	}
 
 	return nil
+}
+
+
+func (p *mysqlParser) validateTableName() error {
+	if err := p.validateName(); err != nil {
+		return err
+	}
+	if p.validateSymbol(".") == nil {
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+
+func (p *mysqlParser) validateColumnName() error {
+	return p.validateName()
+}
+
+
+func (p *mysqlParser) validateProc() error {
+	if (p.isOutOfRange()) {
+		return nil
+	}
+	if err := p.validateCreateTable(); err != nil {
+		return err
+	}
+	return p.validateProc()
 }
 
 
@@ -266,20 +296,6 @@ func (p *mysqlParser) validateCreateTable() error {
 }
 
 
-func (p *mysqlParser) validateTableName() error {
-	if err := p.validateName(); err != nil {
-		return err
-	}
-	if p.validateSymbol(".") == nil {
-		if err := p.validateName(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-
 func (p *mysqlParser) validateColumns() error {
 	if err := p.validateColumn(); err != nil {
 		return err
@@ -307,11 +323,6 @@ func (p *mysqlParser) validateColumn() error {
 	}
 	
 	return nil
-}
-
-
-func (p *mysqlParser) validateColumnName() error {
-	return p.validateName()
 }
 
 
@@ -671,7 +682,7 @@ func (p *mysqlParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if isQuotedToken(p.token()) {
+	if p.isStringValue(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}

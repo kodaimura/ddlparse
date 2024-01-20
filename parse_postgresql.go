@@ -127,6 +127,14 @@ func (p *postgresqlParser) nextAux() error {
 }
 
 
+func (p *postgresqlParser) syntaxError() error {
+	if p.isOutOfRange() {
+		return NewValidateError(p.line, p.tokens[p.size - 1])
+	}
+	return NewValidateError(p.line, p.tokens[p.i])
+}
+
+
 func (p *postgresqlParser) matchKeyword(keywords ...string) bool {
 	return contains(
 		append(
@@ -141,22 +149,25 @@ func (p *postgresqlParser) matchSymbol(symbols ...string) bool {
 }
 
 
-func (p *postgresqlParser) validateProc() error {
-	if (p.isOutOfRange()) {
-		return nil
-	}
-	if err := p.validateCreateTable(); err != nil {
-		return err
-	}
-	return p.validateProc()
+func (p *postgresqlParser) isStringValue(token string) bool {
+	return token[0:1] == "'"
 }
 
 
-func (p *postgresqlParser) syntaxError() error {
-	if p.isOutOfRange() {
-		return NewValidateError(p.line, p.tokens[p.size - 1])
-	}
-	return NewValidateError(p.line, p.tokens[p.i])
+func (p *postgresqlParser) isIdentifier(token string) bool {
+	return token[0:1] == "\""
+}
+
+
+func (p *postgresqlParser) isValidName(name string) bool {
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	return pattern.MatchString(name) && 
+		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+}
+
+
+func (p *postgresqlParser) isValidQuotedName(name string) bool {
+	return true
 }
 
 
@@ -187,31 +198,9 @@ func (p *postgresqlParser) validateSymbol(symbols ...string) error {
 	return p.syntaxError()
 }
 
-func (p *postgresqlParser) validatePositiveInteger(symbols ...string) error {
-	if !isPositiveIntegerToken(p.token()) {
-		return p.syntaxError()
-	}
-	if p.next() != nil {
-		return p.syntaxError()
-	}
-	return nil
-}
-
-
-func (p *postgresqlParser) isValidName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
-}
-
-
-func (p *postgresqlParser) isValidQuotedName(name string) bool {
-	return true
-}
-
 
 func (p *postgresqlParser) validateName() error {
-	if isQuotedToken(p.token()) {
+	if p.isIdentifier(p.token()) {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
@@ -228,6 +217,47 @@ func (p *postgresqlParser) validateName() error {
 	}
 
 	return nil
+}
+
+
+func (p *postgresqlParser) validateTableName() error {
+	if err := p.validateName(); err != nil {
+		return err
+	}
+	if p.validateSymbol(".") == nil {
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+
+func (p *postgresqlParser) validateColumnName() error {
+	return p.validateName()
+}
+
+
+func (p *postgresqlParser) validatePositiveInteger() error {
+	if !isPositiveIntegerToken(p.token()) {
+		return p.syntaxError()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return nil
+}
+
+
+func (p *postgresqlParser) validateProc() error {
+	if (p.isOutOfRange()) {
+		return nil
+	}
+	if err := p.validateCreateTable(); err != nil {
+		return err
+	}
+	return p.validateProc()
 }
 
 
@@ -279,20 +309,6 @@ func (p *postgresqlParser) validateCreateTable() error {
 }
 
 
-func (p *postgresqlParser) validateTableName() error {
-	if err := p.validateName(); err != nil {
-		return err
-	}
-	if p.validateSymbol(".") == nil {
-		if err := p.validateName(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-
 func (p *postgresqlParser) validateColumns() error {
 	if err := p.validateColumn(); err != nil {
 		return err
@@ -320,11 +336,6 @@ func (p *postgresqlParser) validateColumn() error {
 	}
 	
 	return nil
-}
-
-
-func (p *postgresqlParser) validateColumnName() error {
-	return p.validateName()
 }
 
 
@@ -881,7 +892,7 @@ func (p *postgresqlParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if isQuotedToken(p.token()) {
+	if p.isStringValue(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
