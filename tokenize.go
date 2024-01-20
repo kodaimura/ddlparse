@@ -173,7 +173,7 @@ func (l *lexer) lexHyphen(token *string) error {
 			*token = ""
 			l.skipComment()
 		} else {
-			*token += c
+			*token += c + l.char()
 		}
 		l.next()
 	}
@@ -195,7 +195,7 @@ func (l *lexer) lexSlash(token *string) error {
 				return err
 			}
 		} else {
-			*token += c
+			*token += c + l.char()
 		}
 		l.next()
 	}
@@ -213,7 +213,7 @@ func (l *lexer) lexAsterisk(token *string) error {
 			l.i -= 1
 			return l.lexError()
 		} else {
-			*token += c
+			*token += c + l.char()
 		}
 		l.next()
 	} 

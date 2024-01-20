@@ -647,6 +647,7 @@ func (p *postgresqlParser) validateConstraintDefault() error {
 	if err := p.validateKeyword("DEFAULT"); err != nil {
 		return err
 	}
+
 	if p.matchSymbol("(") {
 		if err := p.validateExpr(); err != nil {
 			return err
