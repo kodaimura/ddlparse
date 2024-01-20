@@ -921,6 +921,10 @@ func (p *postgresqlParser) validateTableConstraintAux() error {
 		return p.validateTableForeignKey()
 	}
 
+	if p.matchKeyword("EXCLUDE") {
+		return p.validateTableExclude()
+	}
+
 	return p.syntaxError()
 }
 
@@ -942,6 +946,11 @@ func (p *postgresqlParser) validateTablePrimaryKey() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	p.flgOff()
+	if err := p.validateIndexParameters(); err != nil {
+		return err
+	}
+	p.flgOn()
 	return nil
 }
 
@@ -960,6 +969,11 @@ func (p *postgresqlParser) validateTableUnique() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	p.flgOff()
+	if err := p.validateIndexParameters(); err != nil {
+		return err
+	}
+	p.flgOn()
 	return nil
 }
 
@@ -996,6 +1010,32 @@ func (p *postgresqlParser) validateTableForeignKey() error {
 	}
 	if err := p.validateConstraintForeignKey(); err != nil {
 		return err
+	}
+	p.flgOn()
+	return nil
+}
+
+
+func (p *postgresqlParser) validateTableExclude() error {
+	p.flgOff()
+	if err := p.validateKeyword("EXCLUDE"); err != nil {
+		return err
+	}
+	if p.validateKeyword("USING") == nil{
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+	if err := p.validateAux(); err != nil {
+		return p.syntaxError()
+	}
+	if err := p.validateIndexParameters(); err != nil {
+		return err
+	}
+	if p.validateKeyword("WHERE") == nil{
+		if err := p.validateAux(); err != nil {
+			return err
+		}
 	}
 	p.flgOn()
 	return nil
