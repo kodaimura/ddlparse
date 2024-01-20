@@ -1058,40 +1058,54 @@ func (p *postgresqlParser) validateCommaSeparatedColumnNames() error {
 
 func (p *postgresqlParser) validateTableOptions() error {
 	p.flgOff()
+	if p.matchKeyword(";") {
+		p.flgOn()
+		return nil
+	}
+	if p.matchSymbol(",") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
+	if err := p.validateTableOptionsAux(); err != nil {
+		return err
+	}
+	return p.validateTableOptions()
+}
+
+
+func (p *postgresqlParser) validateTableOptionsAux() error {
+	if p.matchKeyword("WITH") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateExpr; err != nil {
+			return err
+		}
+		return nil
+	}
 	if p.matchKeyword("WITHOUT") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateKeyword("ROWID"); err != nil {
+		if err := p.validateKeyword("OID"); err != nil {
 			return err
 		}
-		if p.matchSymbol(",") {
-			if p.next() != nil {
-				return p.syntaxError()
-			}
-			if err := p.validateKeyword("STRICT"); err != nil {
-				return err
-			}
-		}
-	} else if p.matchKeyword("STRICT") {
+		return nil
+	}
+	if p.matchKeyword("TABLESPACE") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if p.matchSymbol(",") {
-			if p.next() != nil {
-				return p.syntaxError()
-			}
-			if err := p.validateKeyword("WITHOUT"); err != nil {
-				return err
-			}
-			if err := p.validateKeyword("ROWID"); err != nil {
-				return err
-			}
+		if err := p.validateName; err != nil {
+			return err
 		}
+		return nil
 	}
 	p.flgOn()
 	return nil
 }
+
 
 func (p *postgresqlParser) Parse() ([]Table, error) {
 	var tables []Table
