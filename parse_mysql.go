@@ -18,7 +18,7 @@ type mysqlParser struct {
 }
 
 func newMySQLParser(ddl string) parser {
-	return &mysqlParser{ddl: ddl, ddlr: []rune(ddl)}
+	return &mysqlParser{ddl: ddl}
 }
 
 

@@ -18,7 +18,7 @@ type postgresqlParser struct {
 }
 
 func newPostgreSQLParser(ddl string) parser {
-	return &postgresqlParser{ddl: ddl, ddlr: []rune(ddl)}
+	return &postgresqlParser{ddl: ddl}
 }
 
 
@@ -400,7 +400,7 @@ func (p *postgresqlParser) validateColumnType() error {
 		return nil
 	}
 
-	if p.matchKeyword(...DataType_PostgreSQL) {
+	if p.matchKeyword(DataType_PostgreSQL...) {
 		return nil
 	}
 
@@ -585,11 +585,11 @@ func (p *postgresqlParser) validateConstraintNotNull() error {
 
 
 func (p *postgresqlParser) validateConstraintNull() error {
-	p.flg Off()
+	p.flgOff()
 	if err := p.validateKeyword("NULL"); err != nil {
 		return err
 	}
-	p.flg On()
+	p.flgOn()
 	return nil
 }
 
@@ -1024,19 +1024,19 @@ func (p *postgresqlParser) validateTableExclude() error {
 	if err := p.validateKeyword("EXCLUDE"); err != nil {
 		return err
 	}
-	if p.validateKeyword("USING") == nil{
+	if p.validateKeyword("USING") == nil {
 		if err := p.validateName(); err != nil {
 			return err
 		}
 	}
-	if err := p.validateAux(); err != nil {
+	if err := p.validateExpr(); err != nil {
 		return p.syntaxError()
 	}
 	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
 	if p.validateKeyword("WHERE") == nil{
-		if err := p.validateAux(); err != nil {
+		if err := p.validateExpr(); err != nil {
 			return err
 		}
 	}
@@ -1082,7 +1082,7 @@ func (p *postgresqlParser) validateTableOptionsAux() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateExpr; err != nil {
+		if err := p.validateExpr(); err != nil {
 			return err
 		}
 		return nil
@@ -1100,7 +1100,7 @@ func (p *postgresqlParser) validateTableOptionsAux() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateName; err != nil {
+		if err := p.validateName(); err != nil {
 			return err
 		}
 		return nil
@@ -1121,7 +1121,7 @@ var DataType_PostgreSQL = []string{
 	"BIGSERIAL",
 	"SERIAL8",
 	"BIT",
-	"VARBIT"
+	"VARBIT",
 	"BOOLEAN",
 	"BOOL",
 	"BOX",
