@@ -826,22 +826,27 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa integer,
 		bbbb integer,
 		cccc text,
+		constraint constraint_name check(aaa),
 		check(aaa()'bbb'(aaa)),
 		check(aaa) no inherit,
+		constraint constraint_name unique(aaaa),
 		unique(aaaa),
 		unique(aaaa, bbbb, "cccc"),
 		unique(aaaa) include (bbbb, cccc),
 		unique(aaaa) with (aaaa = value, bbbb = 1),
 		unique(aaaa) using index tablespace tsn,
+		constraint constraint_name primary key(aaaa),
 		primary key(aaaa),
 		primary key(aaaa, bbbb, "cccc"),
 		primary key(aaaa) include (bbbb, cccc),
 		primary key(aaaa) with (aaaa = value, bbbb = 1),
 		primary key(aaaa) using index tablespace tsn,
+		constraint constraint_name exclude (exclude_element WITH operator, exclude_element WITH operator),
 		exclude (exclude_element WITH operator, exclude_element WITH operator),
 		exclude using index_method (exclude_element WITH operator),
 		exclude using index_method (exclude_element WITH operator) include (bbbb, cccc),
 		exclude using index_method (exclude_element WITH operator) include (bbbb, cccc) where (predicate),
+		constraint constraint_name foreign key(aaaa) references reftable,
 		foreign key(aaaa, bbbb, "cccc") references reftable,
 		foreign key(aaaa, bbbb) references reftable (dddd, eeee),
 		foreign key(aaaa) references reftable (dddd) match full,
@@ -850,7 +855,46 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		foreign key(aaaa) references reftable (dddd) match full on delete NO ACTION,
 		foreign key(aaaa) references reftable (dddd) match full on update RESTRICT,
 		foreign key(aaaa) references reftable (dddd) match full on update SET DEFAULT,
-		foreign key(aaaa) references reftable (dddd) match full on delete CASCADE on update SET NULL
+		foreign key(aaaa) references reftable (dddd) match full on delete CASCADE on update SET NULL,
+		foreign key(aaaa) references reftable (dddd) match full DEFERRABLE,
+		foreign key(aaaa) references reftable (dddd) match full DEFERRABLE INITIALLY DEFERRED,
+		foreign key(aaaa) references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
+	);`
+	parser = &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+
+	fmt.Println("column constraints");
+	ddl = `create table users (
+		aaaa integer,
+		aaaa integer constraint constraint_name check(aaa),
+		aaaa integer check(aaa()'bbb'(aaa)),
+		aaaa integer check(aaa) no inherit,
+		aaaa integer constraint constraint_name unique,
+		aaaa integer unique,
+		aaaa integer unique include (bbbb, cccc),
+		aaaa integer unique with (aaaa = value, bbbb = 1),
+		aaaa integer unique using index tablespace tsn,
+		aaaa integer constraint constraint_name primary key,
+		aaaa integer primary key,
+		aaaa integer primary key include (bbbb, cccc),
+		aaaa integer primary key with (aaaa = value, bbbb = 1),
+		aaaa integer primary key using index tablespace tsn,
+		aaaa integer constraint constraint_name references reftable,
+		aaaa integer references reftable (bbbb),
+		aaaa integer references reftable (dddd),
+		aaaa integer references reftable (dddd) match full,
+		aaaa integer references reftable (dddd) match partial,
+		aaaa integer references reftable (dddd) match simple,
+		aaaa integer references reftable (dddd) match full on delete NO ACTION,
+		aaaa integer references reftable (dddd) match full on update RESTRICT,
+		aaaa integer references reftable (dddd) match full on update SET DEFAULT,
+		aaaa integer references reftable (dddd) match full on delete CASCADE on update SET NULL,
+		aaaa integer references reftable (dddd) match full DEFERRABLE,
+		aaaa integer references reftable (dddd) match full DEFERRABLE INITIALLY DEFERRED,
+		aaaa integer references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
 	);`
 	parser = &postgresqlParser{ddl: ddl}
 	if err := parser.Validate(); err != nil {
