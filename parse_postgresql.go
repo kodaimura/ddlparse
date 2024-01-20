@@ -127,6 +127,37 @@ func (p *postgresqlParser) nextAux() error {
 }
 
 
+func (p *postgresqlParser) skipBrackets() error {
+	if err := p.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := p.skipBracketsAux(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (p *postgresqlParser) skipBracketsAux() error {
+	if p.matchSymbol(")") {
+		return nil
+	}
+	if p.matchSymbol("(") {
+		if err := p.skipBrackets(); err != nil {
+			return err
+		}
+		return p.skipBracketsAux()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return p.skipBracketsAux()
+}
+
+
 func (p *postgresqlParser) syntaxError() error {
 	if p.isOutOfRange() {
 		return NewValidateError(p.line, p.tokens[p.size - 1])
@@ -284,19 +315,21 @@ func (p *postgresqlParser) validateCreateTable() error {
 	if err := p.validateTableName(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if err := p.validateSymbol("("); err != nil {
 		return err
 	}
 	if err := p.validateColumns(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
 	if err := p.validateTableOptions(); err != nil {
 		return err
 	}
-
+	p.flgOn()
 	if p.matchSymbol(";") {
 		if p.next() != nil {
 			return nil
@@ -310,18 +343,21 @@ func (p *postgresqlParser) validateCreateTable() error {
 
 
 func (p *postgresqlParser) validateColumns() error {
+	p.flgOn()
 	if err := p.validateColumn(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if p.validateSymbol(",") == nil {
 		return p.validateColumns()
 	}
-
+	p.flgOff()
 	return nil
 }
 
 
 func (p *postgresqlParser) validateColumn() error {
+	p.flgOn()
 	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "EXCLUDE") {
 		return p.validateTableConstraint()
 	}
@@ -334,13 +370,14 @@ func (p *postgresqlParser) validateColumn() error {
 	if err := p.validateColumnConstraint(); err != nil {
 		return err
 	}
-	
+	p.flgOff()
 	return nil
 }
 
 
 // Omitting data types is not supported.
 func (p *postgresqlParser) validateColumnType() error {
+	p.flgOn()
 	if p.matchKeyword("BIT", "CHARACTER") {
 		if p.next() != nil {
 			return p.syntaxError()
@@ -353,6 +390,7 @@ func (p *postgresqlParser) validateColumnType() error {
 		if err := p.validateTypeDigitN(); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
 
@@ -363,6 +401,7 @@ func (p *postgresqlParser) validateColumnType() error {
 		if err := p.validateTypeDigitN(); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
 
@@ -373,6 +412,7 @@ func (p *postgresqlParser) validateColumnType() error {
 		if err := p.validateTypeDigitPS(); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
 
@@ -383,6 +423,7 @@ func (p *postgresqlParser) validateColumnType() error {
 		if err := p.validateKeyword("PRECISION"); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
 
@@ -408,6 +449,7 @@ func (p *postgresqlParser) validateColumnType() error {
 				return err
 			}
 		}
+		p.flgOff()
 		return nil
 	}
 
@@ -415,6 +457,7 @@ func (p *postgresqlParser) validateColumnType() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		return nil
 	}
 
@@ -423,11 +466,13 @@ func (p *postgresqlParser) validateColumnType() error {
 
 // (number)
 func (p *postgresqlParser) validateTypeDigitN() error {
+	p.flgOn()
 	if p.matchSymbol("(") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
 	} else {
+		p.flgOff()
 		return nil
 	}
 
@@ -437,6 +482,7 @@ func (p *postgresqlParser) validateTypeDigitN() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -447,6 +493,7 @@ func (p *postgresqlParser) validateTypeDigitP() error {
 
 // (presision. scale)
 func (p *postgresqlParser) validateTypeDigitPS() error {
+	p.flgOn()
 	if p.matchSymbol("(") {
 		if p.next() != nil {
 			return p.syntaxError()
@@ -467,6 +514,7 @@ func (p *postgresqlParser) validateTypeDigitPS() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -477,7 +525,6 @@ func (p *postgresqlParser) validateColumnConstraint() error {
 			return err
 		}
 	}
-	p.flgOn()
 	return p.validateColumnConstraintAux([]string{})
 }
 
@@ -487,6 +534,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "PRIMARY") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintPrimaryKey(); err != nil {
 			return err
 		}
@@ -497,6 +545,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintNotNull(); err != nil {
 			return err
 		}
@@ -507,6 +556,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintNull(); err != nil {
 			return err
 		}
@@ -517,6 +567,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "UNIQUE") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintUnique(); err != nil {
 			return err
 		}
@@ -527,6 +578,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "CHECK") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintCheck(); err != nil {
 			return err
 		}
@@ -537,6 +589,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "DEFAULT") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintDefault(); err != nil {
 			return err
 		}
@@ -547,6 +600,7 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "REFERENCES") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintForeignKey(); err != nil {
 			return err
 		}
@@ -557,12 +611,14 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "GENERATED") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintGenerated(); err != nil {
 			return err
 		}
 		return p.validateColumnConstraintAux(append(ls, "GENERATED"))
 	}
 
+	p.flgOff()
 	return nil
 }
 
@@ -579,7 +635,7 @@ func (p *postgresqlParser) validateConstraintPrimaryKey() error {
 	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -589,11 +645,10 @@ func (p *postgresqlParser) validateConstraintNotNull() error {
 	if err := p.validateKeyword("NOT"); err != nil {
 		return err
 	}
-	p.flgOff()
 	if err := p.validateKeyword("NULL"); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -603,7 +658,6 @@ func (p *postgresqlParser) validateConstraintNull() error {
 	if err := p.validateKeyword("NULL"); err != nil {
 		return err
 	}
-	p.flgOn()
 	return nil
 }
 
@@ -613,9 +667,11 @@ func (p *postgresqlParser) validateConstraintUnique() error {
 	if err := p.validateKeyword("UNIQUE"); err != nil {
 		return err
 	}
+	p.flgOff()
 	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -637,7 +693,7 @@ func (p *postgresqlParser) validateConstraintCheck() error {
 		}
 	}
 
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -657,6 +713,7 @@ func (p *postgresqlParser) validateConstraintDefault() error {
 			return err
 		}
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -680,7 +737,7 @@ func (p *postgresqlParser) validateConstraintForeignKey() error {
 	if err := p.validateConstraintForeignKeyAux(); err != nil {
 		return p.syntaxError()
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -731,7 +788,7 @@ func (p *postgresqlParser) validateConstraintForeignKeyAux() error {
 		return p.validateConstraintForeignKeyAux()
 	}
 
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -754,20 +811,20 @@ func (p *postgresqlParser) validateConstraintGenerated() error {
 				return p.syntaxError()
 			}
 			if p.matchSymbol("(") {
-				if err := p.validateExpr(); err != nil {
+				if err := p.skipBrackets(); err != nil {
 					return err
 				}
 			}
-			p.flgOn()
+			p.flgOff()
 			return nil
 		} else if p.matchSymbol("(") {
-			if err := p.validateExpr(); err != nil {
+			if err := p.skipBrackets(); err != nil {
 				return err
 			}
 			if err := p.validateKeyword("STORED"); err != nil {
 				return err
 			}
-			p.flgOn()
+			p.flgOff()
 			return nil
 		} else {
 			return p.syntaxError()
@@ -786,11 +843,11 @@ func (p *postgresqlParser) validateConstraintGenerated() error {
 			return err
 		}
 		if p.matchSymbol("(") {
-			if err := p.validateExpr(); err != nil {
+			if err := p.skipBrackets(); err != nil {
 				return err
 			}
 		}
-		p.flgOn()
+		p.flgOff()
 		return nil
 	} else if p.matchKeyword("AS") {
 		if err := p.validateKeyword("AS"); err != nil {
@@ -800,11 +857,11 @@ func (p *postgresqlParser) validateConstraintGenerated() error {
 			return err
 		}
 		if p.matchSymbol("(") {
-			if err := p.validateExpr(); err != nil {
+			if err := p.skipBrackets(); err != nil {
 				return err
 			}
 		}
-		p.flgOn()
+		p.flgOff()
 		return nil
 	}
 
@@ -813,33 +870,7 @@ func (p *postgresqlParser) validateConstraintGenerated() error {
 
 
 func (p *postgresqlParser) validateExpr() error {
-	if err := p.validateSymbol("("); err != nil {
-		return err
-	}
-	if err := p.validateExprAux(); err != nil {
-		return err
-	}
-	if err := p.validateSymbol(")"); err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func (p *postgresqlParser) validateExprAux() error {
-	if p.matchSymbol(")") {
-		return nil
-	}
-	if p.matchSymbol("(") {
-		if err := p.validateExpr(); err != nil {
-			return err
-		}
-		return p.validateExprAux()
-	}
-	if p.next() != nil {
-		return p.syntaxError()
-	}
-	return p.validateExprAux()
+	return p.skipBrackets()
 }
 
 
@@ -863,7 +894,7 @@ func (p *postgresqlParser) validateIndexParameters() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateExpr(); err != nil {
+		if err := p.skipBrackets(); err != nil {
 			return err
 		}
 	}
@@ -881,7 +912,7 @@ func (p *postgresqlParser) validateIndexParameters() error {
 			return err
 		}
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -914,7 +945,6 @@ func (p *postgresqlParser) validateTableConstraint() error {
 			return err
 		}
 	}
-	p.flgOn()
 	return p.validateTableConstraintAux()
 }
 
@@ -965,7 +995,7 @@ func (p *postgresqlParser) validateTablePrimaryKey() error {
 	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -988,7 +1018,7 @@ func (p *postgresqlParser) validateTableUnique() error {
 	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -1009,7 +1039,7 @@ func (p *postgresqlParser) validateTableCheck() error {
 			return err
 		}
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -1034,7 +1064,7 @@ func (p *postgresqlParser) validateTableForeignKey() error {
 	if err := p.validateConstraintForeignKey(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -1049,18 +1079,18 @@ func (p *postgresqlParser) validateTableExclude() error {
 			return err
 		}
 	}
-	if err := p.validateExpr(); err != nil {
+	if err := p.skipBrackets(); err != nil {
 		return p.syntaxError()
 	}
 	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
 	if p.validateKeyword("WHERE") == nil{
-		if err := p.validateExpr(); err != nil {
+		if err := p.skipBrackets(); err != nil {
 			return err
 		}
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -1082,7 +1112,6 @@ func (p *postgresqlParser) validateCommaSeparatedColumnNames() error {
 func (p *postgresqlParser) validateTableOptions() error {
 	p.flgOff()
 	if p.matchKeyword(";") {
-		p.flgOn()
 		return nil
 	}
 	if p.matchSymbol(",") {
@@ -1098,13 +1127,15 @@ func (p *postgresqlParser) validateTableOptions() error {
 
 
 func (p *postgresqlParser) validateTableOptionsAux() error {
+	p.flgOff()
 	if p.matchKeyword("WITH") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateExpr(); err != nil {
+		if err := p.skipBrackets(); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
 	if p.matchKeyword("WITHOUT") {
@@ -1114,6 +1145,7 @@ func (p *postgresqlParser) validateTableOptionsAux() error {
 		if err := p.validateKeyword("OIDS"); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
 	if p.matchKeyword("TABLESPACE") {
@@ -1123,9 +1155,9 @@ func (p *postgresqlParser) validateTableOptionsAux() error {
 		if err := p.validateName(); err != nil {
 			return err
 		}
+		p.flgOff()
 		return nil
 	}
-	p.flgOn()
 	return p.syntaxError()
 }
 
