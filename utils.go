@@ -56,7 +56,7 @@ func isNumericToken(token string) bool {
 	return err == nil
 }
 
-func isStringToken(token string) bool {
+func isQuotedToken(token string) bool {
 	tmp := token[0:1]
 	return tmp == "\"" || tmp == "'" || tmp == "`"
 }

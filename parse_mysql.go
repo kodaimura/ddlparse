@@ -201,7 +201,7 @@ func (p *mysqlParser) isValidQuotedName(name string) bool {
 
 
 func (p *mysqlParser) validateName() error {
-	if isStringToken(p.token()) {
+	if isQuotedToken(p.token()) {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
@@ -671,7 +671,7 @@ func (p *mysqlParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if isStringToken(p.token()) {
+	if isQuotedToken(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}

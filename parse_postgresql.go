@@ -211,7 +211,7 @@ func (p *postgresqlParser) isValidQuotedName(name string) bool {
 
 
 func (p *postgresqlParser) validateName() error {
-	if isStringToken(p.token()) {
+	if isQuotedToken(p.token()) {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
@@ -803,7 +803,7 @@ func (p *postgresqlParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if isStringToken(p.token()) {
+	if isQuotedToken(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}

@@ -203,7 +203,7 @@ func (p *sqliteParser) isValidQuotedName(name string) bool {
 
 
 func (p *sqliteParser) validateName() error {
-	if isStringToken(p.token()) {
+	if isQuotedToken(p.token()) {
 		if !p.isValidQuotedName(p.token()) {
 			return p.syntaxError()
 		}
@@ -673,7 +673,7 @@ func (p *sqliteParser) validateLiteralValue() error {
 		}
 		return nil
 	}
-	if isStringToken(p.token()) {
+	if isQuotedToken(p.token()) {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -986,7 +986,7 @@ func (p *sqliteParser) parseTableName() (string, string) {
 func (p *sqliteParser) parseName() string {
 	token := p.token()
 	p.i += 1
-	if isStringToken(token) {
+	if isQuotedToken(token) {
 		return token[1 : len(token)-1]
 	} else {
 		return token
@@ -1119,7 +1119,7 @@ func (p *sqliteParser) parseLiteralValue() interface{} {
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
 	}
-	if isStringToken(token) {
+	if isQuotedToken(token) {
 		return token[1 : len(token)-1]
 	}
 	return token
@@ -1133,7 +1133,7 @@ func (p *sqliteParser) parseStringValue() interface{} {
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
 	}
-	if isStringToken(token) {
+	if isQuotedToken(token) {
 		p.i += 1
 		return token[1 : len(token)-1]
 	}
