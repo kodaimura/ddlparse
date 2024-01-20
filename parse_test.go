@@ -820,6 +820,43 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		fmt.Println(err.Error())
 		t.Errorf("failed")
 	}
+
+	fmt.Println("table constraints");
+	ddl = `create table users (
+		aaaa integer,
+		bbbb integer,
+		cccc text,
+		check(aaa()'bbb'(aaa)),
+		check(aaa) no inherit,
+		unique(aaaa),
+		unique(aaaa, bbbb, "cccc"),
+		unique(aaaa) include (bbbb, cccc),
+		unique(aaaa) with (aaaa = value, bbbb = 1),
+		unique(aaaa) using index tablespace tsn,
+		primary key(aaaa),
+		primary key(aaaa, bbbb, "cccc"),
+		primary key(aaaa) include (bbbb, cccc),
+		primary key(aaaa) with (aaaa = value, bbbb = 1),
+		primary key(aaaa) using index tablespace tsn,
+		exclude (exclude_element WITH operator, exclude_element WITH operator),
+		exclude using index_method (exclude_element WITH operator),
+		exclude using index_method (exclude_element WITH operator) include (bbbb, cccc),
+		exclude using index_method (exclude_element WITH operator) include (bbbb, cccc) where (predicate),
+		foreign key(aaaa, bbbb, "cccc") references reftable,
+		foreign key(aaaa, bbbb) references reftable (dddd, eeee),
+		foreign key(aaaa) references reftable (dddd) match full,
+		foreign key(aaaa) references reftable (dddd) match partial,
+		foreign key(aaaa) references reftable (dddd) match simple,
+		foreign key(aaaa) references reftable (dddd) match full on delete NO ACTION,
+		foreign key(aaaa) references reftable (dddd) match full on update RESTRICT,
+		foreign key(aaaa) references reftable (dddd) match full on update SET DEFAULT,
+		foreign key(aaaa) references reftable (dddd) match full on delete CASCADE on update SET NULL
+	);`
+	parser = &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
 }
 
 func TestEnd(t *testing.T) {

@@ -322,7 +322,7 @@ func (p *postgresqlParser) validateColumns() error {
 
 
 func (p *postgresqlParser) validateColumn() error {
-	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
+	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "EXCLUDE") {
 		return p.validateTableConstraint()
 	}
 	if err := p.validateColumnName(); err != nil {
@@ -880,9 +880,6 @@ func (p *postgresqlParser) validateIndexParameters() error {
 			return err
 		}
 	}
-	if err := p.validateSymbol(")"); err != nil {
-		return err
-	}
 	p.flgOn()
 	return nil
 }
@@ -1002,6 +999,14 @@ func (p *postgresqlParser) validateTableCheck() error {
 	}
 	if err := p.validateExpr(); err != nil {
 		return err
+	}
+	if p.matchKeyword("NO") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("INHERIT"); err != nil {
+			return err
+		}
 	}
 	p.flgOn()
 	return nil
