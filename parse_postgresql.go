@@ -266,10 +266,13 @@ func (p *postgresqlParser) validateCreateTable() error {
 	if err := p.validateTableOptions(); err != nil {
 		return err
 	}
-	if (p.token() == ";") {
+
+	if p.matchSymbol(";") {
 		if p.next() != nil {
 			return nil
 		}
+	} else {
+		return p.syntaxError()
 	}
 
 	return p.validateCreateTable()
@@ -1103,7 +1106,7 @@ func (p *postgresqlParser) validateTableOptionsAux() error {
 		return nil
 	}
 	p.flgOn()
-	return nil
+	return p.syntaxError()
 }
 
 
