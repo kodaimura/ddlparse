@@ -242,6 +242,37 @@ func (p *sqliteParser) validateColumnName() error {
 }
 
 
+func (p *sqliteParser) validateBrackets() error {
+	if err := p.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := p.validateBracketsAux(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (p *sqliteParser) validateBracketsAux() error {
+	if p.matchSymbol(")") {
+		return nil
+	}
+	if p.matchSymbol("(") {
+		if err := p.validateBrackets(); err != nil {
+			return err
+		}
+		return p.validateBracketsAux()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return p.validateBracketsAux()
+}
+
+
 func (p *sqliteParser) validateProc() error {
 	if (p.isOutOfRange()) {
 		return nil
@@ -647,33 +678,7 @@ func (p *sqliteParser) validateConflictClause() error {
 
 
 func (p *sqliteParser) validateExpr() error {
-	if err := p.validateSymbol("("); err != nil {
-		return err
-	}
-	if err := p.validateExprAux(); err != nil {
-		return err
-	}
-	if err := p.validateSymbol(")"); err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func (p *sqliteParser) validateExprAux() error {
-	if p.matchSymbol(")") {
-		return nil
-	}
-	if p.matchSymbol("(") {
-		if err := p.validateExpr(); err != nil {
-			return err
-		}
-		return p.validateExprAux()
-	}
-	if p.next() != nil {
-		return p.syntaxError()
-	}
-	return p.validateExprAux()
+	return p.validateBrackets()
 }
 
 

@@ -240,6 +240,37 @@ func (p *mysqlParser) validateColumnName() error {
 }
 
 
+func (p *mysqlParser) validateBrackets() error {
+	if err := p.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := p.validateBracketsAux(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (p *mysqlParser) validateBracketsAux() error {
+	if p.matchSymbol(")") {
+		return nil
+	}
+	if p.matchSymbol("(") {
+		if err := p.validateBrackets(); err != nil {
+			return err
+		}
+		return p.validateBracketsAux()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return p.validateBracketsAux()
+}
+
+
 func (p *mysqlParser) validateProc() error {
 	if (p.isOutOfRange()) {
 		return nil
@@ -645,33 +676,7 @@ func (p *mysqlParser) validateConflictClause() error {
 
 
 func (p *mysqlParser) validateExpr() error {
-	if err := p.validateSymbol("("); err != nil {
-		return err
-	}
-	if err := p.validateExprAux(); err != nil {
-		return err
-	}
-	if err := p.validateSymbol(")"); err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func (p *mysqlParser) validateExprAux() error {
-	if p.matchSymbol(")") {
-		return nil
-	}
-	if p.matchSymbol("(") {
-		if err := p.validateExpr(); err != nil {
-			return err
-		}
-		return p.validateExprAux()
-	}
-	if p.next() != nil {
-		return p.syntaxError()
-	}
-	return p.validateExprAux()
+	return p.validateBrackets()
 }
 
 
