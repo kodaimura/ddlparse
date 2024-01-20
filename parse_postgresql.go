@@ -477,13 +477,23 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 	}
 
 	if p.matchKeyword("NOT") {
-		if contains(ls, "NOT") {
+		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
 			return p.syntaxError()
 		}
 		if err := p.validateConstraintNotNull(); err != nil {
 			return err
 		}
-		return p.validateColumnConstraintAux(append(ls, "NOT"))
+		return p.validateColumnConstraintAux(append(ls, "NOTNULL"))
+	}
+
+	if p.matchKeyword("NULL") {
+		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
+			return p.syntaxError()
+		}
+		if err := p.validateConstraintNull(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(append(ls, "NULL"))
 	}
 
 	if p.matchKeyword("UNIQUE") {
@@ -514,16 +524,6 @@ func (p *postgresqlParser) validateColumnConstraintAux(ls []string) error {
 			return err
 		}
 		return p.validateColumnConstraintAux(append(ls, "DEFAULT"))
-	}
-
-	if p.matchKeyword("COLLATE") {
-		if contains(ls, "COLLATE") {
-			return p.syntaxError()
-		}
-		if err := p.validateConstraintCollate(); err != nil {
-			return err
-		}
-		return p.validateColumnConstraintAux(append(ls, "COLLATE"))
 	}
 
 	if p.matchKeyword("REFERENCES") {
@@ -559,20 +559,10 @@ func (p *postgresqlParser) validateConstraintPrimaryKey() error {
 		return err
 	}
 	p.flgOff()
-	if p.matchKeyword("ASC", "DESC") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-	}
-	if err := p.validateConflictClause(); err != nil {
+	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
 	p.flgOn()
-	if p.matchKeyword("AUTOINCREMENT") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-	}
 	return nil
 }
 
@@ -582,14 +572,21 @@ func (p *postgresqlParser) validateConstraintNotNull() error {
 	if err := p.validateKeyword("NOT"); err != nil {
 		return err
 	}
+	p.flgOff()
 	if err := p.validateKeyword("NULL"); err != nil {
 		return err
 	}
-	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
+	p.flgOn()
+	return nil
+}
+
+
+func (p *postgresqlParser) validateConstraintNull() error {
+	p.flg Off()
+	if err := p.validateKeyword("NULL"); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flg On()
 	return nil
 }
 
@@ -599,11 +596,9 @@ func (p *postgresqlParser) validateConstraintUnique() error {
 	if err := p.validateKeyword("UNIQUE"); err != nil {
 		return err
 	}
-	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
+	if err := p.validateIndexParameters(); err != nil {
 		return err
 	}
-	p.flgOn()
 	return nil
 }
 
@@ -616,6 +611,15 @@ func (p *postgresqlParser) validateConstraintCheck() error {
 	if err := p.validateExpr(); err != nil {
 		return err
 	}
+	if p.matchKeyword("NO") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("INHERIT"); err != nil {
+			return err
+		}
+	}
+
 	p.flgOn()
 	return nil
 }
@@ -635,19 +639,6 @@ func (p *postgresqlParser) validateConstraintDefault() error {
 			return err
 		}
 	}
-	return nil
-}
-
-
-func (p *postgresqlParser) validateConstraintCollate() error {
-	p.flgOff()
-	if err := p.validateKeyword("COLLATE"); err != nil {
-		return err
-	}
-	if err := p.validateKeyword("BINARY","NOCASE", "RTRIM"); err != nil {
-		return err
-	}
-	p.flgOn()
 	return nil
 }
 
@@ -729,39 +720,77 @@ func (p *postgresqlParser) validateConstraintForeignKeyAux() error {
 
 func (p *postgresqlParser) validateConstraintGenerated() error {
 	p.flgOff()
-	if p.validateKeyword("GENERATED") == nil {
-		if err := p.validateKeyword("ALWAYS"); err != nil {
-			return err
-		}
-	}
-	if err := p.validateKeyword("AS"); err != nil {
+	if err := p.validateKeyword("GENERATED"); err != nil {
 		return err
 	}
-	if err := p.validateExpr(); err != nil {
-		return err
-	}
-	if p.matchKeyword("STORED", "VIRTUAL") {
+
+	if p.matchKeyword("ALWAYS") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-	}
-	p.flgOn()
-	return nil
-}
-
-
-func (p *postgresqlParser) validateConflictClause() error {
-	p.flgOff()
-	if p.validateKeyword("ON") == nil {
-		if err := p.validateKeyword("CONFLICT"); err != nil {
+		if err := p.validateKeyword("AS"); err != nil {
 			return err
 		}
-		if err := p.validateKeyword("ROLLBACK", "ABORT", "FAIL", "IGNORE","REPLACE"); err != nil {
+		if p.matchKeyword("IDENTITY") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if p.matchSymbol("(") {
+				if err := p.validateExpr(); err != nil {
+					return err
+				}
+			}
+			p.flgOn()
+			return nil
+		} else if p.matchSymbol("(") {
+			if err := p.validateExpr(); err != nil {
+				return err
+			}
+			if err := p.validateKeyword("STORED"); err != nil {
+				return err
+			}
+			p.flgOn()
+			return nil
+		} else {
+			return p.syntaxError()
+		}
+	} else if p.matchKeyword("BY") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("DEFAULT"); err != nil {
 			return err
 		}
+		if err := p.validateKeyword("AS"); err != nil {
+			return err
+		}
+		if err := p.validateKeyword("IDENTITY"); err != nil {
+			return err
+		}
+		if p.matchSymbol("(") {
+			if err := p.validateExpr(); err != nil {
+				return err
+			}
+		}
+		p.flgOn()
+		return nil
+	} else if p.matchKeyword("AS") {
+		if err := p.validateKeyword("AS"); err != nil {
+			return err
+		}
+		if err := p.validateKeyword("IDENTITY"); err != nil {
+			return err
+		}
+		if p.matchSymbol("(") {
+			if err := p.validateExpr(); err != nil {
+				return err
+			}
+		}
+		p.flgOn()
+		return nil
 	}
-	p.flgOn()
-	return nil
+
+	return p.syntaxError()
 }
 
 
@@ -793,6 +822,38 @@ func (p *postgresqlParser) validateExprAux() error {
 		return p.syntaxError()
 	}
 	return p.validateExprAux()
+}
+
+
+func (p *postgresqlParser) validateIndexParameters() error {
+	p.flgOff()
+	if p.matchKeyword("INCLUDE", "WITH") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateExpr(); err != nil {
+			return err
+		}
+	}
+	if p.matchKeyword("USING") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("INDEX"); err != nil {
+			return err
+		}
+		if err := p.validateKeyword("TABLESPACE"); err != nil {
+			return err
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	p.flgOn()
+	return nil
 }
 
 
@@ -867,11 +928,6 @@ func (p *postgresqlParser) validateTablePrimaryKey() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
-	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
-		return err
-	}
-	p.flgOn()
 	return nil
 }
 
@@ -890,11 +946,6 @@ func (p *postgresqlParser) validateTableUnique() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
-	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
-		return err
-	}
-	p.flgOn()
 	return nil
 }
 
