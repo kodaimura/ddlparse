@@ -831,7 +831,13 @@ func (p *postgresqlParser) validateIndexParameters() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
+		if err := p.validateSymbol("("); err != nil {
+			return err
+		}
 		if err := p.validateCommaSeparatedColumnNames(); err != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateSymbol(")"); err != nil {
 			return err
 		}
 	}
