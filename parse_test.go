@@ -676,3 +676,152 @@ func TestParse(t *testing.T) {
 		t.Errorf("failed")
 	}
 }
+
+func TestValidate_PostgreSQL(t *testing.T) {
+	fmt.Println("--------------------------------------------------")
+	fmt.Println("TestValidate_PostgreSQL")
+	fmt.Println("")
+	fmt.Println("column date type")
+	ddl := `create table users (
+		aaaa bigint,
+		aaaa int8,
+		aaaa bigserial,
+		aaaa serial8,
+		aaaa bit,
+		aaaa bit(10),
+		aaaa bit varying,
+		aaaa varbit,
+		aaaa varbit(10),
+		aaaa boolean,
+		aaaa bool,
+		aaaa box,
+		aaaa bytea,
+		aaaa character,
+		aaaa character(10),
+		aaaa char,
+		aaaa char(10),
+		aaaa character varying,
+		aaaa character varying(10),
+		aaaa varchar,
+		aaaa varchar(10),
+		aaaa cidr,
+		aaaa circle,
+		aaaa double precision,
+		aaaa float8,
+		aaaa inet,
+		aaaa integer,
+		aaaa int,
+		aaaa int4,
+		aaaa json,
+		aaaa jsonb,
+		aaaa line,
+		aaaa lseg,
+		aaaa macaddr,
+		aaaa macaddr8,
+		aaaa money,
+		aaaa numeric,
+		aaaa numeric(10, 5),
+		aaaa decimal,
+		aaaa decimal(10, 5),
+		aaaa path,
+		aaaa pg_lsn,
+		aaaa pg_snapshot,
+		aaaa point,
+		aaaa polygon,
+		aaaa real,
+		aaaa float4,
+		aaaa smallint,
+		aaaa int2,
+		aaaa smallserial,
+		aaaa serial2,
+		aaaa serial,
+		aaaa serial4,
+		aaaa text,
+		aaaa time,
+		aaaa time(10),
+		aaaa time(10) without time zone,
+		aaaa time(10) with time zone,
+		aaaa timetz,
+		aaaa timestamp,
+		aaaa timestamp(10),
+		aaaa timestamp(10) without time zone,
+		aaaa timestamp(10) with time zone,
+		aaaa timestamptz,
+		aaaa tsquery,
+		aaaa tsvector,
+		aaaa txid_snapshot,
+		aaaa uuid,
+		aaaa xml
+	);`
+	parser := &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+
+	fmt.Println("comment out");
+	ddl = `create table users (
+		aaaa integer, --comment
+		aaaa integer, /* commen
+		comment
+		comment
+		*/
+		aaaa integer
+	);`
+	parser = &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+
+	fmt.Println("schema name");
+	ddl = `create table scm.users (
+		aaaa integer
+	);`
+	parser = &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+
+	fmt.Println("identifier");
+	ddl = `create table "scm"."users" (
+		"aaaa" integer
+	);`
+	parser = &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+
+	fmt.Println("table options");
+	ddl = `create table users (
+		aaaa integer
+	),
+	with (aaaaa),
+	without oids,
+	tablespace tsn;
+	
+	create table users (
+		aaaa integer
+	)
+	with (aaaaa)
+	without oids
+	tablespace tsn;
+	
+	CREATE TABLE users (
+		aaaa integer
+	)
+	WITH (aaaaa)
+	WITHOUT oids
+	TABLESPACE tsn;`
+	parser = &postgresqlParser{ddl: ddl}
+	if err := parser.Validate(); err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+}
+
+func TestEnd(t *testing.T) {
+	fmt.Println("--------------------------------------------------")
+}

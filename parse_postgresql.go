@@ -412,6 +412,9 @@ func (p *postgresqlParser) validateColumnType() error {
 	}
 
 	if p.matchKeyword(DataType_PostgreSQL...) {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
 		return nil
 	}
 
@@ -1102,7 +1105,7 @@ func (p *postgresqlParser) validateTableOptionsAux() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateKeyword("OID"); err != nil {
+		if err := p.validateKeyword("OIDS"); err != nil {
 			return err
 		}
 		return nil
@@ -1160,6 +1163,7 @@ var DataType_PostgreSQL = []string{
 	"DECIMAL",
 	"PATH",
 	"PG_LSN",
+	"PG_SNAPSHOT",
 	"POINT",
 	"POLYGON",
 	"REAL",

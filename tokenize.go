@@ -254,6 +254,9 @@ func (l *lexer) lexSingleQuote(token *string) error {
 
 
 func (l *lexer) lexBackQuote(token *string) error {
+	if l.rdbms == PostgreSQL {
+		return l.lexError()
+	}
 	c := l.char()
 	if c == "`" {
 		if *token != "" {
