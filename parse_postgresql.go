@@ -187,6 +187,16 @@ func (p *postgresqlParser) validateSymbol(symbols ...string) error {
 	return p.syntaxError()
 }
 
+func (p *postgresqlParser) validatePositiveInteger(symbols ...string) error {
+	if !isPositiveIntegerToken(p.token()) {
+		return p.syntaxError()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return nil
+}
+
 
 func (p *postgresqlParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
@@ -317,9 +327,131 @@ func (p *postgresqlParser) validateColumnName() error {
 
 // Omitting data types is not supported.
 func (p *postgresqlParser) validateColumnType() error {
-	return p.validateKeyword("TEXT", "NUMERIC", "INTEGER", "REAL", "NONE")
+	if p.matchKeyword("BIT", "CHARACTER") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchKeyword("VARYING") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateTypeDigitN(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if p.matchKeyword("VARBIT", "VARCHAR", "CHAR") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitN(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if p.matchKeyword("NUMERIC", "DECIMAL") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitPS(); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if p.matchKeyword("DOUBLE") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("PRECISION"); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// TODO
+	//if p.matchKeyword("INTERVAL") {
+	//}
+
+	if p.matchKeyword("TIME", "TIMESTAMP") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitP(); err != nil {
+			return err
+		}
+		if p.matchKeyword("WITH", "WITHOUT") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if err := p.validateKeyword("TIME"); err != nil {
+				return err
+			}
+			if err := p.validateKeyword("ZONE"); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if p.matchKeyword(...DataType_PostgreSQL) {
+		return nil
+	}
+
+	return p.syntaxError()
 }
 
+// (number)
+func (p *postgresqlParser) validateTypeDigitN() error {
+	if p.matchSymbol("(") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	} else {
+		return nil
+	}
+
+	if err := p.validatePositiveInteger(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// (presision)
+func (p *postgresqlParser) validateTypeDigitP() error {
+	return p.validateTypeDigitN()
+}
+
+// (presision. scale)
+func (p *postgresqlParser) validateTypeDigitPS() error {
+	if p.matchSymbol("(") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	} else {
+		return nil
+	}
+
+	if err := p.validatePositiveInteger(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(","); err != nil {
+		return err
+	}
+	if err := p.validatePositiveInteger(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (p *postgresqlParser) validateColumnConstraint() error {
 	p.flgOff()
@@ -859,6 +991,62 @@ func (p *postgresqlParser) validateTableOptions() error {
 func (p *postgresqlParser) Parse() ([]Table, error) {
 	var tables []Table
 	return tables, nil
+}
+
+var DataType_PostgreSQL = []string{
+	"BIGINT",
+	"INT8",
+	"BIGSERIAL",
+	"SERIAL8",
+	"BIT",
+	"VARBIT"
+	"BOOLEAN",
+	"BOOL",
+	"BOX",
+	"BYTEA",
+	"CHARACTER",
+	"CHAR",
+	"VARCHAR",
+	"CIDR",
+	"CIRCLE",
+	"DATE",
+	"FLOAT8",
+	"INET",
+	"INTEGER",
+	"INT",
+	"INT4",
+	//"INTERVAL",
+	"JSON",
+	"JSONB",
+	"LINE",
+	"LSEG",
+	"MACADDR",
+	"MACADDR8",
+	"MONEY",
+	"NUMERIC",
+	"DECIMAL",
+	"PATH",
+	"PG_LSN",
+	"POINT",
+	"POLYGON",
+	"REAL",
+	"FLOAT4",
+	"SMALLINT",
+	"INT2",
+	"SMALLSERIAL",
+	"SERIAL2",
+	"SERIAL",
+	"SERIAL4",
+	"TEXT",
+	"TIME",
+	"TIMETZ",
+	"TIMESTAMP",
+	"TIMESTAMPTZ",
+	"TSQUERY",
+	"TSVECTOR",
+	"TXID_SNAPSHOT",
+	"UUID",
+	"XML",
 }
 
 var ReservedWords_PostgreSQL = []string{

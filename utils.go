@@ -43,6 +43,14 @@ func remove(slice []string, element string) []string {
     return ret
 }
 
+func isPositiveIntegerToken(token string) bool {
+	n, err := strconv.Atoi(token)
+	if err != nil {
+		return false
+	}
+	return n > 0
+}
+
 func isNumericToken(token string) bool {
 	_, err := strconv.ParseFloat(token, 64)
 	return err == nil
