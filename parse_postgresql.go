@@ -505,12 +505,14 @@ func (p *postgresqlParser) validateTypeDigitPS() error {
 	if err := p.validatePositiveInteger(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if err := p.validateSymbol(","); err != nil {
 		return err
 	}
 	if err := p.validatePositiveInteger(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}

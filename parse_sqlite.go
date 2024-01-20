@@ -307,18 +307,21 @@ func (p *sqliteParser) validateCreateTable() error {
 	if err := p.validateTableName(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if err := p.validateSymbol("("); err != nil {
 		return err
 	}
 	if err := p.validateColumns(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
 	if err := p.validateTableOptions(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if (p.token() == ";") {
 		if p.next() != nil {
 			return nil
@@ -330,18 +333,21 @@ func (p *sqliteParser) validateCreateTable() error {
 
 
 func (p *sqliteParser) validateColumns() error {
+	p.flgOn()
 	if err := p.validateColumn(); err != nil {
 		return err
 	}
+	p.flgOn()
 	if p.validateSymbol(",") == nil {
 		return p.validateColumns()
 	}
-
+	p.flgOff()
 	return nil
 }
 
 
 func (p *sqliteParser) validateColumn() error {
+	p.flgOn()
 	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
 		return p.validateTableConstraint()
 	}
@@ -354,14 +360,19 @@ func (p *sqliteParser) validateColumn() error {
 	if err := p.validateColumnConstraint(); err != nil {
 		return err
 	}
-	
+	p.flgOff()
 	return nil
 }
 
 
 // Omitting data types is not supported.
 func (p *sqliteParser) validateColumnType() error {
-	return p.validateKeyword("TEXT", "NUMERIC", "INTEGER", "REAL", "NONE")
+	p.flgOn()
+	if err := p.validateKeyword("TEXT", "NUMERIC", "INTEGER", "REAL", "NONE"); err != nil {
+		return err
+	}
+	p.flgOff()
+	return nil
 }
 
 
@@ -382,6 +393,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "PRIMARY") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintPrimaryKey(); err != nil {
 			return err
 		}
@@ -392,6 +404,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "NOT") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintNotNull(); err != nil {
 			return err
 		}
@@ -402,6 +415,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "UNIQUE") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintUnique(); err != nil {
 			return err
 		}
@@ -412,6 +426,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "CHECK") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintCheck(); err != nil {
 			return err
 		}
@@ -422,6 +437,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "DEFAULT") {
 			return p.syntaxError()
 		}
+		p.flgOn()
 		if err := p.validateConstraintDefault(); err != nil {
 			return err
 		}
@@ -432,6 +448,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "COLLATE") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintCollate(); err != nil {
 			return err
 		}
@@ -442,6 +459,7 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "REFERENCES") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintForeignKey(); err != nil {
 			return err
 		}
@@ -452,12 +470,14 @@ func (p *sqliteParser) validateColumnConstraintAux(ls []string) error {
 		if contains(ls, "GENERATED") {
 			return p.syntaxError()
 		}
+		p.flgOff()
 		if err := p.validateConstraintGenerated(); err != nil {
 			return err
 		}
 		return p.validateColumnConstraintAux(append(ls, "GENERATED"))
 	}
 
+	p.flgOff()
 	return nil
 }
 
@@ -485,6 +505,7 @@ func (p *sqliteParser) validateConstraintPrimaryKey() error {
 			return p.syntaxError()
 		}
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -501,7 +522,7 @@ func (p *sqliteParser) validateConstraintNotNull() error {
 	if err := p.validateConflictClause(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -515,7 +536,7 @@ func (p *sqliteParser) validateConstraintUnique() error {
 	if err := p.validateConflictClause(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -528,7 +549,7 @@ func (p *sqliteParser) validateConstraintCheck() error {
 	if err := p.validateExpr(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -547,6 +568,7 @@ func (p *sqliteParser) validateConstraintDefault() error {
 			return err
 		}
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -559,7 +581,6 @@ func (p *sqliteParser) validateConstraintCollate() error {
 	if err := p.validateKeyword("BINARY","NOCASE", "RTRIM"); err != nil {
 		return err
 	}
-	p.flgOn()
 	return nil
 }
 
@@ -583,7 +604,7 @@ func (p *sqliteParser) validateConstraintForeignKey() error {
 	if err := p.validateConstraintForeignKeyAux(); err != nil {
 		return p.syntaxError()
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -634,7 +655,7 @@ func (p *sqliteParser) validateConstraintForeignKeyAux() error {
 		return p.validateConstraintForeignKeyAux()
 	}
 
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -657,7 +678,7 @@ func (p *sqliteParser) validateConstraintGenerated() error {
 			return p.syntaxError()
 		}
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -672,7 +693,7 @@ func (p *sqliteParser) validateConflictClause() error {
 			return err
 		}
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -710,7 +731,6 @@ func (p *sqliteParser) validateTableConstraint() error {
 			return err
 		}
 	}
-	p.flgOn()
 	return p.validateTableConstraintAux()
 }
 
@@ -757,7 +777,7 @@ func (p *sqliteParser) validateTablePrimaryKey() error {
 	if err := p.validateConflictClause(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -780,7 +800,7 @@ func (p *sqliteParser) validateTableUnique() error {
 	if err := p.validateConflictClause(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -793,7 +813,7 @@ func (p *sqliteParser) validateTableCheck() error {
 	if err := p.validateExpr(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -818,7 +838,7 @@ func (p *sqliteParser) validateTableForeignKey() error {
 	if err := p.validateConstraintForeignKey(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -870,7 +890,6 @@ func (p *sqliteParser) validateTableOptions() error {
 			}
 		}
 	}
-	p.flgOn()
 	return nil
 }
 
