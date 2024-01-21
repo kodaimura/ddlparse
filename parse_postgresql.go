@@ -27,13 +27,6 @@ func (p *postgresqlParser) token() string {
 }
 
 
-func (p *postgresqlParser) appendToken(token string) {
-	if (token != "") {
-		p.tokens = append(p.tokens, token)
-	}
-}
-
-
 func (p *postgresqlParser) isOutOfRange() bool {
 	return p.i > p.size - 1
 }

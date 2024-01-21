@@ -29,13 +29,6 @@ func (p *sqliteParser) token() string {
 }
 
 
-func (p *sqliteParser) appendToken(token string) {
-	if (token != "") {
-		p.tokens = append(p.tokens, token)
-	}
-}
-
-
 func (p *sqliteParser) isOutOfRange() bool {
 	return p.i > p.size - 1
 }

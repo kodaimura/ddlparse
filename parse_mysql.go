@@ -27,13 +27,6 @@ func (p *mysqlParser) token() string {
 }
 
 
-func (p *mysqlParser) appendToken(token string) {
-	if (token != "") {
-		p.tokens = append(p.tokens, token)
-	}
-}
-
-
 func (p *mysqlParser) isOutOfRange() bool {
 	return p.i > p.size - 1
 }
@@ -666,10 +659,6 @@ func (p *mysqlParser) validateConstraintNotNull() error {
 		return err
 	}
 	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
-		return err
-	}
-	p.flgOn()
 	return nil
 }
 
@@ -811,21 +800,6 @@ func (p *mysqlParser) validateConstraintGenerated() error {
 	}
 	if err := p.validateExpr(); err != nil {
 		return err
-	}
-	p.flgOn()
-	return nil
-}
-
-
-func (p *mysqlParser) validateConflictClause() error {
-	p.flgOff()
-	if p.validateKeyword("ON") == nil {
-		if err := p.validateKeyword("CONFLICT"); err != nil {
-			return err
-		}
-		if err := p.validateKeyword("ROLLBACK", "ABORT", "FAIL", "IGNORE","REPLACE"); err != nil {
-			return err
-		}
 	}
 	p.flgOn()
 	return nil
