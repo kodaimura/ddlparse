@@ -128,7 +128,10 @@ func (l *lexer) lexProc() error {
 			if err := l.lexAsterisk(&token); err != nil {
 				return err
 			}
-		} else if c == "\"" {
+		}
+
+		c = l.char()
+		if c == "\"" {
 			if err := l.lexDoubleQuote(&token); err != nil {
 				return err
 			}
@@ -172,10 +175,10 @@ func (l *lexer) lexHyphen(token *string) error {
 			l.appendToken(*token)
 			*token = ""
 			l.skipComment()
+			l.next()
 		} else {
-			*token += c + l.char()
+			*token += c
 		}
-		l.next()
 	}
 
 	return nil
@@ -194,10 +197,10 @@ func (l *lexer) lexSlash(token *string) error {
 			if err := l.skipMultiLineComment(); err != nil {
 				return err
 			}
+			l.next()
 		} else {
-			*token += c + l.char()
+			*token += c
 		}
-		l.next()
 	}
 	return nil
 }
@@ -213,9 +216,8 @@ func (l *lexer) lexAsterisk(token *string) error {
 			l.i -= 1
 			return l.lexError()
 		} else {
-			*token += c + l.char()
+			*token += c
 		}
-		l.next()
 	} 
 	return nil
 }
@@ -358,7 +360,10 @@ func (l *lexer) lexStringDoubleQuote() (string, error) {
 	c := ""
 	for !l.isOutOfRange() {
 		c = l.char()
-		if c == "\"" {
+		if c == "\n" {
+			l.line += 1
+			l.appendToken("\n")
+		} else if c == "\"" {
 			l.next()
 			return str + c, nil
 		} else if c == "'" {
@@ -388,7 +393,10 @@ func (l *lexer) lexStringSingleQuote() (string, error) {
 	c := ""
 	for !l.isOutOfRange() {
 		c = l.char()
-		if c == "'" {
+		if c == "\n" {
+			l.line += 1
+			l.appendToken("\n")
+		} else if c == "'" {
 			l.next()
 			return str + c, nil			
 		} else if c == "\"" {
@@ -418,7 +426,10 @@ func (l *lexer) lexStringBackQuote() (string, error) {
 	c := ""
 	for !l.isOutOfRange() {
 		c = l.char()
-		if c == "`" {
+		if c == "\n" {
+			l.line += 1
+			l.appendToken("\n")
+		} else if c == "`" {
 			l.next()
 			return str + c, nil			
 		} else if c == "\"" {

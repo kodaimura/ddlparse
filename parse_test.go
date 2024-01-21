@@ -2,6 +2,7 @@ package ddlparse
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 )
 
@@ -33,14 +34,16 @@ func (te *tester) getParser(ddl string) parser {
 }
 
 func (te *tester) ValidateOK(ddl string) {
+	_, _, l, _ := runtime.Caller(1)
 	parser := te.getParser(ddl)
 	if err := parser.Validate(); err != nil {
 		fmt.Println(fmt.Sprintf("failed validateOK: %s", err.Error()))
-		te.t.Errorf("failed")
+		te.t.Errorf("%d: failed validateOK", l)
 	}
 }
 
 func (te *tester) ValidateNG(ddl string, line int, near string) {
+	_, _, l, _ := runtime.Caller(1)
 	parser := te.getParser(ddl)
 	if err := parser.Validate(); err != nil {
 		verr, _ := err.(ValidateError)
@@ -48,13 +51,12 @@ func (te *tester) ValidateNG(ddl string, line int, near string) {
 			fmt.Println(err.Error())
 		}  else {
 			te.t.Errorf(
-				fmt.Sprintf(
-					"failed validateNG: Expected (line:%d, near: %s) But (line:%d, near: %s)",
-					line, near, verr.Line, verr.Near,
-				))
+				"%d: failed validateNG: Expected (line:%d, near: %s) But (line:%d, near: %s)",
+				l, line, near, verr.Line, verr.Near,
+			)
 		}
 	} else {
-		te.t.Errorf("failed validateNG")
+		te.t.Errorf("%d: failed validateNG", l)
 	}
 }
 
@@ -731,9 +733,10 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	fmt.Println("--------------------------------------------------")
 	fmt.Println("TestValidate_PostgreSQL")
 	fmt.Println("")
-
+	
 	test := newTester(PostgreSQL, t)
 
+	/* -------------------------------------------------- */
 	fmt.Println("Column Date Type")
 	ddl := `create table users (
 		aaaa bigint,
@@ -743,6 +746,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa bit,
 		aaaa bit(10),
 		aaaa bit varying,
+		aaaa bit varying(10),
 		aaaa varbit,
 		aaaa varbit(10),
 		aaaa boolean,
@@ -773,8 +777,10 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa macaddr8,
 		aaaa money,
 		aaaa numeric,
+		aaaa numeric(10),
 		aaaa numeric(10, 5),
 		aaaa decimal,
+		aaaa decimal(10),
 		aaaa decimal(10, 5),
 		aaaa path,
 		aaaa pg_lsn,
@@ -814,6 +820,61 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	);`
 	test.ValidateNG(ddl, 3, "bigin")
 
+	ddl = `create table users (
+		aaaa int,
+		aaaa bit var (10)
+	);`
+	test.ValidateNG(ddl, 3, "var")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa numeric ()
+	);`
+	test.ValidateNG(ddl, 3, ")")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa numeric (10, '5')
+	);`
+	test.ValidateNG(ddl, 3, "'5'")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa numeric (10, 5, 2)
+	);`
+	test.ValidateNG(ddl, 3, ",")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa int (10)
+	);`
+	test.ValidateNG(ddl, 3, "(")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa time (10, 2)
+	);`
+	test.ValidateNG(ddl, 3, ",")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa time (10) without time
+	);`
+	test.ValidateNG(ddl, 4, ")")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa time (10) with
+	);`
+	test.ValidateNG(ddl, 4, ")")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa time (10) without time zon
+	);`
+	test.ValidateNG(ddl, 3, "zon")
+
+	/* -------------------------------------------------- */
 	fmt.Println("Comment Out");
 	ddl = `create table users (
 		aaaa integer, --comment
@@ -824,19 +885,85 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa integer
 	);`
 	test.ValidateOK(ddl)
+	
+	ddl = `create table users (
+		aaaa int,
+		aaaa integer -comment
+	);`
+	test.ValidateNG(ddl, 3, "-comment")
 
+	ddl = `create table users (
+		aaaa int,
+		aaaa integer / * aaa */
+	);`
+	test.ValidateNG(ddl, 3, "*")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa integer /* aaa
+	);`
+	test.ValidateNG(ddl, 4, ";")
+
+	ddl = `create table users (
+		aaaa int,
+		aaaa integer #aaa
+	);`
+	test.ValidateNG(ddl, 3, "#aaa")
+
+	ddl = `create table users (
+		aaaa int --aaa,
+		aaaa integer 
+	);`
+	test.ValidateNG(ddl, 3, "aaaa")
+
+	/* -------------------------------------------------- */
 	fmt.Println("Schema Name");
 	ddl = `create table scm.users (
 		aaaa integer
 	);`
 	test.ValidateOK(ddl)
 
+	ddl = `create table scm users (
+		aaaa integer
+	);`
+	test.ValidateNG(ddl, 1, "users")
+
+	ddl = `create table scm,users (
+		aaaa integer
+	);`
+	test.ValidateNG(ddl, 1, ",")
+
+	/* -------------------------------------------------- */
 	fmt.Println("Identifier");
 	ddl = `create table "scm"."users" (
 		"aaaa" integer
 	);`
 	test.ValidateOK(ddl)
 
+	ddl = `create table 'scm'."users" (
+		"aaaa" integer
+	);`
+	test.ValidateNG(ddl, 1, "'scm'")
+
+	ddl = `create table "scm".'users' (
+		"aaaa" integer
+	);`
+	test.ValidateNG(ddl, 1, "'users'")
+
+	ddl = `create table "scm"."users" (
+		'aaaa' integer
+	);`
+	test.ValidateNG(ddl, 2, "'aaaa'")
+
+	ddl = "create table `scm`.`users` (`aaaa` integer);"
+	test.ValidateNG(ddl, 1, "`scm`")
+
+	ddl = `create table "scm.users (
+		aaaa integer
+	);`
+	test.ValidateNG(ddl, 3, ";")
+
+	/* -------------------------------------------------- */
 	fmt.Println("Table Options");
 	ddl = `create table users (
 		aaaa integer
@@ -860,6 +987,39 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	TABLESPACE tsn;`
 	test.ValidateOK(ddl)
 
+	ddl = `create table users (
+		aaaa integer
+	)
+	with (aaaaa),
+	without oids,
+	tablespace tsn;`
+	test.ValidateOK(ddl)
+
+	ddl = `create table users (
+		aaaa integer
+	),
+	with aaaaa,
+	without oids,
+	tablespaceeee tsn;`
+	test.ValidateNG(ddl, 4, "aaaaa")
+
+	ddl = `create table users (
+		aaaa integer
+	),
+	with (aaaaa),
+	without oids aaa,
+	tablespace tsn;`
+	test.ValidateNG(ddl, 5, "aaa")
+
+	ddl = `create table users (
+		aaaa integer
+	),
+	with (aaaaa),
+	without oids,
+	tablespaceeee tsn;`
+	test.ValidateNG(ddl, 6, "tablespaceeee")
+
+	/* -------------------------------------------------- */
 	fmt.Println("Table Constraints");
 	ddl = `create table users (
 		aaaa integer,
@@ -901,6 +1061,55 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	);`
 	test.ValidateOK(ddl)
 
+	ddl = `create table users (
+		aaaa integer,
+		constraintttt check(aaaa)
+	);`
+	test.ValidateNG(ddl, 3, "check")
+
+	ddl = `create table users (
+		aaaa integer,
+		constraint check check(aaaa)
+	);`
+	test.ValidateNG(ddl, 3, "check")
+
+	ddl = `create table users (
+		aaaa integer,
+		constraint constraint_name check a
+	);`
+	test.ValidateNG(ddl, 3, "a")
+
+	ddl = `create table users (
+		aaaa integer,
+		check(aaa) inherit,
+	);`
+	test.ValidateNG(ddl, 3, "inherit")
+
+	ddl = `create table users (
+		aaaa integer,
+		unique
+	);`
+	test.ValidateNG(ddl, 4, ")")
+
+	ddl = `create table users (
+		aaaa integer,
+		unique('aaaa')
+	);`
+	test.ValidateNG(ddl, 3, "'aaaa'")
+
+	ddl = `create table users (
+		aaaa integer,
+		primary key
+	);`
+	test.ValidateNG(ddl, 4, ")")
+
+	ddl = `create table users (
+		aaaa integer,
+		primary key('aaaa')
+	);`
+	test.ValidateNG(ddl, 3, "'aaaa'")
+
+	/* -------------------------------------------------- */
 	fmt.Println("Column Constraints");
 	ddl = `create table users (
 		aaaa integer,
@@ -953,6 +1162,49 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa integer references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
 	);`
 	test.ValidateOK(ddl)
+
+	ddl = `create table users (
+		aaaa integer null not null
+	);`
+	test.ValidateNG(ddl, 2, "not")
+
+	ddl = `create table users (
+		aaaa integer not null null
+	);`
+	test.ValidateNG(ddl, 2, "null")
+
+	ddl = `create table users (
+		aaaa integer default "aaa"
+	);`
+	test.ValidateNG(ddl, 2, "\"aaa\"")
+
+	ddl = "create table users (aaaa integer default `aaa`);"
+	test.ValidateNG(ddl, 1, "`aaa`")
+
+	ddl = `create table users (
+		aaaa integer default aaa
+	);`
+	test.ValidateNG(ddl, 2, "aaa")
+
+	ddl = `create table users (
+		aaaa integer default 'aaa
+	);`
+	test.ValidateNG(ddl, 3, ";")
+
+	ddl = `create table users (
+		aaaa integer default - 2
+	);`
+	test.ValidateNG(ddl, 2, "-")
+
+	ddl = `create table users (
+		aaaa integer unique unique
+	);`
+	test.ValidateNG(ddl, 2, "unique")
+
+	ddl = `create table users (
+		aaaa integer primary key primary key
+	);`
+	test.ValidateNG(ddl, 2, "primary")
 }
 
 func TestEnd(t *testing.T) {
