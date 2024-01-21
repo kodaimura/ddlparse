@@ -271,6 +271,69 @@ func (p *mysqlParser) validateBracketsAux() error {
 }
 
 
+func (p *mysqlParser) validateStringlValue() error {
+	if !p.isStringValue(p.token()) {
+		return p.syntaxError()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return nil
+}
+
+
+// (number)
+func (p *postgresqlParser) validateTypeDigitN() error {
+	if p.matchSymbol("(") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	} else {
+		return nil
+	}
+
+	if err := p.validatePositiveInteger(); err != nil {
+		return err
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// (presision)
+func (p *postgresqlParser) validateTypeDigitP() error {
+	return p.validateTypeDigitN()
+}
+
+// (presision. scale)
+func (p *postgresqlParser) validateTypeDigitPS() error {
+	if p.matchSymbol("(") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	} else {
+		return nil
+	}
+
+	if err := p.validatePositiveInteger(); err != nil {
+		return err
+	}
+	if (p.matchSymbol(",")) {
+		if err := p.validateSymbol(","); err != nil {
+			return err
+		}
+		if err := p.validatePositiveInteger(); err != nil {
+			return err
+		}
+	}
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
 func (p *mysqlParser) validateProc() error {
 	if (p.isOutOfRange()) {
 		return nil
@@ -340,7 +403,7 @@ func (p *mysqlParser) validateColumns() error {
 
 
 func (p *mysqlParser) validateColumn() error {
-	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
+	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "FOREIGN", "INDEX", "KEY", "FULLTEXT", "SPATIAL") {
 		return p.validateTableConstraint()
 	}
 	if err := p.validateColumnName(); err != nil {
@@ -570,13 +633,8 @@ func (p *mysqlParser) validateConstraintForeignKey() error {
 	if err := p.validateTableName(); err != nil {
 		return err
 	}
-	if p.validateSymbol("(") == nil {
-		if err := p.validateCommaSeparatedColumnNames(); err != nil {
-			return err
-		}
-		if err := p.validateSymbol(")"); err != nil {
-			return err
-		}
+	if err := p.validateIndexKeysOff(); err != nil {
+		return err
 	}
 	if err := p.validateConstraintForeignKeyAux(); err != nil {
 		return p.syntaxError()
@@ -611,23 +669,6 @@ func (p *mysqlParser) validateConstraintForeignKeyAux() error {
 	if p.validateKeyword("MATCH") == nil {
 		if err := p.validateKeyword("SIMPLE", "PARTIAL", "FULL"); err != nil {
 			return err
-		}
-		return p.validateConstraintForeignKeyAux()
-	}
-
-	if p.matchKeyword("NOT", "DEFERRABLE") {
-		if p.matchKeyword("NOT") {
-			if p.next() != nil {
-				return p.syntaxError()
-			}
-		}
-		if err := p.validateKeyword("DEFERRABLE"); err != nil {
-			return err
-		}
-		if p.validateKeyword("INITIALLY") == nil {
-			if err := p.validateKeyword("DEFERRED", "IMMEDIATE"); err != nil {
-				return err
-			}
 		}
 		return p.validateConstraintForeignKeyAux()
 	}
@@ -704,8 +745,10 @@ func (p *mysqlParser) validateLiteralValue() error {
 func (p *mysqlParser) validateTableConstraint() error {
 	p.flgOff()
 	if p.validateKeyword("CONSTRAINT") == nil{
-		if err := p.validateName(); err != nil {
-			return err
+		if !p.matchKeyword("PRIMARY", "UNIQUE", "FOREIGN", "CHECK") {
+			if err := p.validateName(); err != nil {
+				return err
+			}
 		}
 	}
 	p.flgOn()
@@ -722,12 +765,38 @@ func (p *mysqlParser) validateTableConstraintAux() error {
 		return p.validateTableUnique()
 	}
 
+	if p.matchKeyword("FOREIGN") {
+		return p.validateTableForeignKey()
+	}
+
 	if p.matchKeyword("CHECK") {
 		return p.validateTableCheck()
 	}
 
-	if p.matchKeyword("FOREIGN") {
-		return p.validateTableForeignKey()
+	if p.matchKeyword("FULLTEXT", "SPATIAL") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchKeyword("INDEXT", "KEY") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if !p.matchSymbol("(") {
+			if err := p.validateName(); err != nil {
+				return err
+			}
+		}
+		if err := p.validateIndexKeysOff(); err != nil {
+			return err
+		}
+		if err := p.validateIndexOption(); err != nil {
+			return err
+		}
+	}
+
+	if p.matchKeyword("INDEXT", "KEY") {
+		return p.validateTableIndex()
 	}
 
 	return p.syntaxError()
@@ -742,20 +811,20 @@ func (p *mysqlParser) validateTablePrimaryKey() error {
 	if err := p.validateKeyword("KEY"); err != nil {
 		return err
 	}
-	if err := p.validateSymbol("("); err != nil {
-		return err
-	}
-	if err := p.validateCommaSeparatedColumnNames(); err != nil {
-		return p.syntaxError()
-	}
-	if err := p.validateSymbol(")"); err != nil {
+	p.flgOff()
+	if p.matchKeyword("USING") {
+		if err := p.validateIndexType(); err != nil {
+			return err
+		}
+	} 
+	if err := p.validateIndexKeysOn(); err != nil {
 		return err
 	}
 	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
+	if err := p.validateIndexOption(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
 	return nil
 }
 
@@ -765,33 +834,24 @@ func (p *mysqlParser) validateTableUnique() error {
 	if err := p.validateKeyword("UNIQUE"); err != nil {
 		return err
 	}
-	if err := p.validateSymbol("("); err != nil {
-		return err
+	if p.matchKeyword("INDEXT", "KEY") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
 	}
-	if err := p.validateCommaSeparatedColumnNames(); err != nil {
-		return p.syntaxError()
+	if !p.matchSymbol("(") {
+		if err := p.validateName(); err != nil {
+			return err
+		}
 	}
-	if err := p.validateSymbol(")"); err != nil {
+	if err := p.validateIndexKeysOn(); err != nil {
 		return err
 	}
 	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
+	if err := p.validateIndexOption(); err != nil {
 		return err
 	}
-	p.flgOn()
-	return nil
-}
-
-
-func (p *mysqlParser) validateTableCheck() error {
 	p.flgOff()
-	if err := p.validateKeyword("CHECK"); err != nil {
-		return err
-	}
-	if err := p.validateExpr(); err != nil {
-		return err
-	}
-	p.flgOn()
 	return nil
 }
 
@@ -803,6 +863,11 @@ func (p *mysqlParser) validateTableForeignKey() error {
 	}
 	if err := p.validateKeyword("KEY"); err != nil {
 		return err
+	}
+	if !p.matchSymbol("(") {
+		if err := p.validateName(); err != nil {
+			return err
+		}
 	}
 	if err := p.validateSymbol("("); err != nil {
 		return err
@@ -816,7 +881,246 @@ func (p *mysqlParser) validateTableForeignKey() error {
 	if err := p.validateConstraintForeignKey(); err != nil {
 		return err
 	}
+	p.flgOff()
+	return nil
+}
+
+
+func (p *postgresqlParser) validateTableCheck() error {
+	p.flgOff()
+	if err := p.validateKeyword("CHECK"); err != nil {
+		return err
+	}
+	if err := p.validateExpr(); err != nil {
+		return err
+	}
+	if p.matchKeyword("NOT") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
+	if p.matchKeyword("ENFORCED") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
+	p.flgOff()
+	return nil
+}
+
+
+func (p *mysqlParser) validateTableIndex() error {
+	p.flgOff()
+	if err := p.validateKeyword("INDEX", "KEY"); err != nil {
+		return err
+	}
+	if !p.matchKeyword("USING") && p.matchSymbol("(") {
+		if err := p.validateName(); err != nil {
+			return err
+		}
+	}
+	if p.matchKeyword("USING") {
+		if err := p.validateIndexType(); err != nil {
+			return err
+		}
+	} 
+	if err := p.validateIndexKeysOff(); err != nil {
+		return err
+	}
+	if err := p.validateIndexOption(); err != nil {
+		return err
+	}
+	p.flgOff()
+	return nil
+}
+
+
+func (p *mysqlParser) validateIndexKeysOn() error {
 	p.flgOn()
+	if err := p.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := p.validateIndexKeysOffAux(); err != nil {
+		return p.syntaxError()
+	}
+	p.flgOn()
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+}
+
+func (p *mysqlParser) validateIndexKeysOnAux() error {
+	p.flgOff()
+	if p.matchSymbol("(") {
+		if err := p.validateExpr(); err != nil {
+			return err
+		}
+	} else {
+		p.flgOn()
+		if err := p.validateName(); err != nil {
+			return err
+		}
+		p.flgOff()
+		if err := p.validateTypeDigitN(); err != nil {
+			return p.syntaxError()
+		}
+	}
+	if p.matchKeyword("ASC", "DESC") {
+		if err := p.next(); err != nil {
+			return err
+		}
+	}
+	if err := p.next(); err != nil {
+		return err
+	}
+	
+	if p.matchSymbol(",") {
+		p.flgOn()
+		if err := p.next(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return p.validateIndexKeysOnAux()
+	}
+	return nil
+}
+
+
+func (p *mysqlParser) validateIndexKeysOff() error {
+	p.flgOff()
+	if err := p.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := p.validateIndexKeysOffAux(); err != nil {
+		return p.syntaxError()
+	}
+	p.flgOff()
+	if err := p.validateSymbol(")"); err != nil {
+		return err
+	}
+}
+
+
+func (p *mysqlParser) validateIndexKeysOffAux() error {
+	p.flgOff()
+	if p.matchSymbol("(") {
+		if err := p.validateExpr(); err != nil {
+			return err
+		}
+	} else {
+		if err := p.validateName(); err != nil {
+			return err
+		}
+		if err := p.validateTypeDigitN(); err != nil {
+			return p.syntaxError()
+		}
+	}
+	if p.matchKeyword("ASC", "DESC") {
+		if err := p.next(); err != nil {
+			return err
+		}
+	}
+	if err := p.next(); err != nil {
+		return err
+	}
+
+	if p.matchSymbol(",") {
+		if err := p.next(); err != nil {
+			return err
+		}
+		return p.validateIndexKeysOffAux()
+	}
+	return nil
+}
+
+
+func (p *mysqlParser) validateIndexType() error {
+	p.flgOff()
+	if err := p.validatehKeyword("USING"); err != nil {
+		return err
+	}
+	if err := p.validatehKeyword("BTREE", "HASH"); err != nil {
+		return err
+	}
+	p.flgOff()
+	return nil
+}
+
+func (p *mysqlParser) validateIndexOption() error {
+	p.flgOff()
+	if p.matchKeyword("KEY_BLOCK_SIZE") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateLiteralValue(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return p.validateIndexOption()
+
+	} else if p.matchKeyword("USING") {
+		if err := p.validateIndexType(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return p.validateIndexOption()
+		
+	} else if p.matchKeyword("WITH") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("PARSER"); err != nil {
+			return err
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return p.validateIndexOption()
+
+	} else if p.matchKeyword("COMMENT") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("PARSER"); err != nil {
+			return err
+		}
+		if err := pvalidateStringlValue(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return p.validateIndexOption()
+
+	} else if p.matchKeyword("VISIBLE", "INVISIBLE") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return p.validateIndexOption()
+
+	} else if p.matchKeyword("ENGINE_ATTRIBUTE", "SECONDARY_ENGINE_ATTRIBUTE") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateStringlValue(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return p.validateIndexOption()
+
+	}
+
+	p.flgOff()
 	return nil
 }
 
