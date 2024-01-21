@@ -283,7 +283,7 @@ func (p *mysqlParser) validateStringlValue() error {
 
 
 // (number)
-func (p *postgresqlParser) validateTypeDigitN() error {
+func (p *mysqlParser) validateTypeDigitN() error {
 	if p.matchSymbol("(") {
 		if p.next() != nil {
 			return p.syntaxError()
@@ -302,12 +302,12 @@ func (p *postgresqlParser) validateTypeDigitN() error {
 }
 
 // (presision)
-func (p *postgresqlParser) validateTypeDigitP() error {
+func (p *mysqlParser) validateTypeDigitP() error {
 	return p.validateTypeDigitN()
 }
 
 // (presision. scale)
-func (p *postgresqlParser) validateTypeDigitPS() error {
+func (p *mysqlParser) validateTypeDigitPS() error {
 	if p.matchSymbol("(") {
 		if p.next() != nil {
 			return p.syntaxError()
@@ -422,7 +422,57 @@ func (p *mysqlParser) validateColumn() error {
 
 // Omitting data types is not supported.
 func (p *mysqlParser) validateColumnType() error {
-	return p.validateKeyword("TEXT", "NUMERIC", "INTEGER", "REAL", "NONE")
+	p.flgOn()
+	if p.matchKeyword("BIT", "VARCHAR", "CHAR", "BINARY", "VARBINARY") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitN(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("NUMERIC", "DECIMAL") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitPS(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("REAL", "DOUBLE") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitP(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	// TODO
+	//if p.matchKeyword("ENUM") {
+	//}
+
+	// TODO
+	//if p.matchKeyword("SET") {
+	//}
+
+	if p.matchKeyword(DataType_MySQL...) {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	return p.syntaxError()
 }
 
 
@@ -886,7 +936,7 @@ func (p *mysqlParser) validateTableForeignKey() error {
 }
 
 
-func (p *postgresqlParser) validateTableCheck() error {
+func (p *mysqlParser) validateTableCheck() error {
 	p.flgOff()
 	if err := p.validateKeyword("CHECK"); err != nil {
 		return err
@@ -1179,6 +1229,41 @@ func (p *mysqlParser) validateTableOptions() error {
 func (p *mysqlParser) Parse() ([]Table, error) {
 	var tables []Table
 	return tables, nil
+}
+
+var DataType_MySQL = []string{
+	"INTEGERINT",
+	"SMALLINT",
+	"TINYINT",
+	"MEDIUMINT",
+	"BIGINT",
+	"DECIMAL",
+	"NUMERIC",
+	"FLOAT",
+	"DOUBLE",
+	"BIT",
+	"DATE",
+	"DATETIME",
+	"TIMESTAMP",
+	"TIME",
+	"YEAR",
+	"CHAR",
+	"VARCHAR",
+	"BINARY",
+	"VARBINARY",
+	"BLOB",
+	"TEXT",
+	//"ENUM",
+	//"SET",
+	"GEOMETRY",
+	"POINT",
+	"LINESTRING",
+	"POLYGON",
+	"MULTIPOINT",
+	"MULTILINESTRING",
+	"MULTIPOLYGON",
+	"GEOMETRYCOLLECTION",
+	"JSON",
 }
 
 var ReservedWords_MySQL = []string{
