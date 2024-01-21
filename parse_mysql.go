@@ -247,6 +247,17 @@ func (p *mysqlParser) validateBrackets() error {
 }
 
 
+func (p *mysqlParser) validatePositiveInteger() error {
+	if !isPositiveIntegerToken(p.token()) {
+		return p.syntaxError()
+	}
+	if p.next() != nil {
+		return p.syntaxError()
+	}
+	return nil
+}
+
+
 func (p *mysqlParser) validateBracketsAux() error {
 	if p.matchSymbol(")") {
 		return nil
@@ -264,7 +275,7 @@ func (p *mysqlParser) validateBracketsAux() error {
 }
 
 
-func (p *mysqlParser) validateStringlValue() error {
+func (p *mysqlParser) validateStringValue() error {
 	if !p.isStringValue(p.token()) {
 		return p.syntaxError()
 	}
@@ -542,7 +553,7 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if err := p.validateStringlValue(); err != nil {
+		if err := p.validateStringValue(); err != nil {
 			return err
 		}
 		return p.validateColumnConstraintAux(append(ls, "COMMENT"))
@@ -605,7 +616,7 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 				return p.syntaxError()
 			}
 		}
-		if err := p.validateStringlValue(); err != nil {
+		if err := p.validateStringValue(); err != nil {
 			return err
 		}
 		return p.validateColumnConstraintAux(append(ls, p.token()))
@@ -1041,6 +1052,8 @@ func (p *mysqlParser) validateIndexKeysOn() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	p.flgOff()
+	return nil
 }
 
 func (p *mysqlParser) validateIndexKeysOnAux() error {
@@ -1076,6 +1089,7 @@ func (p *mysqlParser) validateIndexKeysOnAux() error {
 		p.flgOff()
 		return p.validateIndexKeysOnAux()
 	}
+	p.flgOff()
 	return nil
 }
 
@@ -1092,6 +1106,8 @@ func (p *mysqlParser) validateIndexKeysOff() error {
 	if err := p.validateSymbol(")"); err != nil {
 		return err
 	}
+	p.flgOff()
+	return nil
 }
 
 
@@ -1124,16 +1140,17 @@ func (p *mysqlParser) validateIndexKeysOffAux() error {
 		}
 		return p.validateIndexKeysOffAux()
 	}
+	p.flgOff()
 	return nil
 }
 
 
 func (p *mysqlParser) validateIndexType() error {
 	p.flgOff()
-	if err := p.validatehKeyword("USING"); err != nil {
+	if err := p.validateKeyword("USING"); err != nil {
 		return err
 	}
-	if err := p.validatehKeyword("BTREE", "HASH"); err != nil {
+	if err := p.validateKeyword("BTREE", "HASH"); err != nil {
 		return err
 	}
 	p.flgOff()
@@ -1185,7 +1202,7 @@ func (p *mysqlParser) validateIndexOption() error {
 		if err := p.validateKeyword("PARSER"); err != nil {
 			return err
 		}
-		if err := pvalidateStringlValue(); err != nil {
+		if err := p.validateStringValue(); err != nil {
 			return err
 		}
 		return p.validateIndexOption()
@@ -1207,7 +1224,7 @@ func (p *mysqlParser) validateIndexOption() error {
 				return p.syntaxError()
 			}
 		}
-		if err := p.validateStringlValue(); err != nil {
+		if err := p.validateStringValue(); err != nil {
 			return err
 		}
 		
