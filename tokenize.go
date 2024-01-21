@@ -130,6 +130,10 @@ func (l *lexer) lexProc() error {
 			}
 		}
 
+		if l.isOutOfRange() {
+			break
+		}
+
 		c = l.char()
 		if c == "\"" {
 			if err := l.lexDoubleQuote(&token); err != nil {
@@ -143,6 +147,9 @@ func (l *lexer) lexProc() error {
 			if err := l.lexBackQuote(&token); err != nil {
 				return err
 			}
+		} else if c == "#" {
+			l.lexSharp(&token)
+
 		} else if c == " " || c == "\t"{
 			l.lexSpace(&token)
 
@@ -175,7 +182,6 @@ func (l *lexer) lexHyphen(token *string) error {
 			l.appendToken(*token)
 			*token = ""
 			l.skipComment()
-			l.next()
 		} else {
 			*token += c
 		}
@@ -197,7 +203,6 @@ func (l *lexer) lexSlash(token *string) error {
 			if err := l.skipMultiLineComment(); err != nil {
 				return err
 			}
-			l.next()
 		} else {
 			*token += c
 		}
@@ -274,6 +279,22 @@ func (l *lexer) lexBackQuote(token *string) error {
 }
 
 
+func (l *lexer) lexSharp(token *string) {
+	c := l.char()
+	if c == "#" {
+		if l.rdbms == MySQL {
+			l.appendToken(*token)
+			*token = ""
+			l.skipComment()
+		} else {
+			*token += c
+			l.next()
+		}
+	}
+	return
+}
+
+
 func (l *lexer) lexEOL(token *string) {
 	c := l.char()
 	if c == "\n" {
@@ -320,6 +341,7 @@ func (l *lexer) skipComment() {
 		}
 		l.next()
 	}
+	l.next()
 	return
 }
 

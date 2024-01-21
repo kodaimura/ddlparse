@@ -16,6 +16,8 @@ type tester struct {
 }
 
 type testerI interface {
+	TokenizeOK(ddl string, size int)
+	TokenizeNG(ddl string, line int, near string)
 	ValidateOK(ddl string)
 	ValidateNG(ddl string, line int, near string)
 } 
@@ -23,6 +25,41 @@ type testerI interface {
 func newTester(rdbms Rdbms, t *testing.T) testerI {
 	return &tester{rdbms, t}
 }
+
+
+func (te *tester) TokenizeOK(ddl string, size int) {
+	_, _, l, _ := runtime.Caller(1)
+	tokens, err := Tokenize(ddl, te.rdbms)
+	if err != nil {
+		fmt.Println(fmt.Sprintf("failed TokenizeOK: %s", err.Error()))
+		te.t.Errorf("%d: failed TokenizeOK", l)
+	} else {
+		if len(tokens) != size {
+			te.t.Errorf("%d: failed TokenizeNG: Expected (size:%d) But (size:%d)", l, size, len(tokens))
+			te.t.Errorf("%d: failed TokenizeOK", l)
+		}
+	}
+}
+
+
+func (te *tester) TokenizeNG(ddl string, line int, near string) {
+	_, _, l, _ := runtime.Caller(1)
+	_, err := Tokenize(ddl, te.rdbms)
+	if err != nil {
+		verr, _ := err.(ValidateError)
+		if (verr.Line == line && verr.Near == near) {
+			fmt.Println(err.Error())
+		}  else {
+			te.t.Errorf(
+				"%d: failed TokenizeNG: Expected (line:%d, near: %s) But (line:%d, near: %s)",
+				l, line, near, verr.Line, verr.Near,
+			)
+		}
+	} else {
+		te.t.Errorf("%d: failed TokenizeNG", l)
+	}
+}
+
 
 func (te *tester) getParser(ddl string) parser {
 	if te.rdbms == PostgreSQL {
@@ -37,8 +74,8 @@ func (te *tester) ValidateOK(ddl string) {
 	_, _, l, _ := runtime.Caller(1)
 	parser := te.getParser(ddl)
 	if err := parser.Validate(); err != nil {
-		fmt.Println(fmt.Sprintf("failed validateOK: %s", err.Error()))
-		te.t.Errorf("%d: failed validateOK", l)
+		fmt.Println(fmt.Sprintf("failed ValidateOK: %s", err.Error()))
+		te.t.Errorf("%d: failed ValidateOK", l)
 	}
 }
 
@@ -51,80 +88,93 @@ func (te *tester) ValidateNG(ddl string, line int, near string) {
 			fmt.Println(err.Error())
 		}  else {
 			te.t.Errorf(
-				"%d: failed validateNG: Expected (line:%d, near: %s) But (line:%d, near: %s)",
+				"%d: failed ValidateNG: Expected (line:%d, near: %s) But (line:%d, near: %s)",
 				l, line, near, verr.Line, verr.Near,
 			)
 		}
 	} else {
-		te.t.Errorf("%d: failed validateNG", l)
+		te.t.Errorf("%d: failed ValidateNG", l)
 	}
 }
 
 
-func TestTokenize(t *testing.T) {
-	ddl := `CREATE TABLE IF NOT EXISTS users (
+func TestTokenize_SQLite(t *testing.T) {
+	fmt.Println("--------------------------------------------------")
+	fmt.Println("TestTokenize")
+	fmt.Println("")
+	
+	test := newTester(SQLite, t)
+
+	ddl := ""
+	test.TokenizeOK(ddl, 0)
+
+	/* -------------------------------------------------- */
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 			"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
-			'username' TEXT NOT NULL UNIQUE, * - -2
+			'username' TEXT NOT NULL UNIQUE, * - -2 #aaaaaa
 			password TEXT NOT NULL DEFAULT "aaaa'bbb'aaaa", --XXX
 			email TEXT NOT NULL UNIQUE, /*aaa*/
 			created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 			updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
 		);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
 
-	tokens, err := Tokenize(ddl, SQLite);
-	if err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
-	fmt.Println(tokens)
+	test.TokenizeOK(ddl, 85)
 	
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE */
 	);`;
-
-	_, err = Tokenize(ddl, SQLite);
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.TokenizeNG(ddl, 3, "*")
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT, /*
 		email TEXT NOT NULL UNIQUE
 	);`;
-
-	_, err = Tokenize(ddl, SQLite);
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.TokenizeNG(ddl, 4, ";")
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE "
 	);`;
-
-	_, err = Tokenize(ddl, SQLite);
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.TokenizeNG(ddl, 4, ";")
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE '
 	);`;
+	test.TokenizeNG(ddl, 4, ";")
 
-	_, err = Tokenize(ddl, SQLite);
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	ddl = "CREATE TABLE IF NOT EXISTS `users ();"
+	test.TokenizeNG(ddl, 1, ";")
+
+	/* -------------------------------------------------- */
+	test = newTester(MySQL, t)
+	
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		'username' TEXT NOT NULL UNIQUE, * - -2 #aaaaaa
+		password TEXT NOT NULL DEFAULT "aaaa'bbb'aaaa", --XXX
+		email TEXT NOT NULL UNIQUE, /*aaa*/
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
+	);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
+
+	test.TokenizeOK(ddl, 84)
+	/* -------------------------------------------------- */
+	test = newTester(PostgreSQL, t)
+	
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+		'username' TEXT NOT NULL UNIQUE, * - -2 #aaaaaa
+		password TEXT NOT NULL DEFAULT "aaaa'bbb'aaaa", --XXX
+		email TEXT NOT NULL UNIQUE, /*aaa*/
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
+	);` + "CREATE TABLE IF NOT EXISTS users (`user_id` INTEGER PRIMARY KEY AUTOINCREMENT)"
+
+	test.TokenizeNG(ddl, 8, "`")
+	/* -------------------------------------------------- */
+	
 }
 
 
