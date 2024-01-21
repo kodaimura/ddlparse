@@ -1143,6 +1143,7 @@ func (p *mysqlParser) validateIndexType() error {
 func (p *mysqlParser) validateIndexOption() error {
 	p.flgOff()
 	if p.matchKeyword("KEY_BLOCK_SIZE") {
+		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -1154,17 +1155,17 @@ func (p *mysqlParser) validateIndexOption() error {
 		if err := p.validateLiteralValue(); err != nil {
 			return err
 		}
-		p.flgOff()
 		return p.validateIndexOption()
 
 	} else if p.matchKeyword("USING") {
+		p.flgOff()
 		if err := p.validateIndexType(); err != nil {
 			return err
 		}
-		p.flgOff()
 		return p.validateIndexOption()
 		
 	} else if p.matchKeyword("WITH") {
+		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -1174,10 +1175,10 @@ func (p *mysqlParser) validateIndexOption() error {
 		if err := p.validateName(); err != nil {
 			return err
 		}
-		p.flgOff()
 		return p.validateIndexOption()
 
 	} else if p.matchKeyword("COMMENT") {
+		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -1187,17 +1188,17 @@ func (p *mysqlParser) validateIndexOption() error {
 		if err := pvalidateStringlValue(); err != nil {
 			return err
 		}
-		p.flgOff()
 		return p.validateIndexOption()
 
 	} else if p.matchKeyword("VISIBLE", "INVISIBLE") {
+		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		p.flgOff()
 		return p.validateIndexOption()
 
 	} else if p.matchKeyword("ENGINE_ATTRIBUTE", "SECONDARY_ENGINE_ATTRIBUTE") {
+		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -1209,7 +1210,7 @@ func (p *mysqlParser) validateIndexOption() error {
 		if err := p.validateStringlValue(); err != nil {
 			return err
 		}
-		p.flgOff()
+		
 		return p.validateIndexOption()
 
 	}
@@ -1233,42 +1234,298 @@ func (p *mysqlParser) validateCommaSeparatedColumnNames() error {
 }
 
 
-func (p *mysqlParser) validateTableOptions() error {
-	p.flgOff()
-	if p.matchKeyword("WITHOUT") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		if err := p.validateKeyword("ROWID"); err != nil {
-			return err
-		}
-		if p.matchSymbol(",") {
-			if p.next() != nil {
-				return p.syntaxError()
-			}
-			if err := p.validateKeyword("STRICT"); err != nil {
-				return err
-			}
-		}
-	} else if p.matchKeyword("STRICT") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-		if p.matchSymbol(",") {
-			if p.next() != nil {
-				return p.syntaxError()
-			}
-			if err := p.validateKeyword("WITHOUT"); err != nil {
-				return err
-			}
-			if err := p.validateKeyword("ROWID"); err != nil {
-				return err
-			}
-		}
+func (p *mysqlParser) validateCommaSeparatedTableNames() error {
+	if err := p.validateTableName(); err != nil {
+		return err
 	}
-	p.flgOn()
+	if p.matchSymbol(",") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return p.validateCommaSeparatedTableNames()
+	}
 	return nil
 }
+
+
+func (p *mysqlParser) validateTableOptions() error {
+	p.flgOff()
+	if p.matchKeyword(";") {
+		return nil
+	}
+	if p.matchSymbol(",") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
+	if err := p.validateTableOptionsAux(); err != nil {
+		return err
+	}
+	return p.validateTableOptions()
+}
+
+
+func (p *mysqlParser) validateTableOptionsAux() error {
+	p.flgOff()
+	if p.matchKeyword(
+		"AUTOEXTEND_SIZE", "AUTO_INCREMENT", "AVG_ROW_LENGTH", 
+		"KEY_BLOCK_SIZE", "MAX_ROWS", "MIN_ROWS", "STATS_SAMPLE_PAGES",
+	) {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateLiteralValue(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword(
+		"COMMENT", "ENGINE_ATTRIBUTE", "PASSWORD", 
+		"SECONDARY_ENGINE_ATTRIBUTE", "CONNECTION",
+	) {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateStringValue(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("DATA", "INDEX") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("DIRECTORY"); err != nil {
+			return err
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateStringValue(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("TABLESPACE") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+		if p.matchKeyword("STORAGE") {
+			if p.validateKeyword("DISK", "MEMORY") != nil {
+				return p.syntaxError()
+			}
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("DEDAULT", "CHARACTER", "COLLATE") {
+		p.flgOff()
+		if p.matchKeyword("DEDAULT") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if p.matchKeyword("CHARACTER") {
+			if p.validateKeyword("SET") != nil {
+				return p.syntaxError()
+			}
+		} else if p.matchKeyword("COLLATE") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("CHECKSUM", "DELAY_KEY_WRITE") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if (p.matchSymbol("0", "1")) {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("PACK_KEYS", "STATS_AUTO_RECALC", "STATS_PERSISTENT") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if (p.matchSymbol("0", "1") || p.matchKeyword("DEFAULT")) {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("COMPRESSION") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if (p.matchKeyword("'ZLIB'", "'LZ4'", "'NONE'")) {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("ENCRYPTION") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if (p.matchKeyword("'Y'", "'N'")) {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("INSERT_METHOD") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if (p.matchKeyword("NO", "FIRST", "LAST")) {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("ROW_FORMAT") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if (p.matchKeyword("DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT")) {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		} else {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("UNION") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateSymbol("("); err != nil {
+			return err
+		}
+		if err := p.validateCommaSeparatedTableNames(); err != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateSymbol(")"); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+	
+	return p.syntaxError()
+}
+
 
 func (p *mysqlParser) Parse() ([]Table, error) {
 	var tables []Table
