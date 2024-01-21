@@ -479,8 +479,10 @@ func (p *mysqlParser) validateColumnType() error {
 func (p *mysqlParser) validateColumnConstraint() error {
 	p.flgOff()
 	if p.validateKeyword("CONSTRAINT") == nil {
-		if err := p.validateName(); err != nil {
-			return err
+		if !p.matchKeyword("CHECK") {
+			if err := p.validateName(); err != nil {
+				return err
+			}
 		}
 	}
 	p.flgOn()
@@ -489,7 +491,7 @@ func (p *mysqlParser) validateColumnConstraint() error {
 
 
 func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
-	if p.matchKeyword("PRIMARY") {
+	if p.matchKeyword("PRIMARY", "KEY") {
 		if contains(ls, "PRIMARY") {
 			return p.syntaxError()
 		}
@@ -539,6 +541,20 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(append(ls, "DEFAULT"))
 	}
 
+	if p.matchKeyword("COMMENT") {
+		if contains(ls, "COMMENT") {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateStringlValue(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(append(ls, "COMMENT"))
+	}
+
 	if p.matchKeyword("COLLATE") {
 		if contains(ls, "COLLATE") {
 			return p.syntaxError()
@@ -569,12 +585,67 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 		return p.validateColumnConstraintAux(append(ls, "GENERATED"))
 	}
 
+	if p.matchKeyword("COLUMN_FORMAT") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("FIXED", "DYNAMIC", "DEFAULT"); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(ls)
+	}
+
+	if p.matchKeyword("ENGINE_ATTRIBUTE", "SECONDARY_ENGINE_ATTRIBUTE") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateStringlValue(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(ls)
+	}
+
+	if p.matchKeyword("STORAGE") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateKeyword("DISK", "MEMORY"); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(ls)
+	}
+
+	if p.matchKeyword("VISIBLE", "INVISIBLE", "VIRTUAL", "STORED") {
+		p.flgOff()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return p.validateColumnConstraintAux(ls)
+
+	}
+
 	return nil
 }
 
 
 func (p *mysqlParser) validateConstraintPrimaryKey() error {
 	p.flgOn()
+	if p.matchKeyword("KEY") {
+		p.validatedTokens = append(p.validatedTokens, "PRIMARY")
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		return nil
+	}
 	if err := p.validateKeyword("PRIMARY"); err != nil {
 		return err
 	}
@@ -582,20 +653,6 @@ func (p *mysqlParser) validateConstraintPrimaryKey() error {
 		return err
 	}
 	p.flgOff()
-	if p.matchKeyword("ASC", "DESC") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-	}
-	if err := p.validateConflictClause(); err != nil {
-		return err
-	}
-	p.flgOn()
-	if p.matchKeyword("AUTOINCREMENT") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-	}
 	return nil
 }
 
@@ -623,10 +680,11 @@ func (p *mysqlParser) validateConstraintUnique() error {
 		return err
 	}
 	p.flgOff()
-	if err := p.validateConflictClause(); err != nil {
-		return err
+	if p.matchKeyword("KEY") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
 	}
-	p.flgOn()
 	return nil
 }
 
@@ -667,10 +725,23 @@ func (p *mysqlParser) validateConstraintCollate() error {
 	if err := p.validateKeyword("COLLATE"); err != nil {
 		return err
 	}
-	if err := p.validateKeyword("BINARY","NOCASE", "RTRIM"); err != nil {
+	if err := p.validateName(); err != nil {
 		return err
 	}
-	p.flgOn()
+	p.flgOff()
+	return nil
+}
+
+
+func (p *mysqlParser) validateConstraintColumnFormat() error {
+	p.flgOff()
+	if err := p.validateKeyword("COLUMN_FORMAT"); err != nil {
+		return err
+	}
+	if err := p.validateKeyword("FIXED", "DYNAMIC", "DEFAULT"); err != nil {
+		return err
+	}
+	p.flgOff()
 	return nil
 }
 
@@ -740,11 +811,6 @@ func (p *mysqlParser) validateConstraintGenerated() error {
 	}
 	if err := p.validateExpr(); err != nil {
 		return err
-	}
-	if p.matchKeyword("STORED", "VIRTUAL") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
 	}
 	p.flgOn()
 	return nil
@@ -937,25 +1003,7 @@ func (p *mysqlParser) validateTableForeignKey() error {
 
 
 func (p *mysqlParser) validateTableCheck() error {
-	p.flgOff()
-	if err := p.validateKeyword("CHECK"); err != nil {
-		return err
-	}
-	if err := p.validateExpr(); err != nil {
-		return err
-	}
-	if p.matchKeyword("NOT") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-	}
-	if p.matchKeyword("ENFORCED") {
-		if p.next() != nil {
-			return p.syntaxError()
-		}
-	}
-	p.flgOff()
-	return nil
+	return p.validateConstraintCheck()
 }
 
 
