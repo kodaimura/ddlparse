@@ -156,7 +156,7 @@ func (p *mysqlParser) isIdentifier(token string) bool {
 func (p *mysqlParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+		!contains(ReservedWords_MySQL, strings.ToUpper(name))
 }
 
 
@@ -1550,7 +1550,8 @@ func (p *mysqlParser) Parse() ([]Table, error) {
 }
 
 var DataType_MySQL = []string{
-	"INTEGERINT",
+	"INTEGER",
+	"INT",
 	"SMALLINT",
 	"TINYINT",
 	"MEDIUMINT",
@@ -1585,6 +1586,7 @@ var DataType_MySQL = []string{
 }
 
 var ReservedWords_MySQL = []string{
+	"AUTO_INCREMENT",
 	"ACCESSIBLE",
 	"ADD",
 	"ALL",

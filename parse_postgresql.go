@@ -155,7 +155,7 @@ func (p *postgresqlParser) isIdentifier(token string) bool {
 func (p *postgresqlParser) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+		!contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
 }
 
 
