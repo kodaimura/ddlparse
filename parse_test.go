@@ -186,25 +186,25 @@ func TestValidate_SQLite(t *testing.T) {
 	test.ValidateNG(ddl, 3, "-comment")
 
 	ddl = `create table users (
-		aaaa int,
+		aaaa integer,
 		aaaa integer / * aaa */
 	);`
 	test.ValidateNG(ddl, 3, "*")
 
 	ddl = `create table users (
-		aaaa int,
+		aaaa integer,
 		aaaa integer /* aaa
 	);`
 	test.ValidateNG(ddl, 4, ";")
 
 	ddl = `create table users (
-		aaaa int,
+		aaaa integer,
 		aaaa integer #aaa
 	);`
 	test.ValidateNG(ddl, 3, "#aaa")
 
 	ddl = `create table users (
-		aaaa int --aaa,
+		aaaa integer --aaa,
 		aaaa integer 
 	);`
 	test.ValidateNG(ddl, 3, "aaaa")
@@ -249,112 +249,243 @@ func TestValidate_SQLite(t *testing.T) {
 	test.ValidateNG(ddl, 2, "'aaaa'")
 
 	ddl = "create table `scm`.`users` (`aaaa` integer);"
-	test.ValidateNG(ddl, 1, "`scm`")
+	test.ValidateOK(ddl)
 
 	ddl = `create table "scm.users (
 		aaaa integer
 	);`
 	test.ValidateNG(ddl, 3, ";")
 
+	ddl = "create table `scm.users (aaaa integer);"
+	test.ValidateNG(ddl, 1, ";")
+
 	/* -------------------------------------------------- */
 	fmt.Println("Column Date Type")
 
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER,
-		bbbb TEXT,
-		cccc NUMERIC,
-		dddd INTEGER,
-		eeee REAL,
-		ffff NONE,
+	ddl = `create table users (
 		aaaa integer,
-		bbbb text,
-		cccc numeric,
-		dddd integer,
-		eeee real,
-		ffff none
+		aaaa text,
+		aaaa numeric,
+		aaaa integer,
+		aaaa real,
+		aaaa none
 	);`
 	test.ValidateOK(ddl)
-}
 
-
-func TestParse(t *testing.T) {
-	ddl := `CREATE TABLE IF NOT EXISTS users (
-		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		username TEXT NOT NULL UNIQUE,
-		password TEXT NOT NULL,
-		email TEXT NOT NULL UNIQUE,
-		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
-	);
+	ddl = `create table users (
+		aaaa integerrr
+	);`
+	test.ValidateNG(ddl, 2, "integerrr")
 	
-	CREATE TABLE IF NOT EXISTS "sch"."project" (
-		project_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		project_name TEXT NOT NULL,
-		project_memo TEXT DEFAULT 'aaaaa"bbb"aaaaa',
-		user_id INTEGER NOT NULL,
-		username TEXT NOT NULL,
-		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-		UNIQUE(project_name, username)
-	);`
-	parser := newTestParser(ddl)
-	tables, err := parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
-	fmt.Println(tables)
+	/* -------------------------------------------------- */
+	fmt.Println("Table Option")
+	ddl = `create table users (
+		aaaa integer
+	) without rowid;
+	
+	create table users (
+		aaaa integer
+	) strict;
 
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER,
-		aaaa INTEGER
-	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	create table users (
+		aaaa integer
+	) strict, without rowid;
+	
+	create table users (
+		aaaa integer
+	) without rowid, strict;`
+	test.ValidateOK(ddl)
 
-	ddl = `CREATE TABLE IF NOT EXISTS users (
+	ddl = `create table users (
+		aaaa integer
+	) without;`
+	test.ValidateNG(ddl, 3, ";")
+
+	ddl = `create table users (
+		aaaa integer
+	) strict, without rowid, strict;`
+	test.ValidateNG(ddl, 3, ",")
+
+	/* -------------------------------------------------- */
+	fmt.Println("Table Constraints");
+	ddl = `create table users (
+		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		PRIMARY KEY (a),
+		CONSTRAINT const_name PRIMARY KEY (a, b, "c"),
+		CONSTRAINT const_name PRIMARY KEY (a, b, "c") ON CONFLICT ROLLBACK,
+		constraint const_name primary key (a, b, "c") on conflict rollback,
+		UNIQUE (a),
+		CONSTRAINT const_name UNIQUE (a, b, "c"),
+		CONSTRAINT const_name UNIQUE (a, b, "c") ON CONFLICT ROLLBACK,
+		constraint const_name unique (a, b, "c") on conflict rollback,
+		CHECK (a),
+		CONSTRAINT const_name CHECK (aaa(aa(a)a())aa),
+		CONSTRAINT const_name check (aaa(aa(a)a())aa),
+		FOREIGN KEY (a) REFERENCES bbb(ccc) ON DELETE SET NULL,
+		CONSTRAINT const_name FOREIGN KEY (a, b, "c") REFERENCES bbb(ccc) ON DELETE SET NULL,
+		constraint const_name foreign key (a, b, "c") references bbb(ccc) on delete set null
+	);`
+	test.ValidateOK(ddl)
+
+	ddl = `create table users (
+		aaaa integer,
+		constraintttt check(aaaa)
+	);`
+	test.ValidateNG(ddl, 3, "check")
+
+	ddl = `create table users (
+		aaaa integer,
+		constraint check check(aaaa)
+	);`
+	test.ValidateNG(ddl, 3, "check")
+
+	ddl = `create table users (
+		aaaa integer,
+		constraint constraint_name check a
+	);`
+	test.ValidateNG(ddl, 3, "a")
+
+	ddl = `create table users (
+		aaaa integer,
+		check(aaa) inherit,
+	);`
+	test.ValidateNG(ddl, 3, "inherit")
+
+	ddl = `create table users (
+		aaaa integer,
+		unique
+	);`
+	test.ValidateNG(ddl, 4, ")")
+
+	ddl = `create table users (
+		aaaa integer,
+		unique('aaaa')
+	);`
+	test.ValidateNG(ddl, 3, "'aaaa'")
+
+	ddl = `create table users (
+		aaaa integer,
+		primary key
+	);`
+	test.ValidateNG(ddl, 4, ")")
+
+	ddl = `create table users (
+		aaaa integer,
+		primary key('aaaa')
+	);`
+	test.ValidateNG(ddl, 3, "'aaaa'")
+
+	/* -------------------------------------------------- */
+	fmt.Println("Column Constraints");
+	ddl = `create table users (
 		aaaa INTEGER PRIMARY KEY,
-		PRIMARY KEY(aaaa)
-	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER PRIMARY KEY AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY ASC AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY DESC AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY ON CONFLICT ROLLBACK AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY ON CONFLICT ABORT AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY ON CONFLICT FAIL AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY ON CONFLICT IGNORE AUTOINCREMENT,
+		aaaa INTEGER PRIMARY KEY ON CONFLICT REPLACE AUTOINCREMENT,
+		aaaa integer primary key on conflict rollback autoincrement,
+		aaaa INTEGER PRIMARY KEY ON CONFLICT ROLLBACK,
+		aaaa INTEGER NOT NULL,
+		aaaa INTEGER NOT NULL ON CONFLICT ROLLBACK,
+		aaaa INTEGER NOT NULL ON CONFLICT ABORT,
+		aaaa INTEGER NOT NULL ON CONFLICT FAIL,
+		aaaa INTEGER NOT NULL ON CONFLICT IGNORE,
+		aaaa INTEGER NOT NULL ON CONFLICT REPLACE,
+		aaaa integer not null on conflict rollback,
 		aaaa INTEGER UNIQUE,
-		UNIQUE(aaaa)
+		aaaa INTEGER UNIQUE ON CONFLICT ROLLBACK,
+		aaaa INTEGER UNIQUE ON CONFLICT ABORT,
+		aaaa INTEGER UNIQUE ON CONFLICT FAIL,
+		aaaa INTEGER UNIQUE ON CONFLICT IGNORE,
+		aaaa INTEGER UNIQUE ON CONFLICT REPLACE,
+		aaaa integer unique on conflict rollback,
+		aaaa INTEGER CHECK (),
+		aaaa INTEGER CHECK (aaaaaaaaa),
+		aaaa INTEGER CHECK (aaa(aa(a)a())aa),
+		aaaa integer check (aaaaaaaaa),
+		aaaa INTEGER DEFAULT (),
+		aaaa INTEGER DEFAULT (aaaaaaaaa),
+		aaaa INTEGER DEFAULT (aaa(aa(a)a())aa),
+		aaaa INTEGER DEFAULT +10,
+		aaaa INTEGER DEFAULT -10,
+		aaaa INTEGER DEFAULT 10,
+		aaaa INTEGER DEFAULT 'aaaaa',
+		aaaa INTEGER DEFAULT NULL,
+		aaaa INTEGER DEFAULT TRUE,
+		aaaa INTEGER DEFAULT FALSE,
+		aaaa INTEGER DEFAULT CURRENT_TIME,
+		aaaa INTEGER DEFAULT CURRENT_DATE,
+		aaaa INTEGER DEFAULT CURRENT_TIMESTAMP,
+		aaaa integer default null,
+		aaaa integer default true,
+		aaaa integer default false,
+		aaaa integer default current_time,
+		aaaa integer default current_date,
+		aaaa integer default current_timestamp,
+		aaaa INTEGER COLLATE BINARY,
+		aaaa INTEGER COLLATE NOCASE,
+		aaaa INTEGER COLLATE RTRIM,
+		aaaa INTEGER collate binary,
+		aaaa INTEGER collate nocase,
+		aaaa INTEGER collate rtrim,
+		aaaa INTEGER REFERENCES bbb(ccc),
+		aaaa INTEGER REFERENCES bbb(ccc, ddd),
+		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET NULL,
+		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET DEFAULT,
+		aaaa INTEGER REFERENCES bbb(ccc) ON UPDATE CASCADE,
+		aaaa INTEGER REFERENCES bbb(ccc) ON UPDATE RESTRICT,
+		aaaa INTEGER REFERENCES bbb(ccc) ON UPDATE NO ACTION,
+		aaaa INTEGER REFERENCES bbb(ccc) MATCH SIMPLE,
+		aaaa INTEGER REFERENCES bbb(ccc) MATCH PARTIAL,
+		aaaa INTEGER REFERENCES bbb(ccc) MATCH FULL,
+		aaaa INTEGER REFERENCES bbb(ccc) DEFERRABLE,
+		aaaa INTEGER REFERENCES bbb(ccc) NOT DEFERRABLE,
+		aaaa INTEGER REFERENCES bbb(ccc) NOT DEFERRABLE INITIALLY DEFERRED,
+		aaaa INTEGER REFERENCES bbb(ccc) NOT DEFERRABLE INITIALLY IMMEDIATE,
+		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET NULL MATCH SIMPLE DEFERRABLE INITIALLY IMMEDIATE,
+		aaaa INTEGER REFERENCES bbb ON DELETE SET NULL MATCH SIMPLE DEFERRABLE INITIALLY IMMEDIATE
 	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER UNIQUE,
-		UNIQUE(bbbb)
+	ddl = `create table users (
+		aaaa integer default "aaa"
 	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.ValidateNG(ddl, 2, "\"aaa\"")
+
+	ddl = "create table users (aaaa integer default `aaa`);"
+	test.ValidateNG(ddl, 1, "`aaa`")
+
+	ddl = `create table users (
+		aaaa integer default aaa
+	);`
+	test.ValidateNG(ddl, 2, "aaa")
+
+	ddl = `create table users (
+		aaaa integer default 'aaa
+	);`
+	test.ValidateNG(ddl, 3, ";")
+
+	ddl = `create table users (
+		aaaa integer default - 2
+	);`
+	test.ValidateNG(ddl, 2, "-")
+
+	ddl = `create table users (
+		aaaa integer unique unique
+	);`
+	test.ValidateNG(ddl, 2, "unique")
+
+	ddl = `create table users (
+		aaaa integer primary key primary key
+	);`
+	test.ValidateNG(ddl, 2, "primary")
 }
 
-func TetValidate_PostgreSQL(t *testing.T) {
+func TestValidate_PostgreSQL(t *testing.T) {
 	fmt.Println("--------------------------------------------------")
 	fmt.Println("TestValidate_PostgreSQL")
 	fmt.Println("")
@@ -860,6 +991,84 @@ func TetValidate_PostgreSQL(t *testing.T) {
 		aaaa integer primary key primary key
 	);`
 	test.ValidateNG(ddl, 2, "primary")
+}
+
+
+func TestParse(t *testing.T) {
+	ddl := `CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT NOT NULL UNIQUE,
+		password TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+	);
+	
+	CREATE TABLE IF NOT EXISTS "sch"."project" (
+		project_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		project_name TEXT NOT NULL,
+		project_memo TEXT DEFAULT 'aaaaa"bbb"aaaaa',
+		user_id INTEGER NOT NULL,
+		username TEXT NOT NULL,
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		UNIQUE(project_name, username)
+	);`
+	parser := newTestParser(ddl)
+	tables, err := parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+		t.Errorf("failed")
+	}
+	fmt.Println(tables)
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER,
+		aaaa INTEGER
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER PRIMARY KEY,
+		PRIMARY KEY(aaaa)
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER UNIQUE,
+		UNIQUE(aaaa)
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
+
+	ddl = `CREATE TABLE IF NOT EXISTS users (
+		aaaa INTEGER UNIQUE,
+		UNIQUE(bbbb)
+	);`
+	parser = newTestParser(ddl)
+	_, err = parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		t.Errorf("failed")
+	}
 }
 
 func TestEnd(t *testing.T) {
