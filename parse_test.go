@@ -9,6 +9,55 @@ func newTestParser(ddl string) *sqliteParser {
 	return &sqliteParser{ddl: ddl}
 }
 
+type tester struct {
+	rdbms Rdbms
+	t *testing.T
+}
+
+type testerI interface {
+	ValidateOK(ddl string)
+	ValidateNG(ddl string, line int, near string)
+} 
+
+func newTester(rdbms Rdbms, t *testing.T) testerI {
+	return &tester{rdbms, t}
+}
+
+func (te *tester) getParser(ddl string) parser {
+	if te.rdbms == PostgreSQL {
+		return newPostgreSQLParser(ddl)
+	} else if te.rdbms == MySQL {
+		return newMySQLParser(ddl)
+	}
+	return newSQLiteParser(ddl)
+}
+
+func (te *tester) ValidateOK(ddl string) {
+	parser := te.getParser(ddl)
+	if err := parser.Validate(); err != nil {
+		fmt.Println(fmt.Sprintf("failed validateOK: %s", err.Error()))
+		te.t.Errorf("failed")
+	}
+}
+
+func (te *tester) ValidateNG(ddl string, line int, near string) {
+	parser := te.getParser(ddl)
+	if err := parser.Validate(); err != nil {
+		verr, _ := err.(ValidateError)
+		if (verr.Line == line && verr.Near == near) {
+			fmt.Println(err.Error())
+		}  else {
+			te.t.Errorf(
+				fmt.Sprintf(
+					"failed validateNG: Expected (line:%d, near: %s) But (line:%d, near: %s)",
+					line, near, verr.Line, verr.Near,
+				))
+		}
+	} else {
+		te.t.Errorf("failed validateNG")
+	}
+}
+
 
 func TestTokenize(t *testing.T) {
 	ddl := `CREATE TABLE IF NOT EXISTS users (
@@ -677,11 +726,15 @@ func TestParse(t *testing.T) {
 	}
 }
 
+
 func TestValidate_PostgreSQL(t *testing.T) {
 	fmt.Println("--------------------------------------------------")
 	fmt.Println("TestValidate_PostgreSQL")
 	fmt.Println("")
-	fmt.Println("column date type")
+
+	test := newTester(PostgreSQL, t)
+
+	fmt.Println("Column Date Type")
 	ddl := `create table users (
 		aaaa bigint,
 		aaaa int8,
@@ -753,13 +806,15 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa uuid,
 		aaaa xml
 	);`
-	parser := &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	fmt.Println("comment out");
+	ddl = `create table users (
+		aaaa int,
+		aaaa bigin
+	);`
+	test.ValidateNG(ddl, 3, "bigin")
+
+	fmt.Println("Comment Out");
 	ddl = `create table users (
 		aaaa integer, --comment
 		aaaa integer, /* commen
@@ -768,33 +823,21 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		*/
 		aaaa integer
 	);`
-	parser = &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	fmt.Println("schema name");
+	fmt.Println("Schema Name");
 	ddl = `create table scm.users (
 		aaaa integer
 	);`
-	parser = &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	fmt.Println("identifier");
+	fmt.Println("Identifier");
 	ddl = `create table "scm"."users" (
 		"aaaa" integer
 	);`
-	parser = &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	fmt.Println("table options");
+	fmt.Println("Table Options");
 	ddl = `create table users (
 		aaaa integer
 	),
@@ -815,13 +858,9 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	WITH (aaaaa)
 	WITHOUT oids
 	TABLESPACE tsn;`
-	parser = &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	fmt.Println("table constraints");
+	fmt.Println("Table Constraints");
 	ddl = `create table users (
 		aaaa integer,
 		bbbb integer,
@@ -860,13 +899,9 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		foreign key(aaaa) references reftable (dddd) match full DEFERRABLE INITIALLY DEFERRED,
 		foreign key(aaaa) references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
 	);`
-	parser = &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 
-	fmt.Println("column constraints");
+	fmt.Println("Column Constraints");
 	ddl = `create table users (
 		aaaa integer,
 		aaaa integer constraint constraint_name not null,
@@ -917,11 +952,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa integer references reftable (dddd) match full DEFERRABLE INITIALLY DEFERRED,
 		aaaa integer references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
 	);`
-	parser = &postgresqlParser{ddl: ddl}
-	if err := parser.Validate(); err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
+	test.ValidateOK(ddl)
 }
 
 func TestEnd(t *testing.T) {
