@@ -579,6 +579,9 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 	}
 
 	if p.matchKeyword("COLUMN_FORMAT") {
+		if contains(ls, p.token()) {
+			return p.syntaxError()
+		}
 		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
@@ -586,10 +589,13 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 		if err := p.validateKeyword("FIXED", "DYNAMIC", "DEFAULT"); err != nil {
 			return err
 		}
-		return p.validateColumnConstraintAux(ls)
+		return p.validateColumnConstraintAux(append(ls, p.token()))
 	}
 
 	if p.matchKeyword("ENGINE_ATTRIBUTE", "SECONDARY_ENGINE_ATTRIBUTE") {
+		if contains(ls, p.token()) {
+			return p.syntaxError()
+		}
 		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
@@ -602,10 +608,13 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 		if err := p.validateStringlValue(); err != nil {
 			return err
 		}
-		return p.validateColumnConstraintAux(ls)
+		return p.validateColumnConstraintAux(append(ls, p.token()))
 	}
 
 	if p.matchKeyword("STORAGE") {
+		if contains(ls, p.token()) {
+			return p.syntaxError()
+		}
 		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
@@ -613,16 +622,29 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 		if err := p.validateKeyword("DISK", "MEMORY"); err != nil {
 			return err
 		}
-		return p.validateColumnConstraintAux(ls)
+		return p.validateColumnConstraintAux(append(ls, p.token()))
 	}
 
 	if p.matchKeyword("VISIBLE", "INVISIBLE", "VIRTUAL", "STORED") {
+		if contains(ls, p.token()) {
+			return p.syntaxError()
+		}
 		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		return p.validateColumnConstraintAux(ls)
+		return p.validateColumnConstraintAux(append(ls, p.token()))
+	}
 
+	if p.matchKeyword("AUTO_INCREMENT") {
+		if contains(ls, "AUTO_INCREMENT") {
+			return p.syntaxError()
+		}
+		p.flgOn()
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		return p.validateColumnConstraintAux(append(ls, "AUTO_INCREMENT"))
 	}
 
 	return nil
