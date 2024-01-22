@@ -63,7 +63,7 @@ Example:
 */
 
 func (p *postgresqlParser) Validate() error {
-	tokens, err := Tokenize(p.ddl, SQLite)
+	tokens, err := Tokenize(p.ddl, PostgreSQL)
 	if err != nil {
 		return err
 	}

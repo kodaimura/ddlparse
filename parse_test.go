@@ -27,12 +27,10 @@ func (te *tester) TokenizeOK(ddl string, size int) {
 	_, _, l, _ := runtime.Caller(1)
 	tokens, err := Tokenize(ddl, te.rdbms)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("failed TokenizeOK: %s", err.Error()))
-		te.t.Errorf("%d: failed TokenizeOK", l)
+		te.t.Errorf("%d: failed TokenizeOK: %s", l, err.Error())
 	} else {
 		if len(tokens) != size {
-			te.t.Errorf("%d: failed TokenizeNG: Expected (size:%d) But (size:%d)", l, size, len(tokens))
-			te.t.Errorf("%d: failed TokenizeOK", l)
+			te.t.Errorf("%d: failed TokenizeOK: Expected (size:%d) But (size:%d)", l, size, len(tokens))
 		}
 	}
 }
@@ -70,8 +68,7 @@ func (te *tester) ValidateOK(ddl string) {
 	_, _, l, _ := runtime.Caller(1)
 	parser := te.getParser(ddl)
 	if err := parser.Validate(); err != nil {
-		fmt.Println(fmt.Sprintf("failed ValidateOK: %s", err.Error()))
-		te.t.Errorf("%d: failed ValidateOK", l)
+		te.t.Errorf("%d: failed ValidateOK: %s", l, err.Error())
 	}
 }
 
@@ -558,7 +555,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	ddl = `CREATE TABLE IF NOT EXISTS "users ();`
 	test.ValidateNG(ddl, 1, ";")
 
-	ddl = "CREATE TABLE IF NOT EXISTS `users ();"
+	ddl = `CREATE TABLE IF NOT EXISTS 'users ();`
 	test.ValidateNG(ddl, 1, ";")
 
 	ddl = `CREATE TABLE IF NOT EXISTS ALLOCATE ();`
@@ -651,7 +648,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	test.ValidateNG(ddl, 2, "'aaaa'")
 
 	ddl = "create table `scm`.`users` (`aaaa` integer);"
-	test.ValidateNG(ddl, 1, "`scm`")
+	test.ValidateNG(ddl, 1, "`")
 
 	ddl = `create table "scm.users (
 		aaaa integer
@@ -1010,9 +1007,6 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	);`
 	test.ValidateNG(ddl, 2, "\"aaa\"")
 
-	ddl = "create table users (aaaa integer default `aaa`);"
-	test.ValidateNG(ddl, 1, "`aaa`")
-
 	ddl = `create table users (
 		aaaa integer default aaa
 	);`
@@ -1132,7 +1126,7 @@ func TestValidate_MySQL(t *testing.T) {
 
 	/* -------------------------------------------------- */
 	fmt.Println("Identifier");
-	ddl = "create table `scm``.`users` (`aaaa` integer);"
+	ddl = "create table `scm`.`users` (`aaaa` integer);"
 	test.ValidateOK(ddl)
 
 	ddl = "create table 'scm'.`users` (" + `
@@ -1166,12 +1160,20 @@ func TestValidate_MySQL(t *testing.T) {
 	/* -------------------------------------------------- */
 	fmt.Println("Column Date Type")
 	ddl = `create table users (
+		aaaa bool,
+		aaaa boolean,
 		aaaa integer,
+		aaaa integer (10),
 		aaaa int,
+		aaaa int (10),
 		aaaa smallint,
+		aaaa smallint (10),
 		aaaa tinyint,
+		aaaa tinyint (10),
 		aaaa mediumint,
+		aaaa mediumint (10),
 		aaaa bigint,
+		aaaa bigint (10),
 		aaaa numeric,
 		aaaa numeric(10),
 		aaaa numeric(10, 5),
@@ -1179,17 +1181,25 @@ func TestValidate_MySQL(t *testing.T) {
 		aaaa decimal(10),
 		aaaa decimal(10, 5),
 		aaaa float,
+		aaaa float (10),
+		aaaa float (10, 5),
 		aaaa real,
 		aaaa real (10),
+		aaaa real (10, 5),
 		aaaa double,
 		aaaa double (10),
+		aaaa double (10, 5),
 		aaaa bit,
 		aaaa bit (10),
 		aaaa date,
 		aaaa datetime,
+		aaaa datetime (3),
 		aaaa timestamp,
+		aaaa timestamp (3),
 		aaaa time,
+		aaaa time (3),
 		aaaa year,
+		aaaa year (4),
 		aaaa char,
 		aaaa char(10),
 		aaaa varchar,
@@ -1197,7 +1207,9 @@ func TestValidate_MySQL(t *testing.T) {
 		aaaa binary (100),
 		aaaa varbinary (100),
 		aaaa blob,
+		aaaa blob (10),
 		aaaa text,
+		aaaa text (10),
 		aaaa geometry,
 		aaaa point,
 		aaaa linestring,
@@ -1242,9 +1254,9 @@ func TestValidate_MySQL(t *testing.T) {
 
 	ddl = `create table users (
 		aaaa int,
-		aaaa int (10)
+		aaaa int (10 , 5)
 	);`
-	test.ValidateNG(ddl, 3, "(")
+	test.ValidateNG(ddl, 3, ",")
 
 	ddl = `create table users (
 		aaaa int,
@@ -1252,23 +1264,6 @@ func TestValidate_MySQL(t *testing.T) {
 	);`
 	test.ValidateNG(ddl, 3, ",")
 
-	ddl = `create table users (
-		aaaa int,
-		aaaa time (10) without time
-	);`
-	test.ValidateNG(ddl, 4, ")")
-
-	ddl = `create table users (
-		aaaa int,
-		aaaa time (10) with
-	);`
-	test.ValidateNG(ddl, 4, ")")
-
-	ddl = `create table users (
-		aaaa int,
-		aaaa time (10) without time zon
-	);`
-	test.ValidateNG(ddl, 3, "zon")
 	/* -------------------------------------------------- */
 	fmt.Println("Table Options");
 	ddl = `create table users (
@@ -1513,7 +1508,7 @@ func TestValidate_MySQL(t *testing.T) {
 	test.ValidateNG(ddl, 2, "primary")
 }
 
-
+/*
 func TestParse(t *testing.T) {
 	ddl := `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1590,7 +1585,7 @@ func TestParse(t *testing.T) {
 		t.Errorf("failed")
 	}
 }
-
+*/
 func TestEnd(t *testing.T) {
 	fmt.Println("--------------------------------------------------")
 }

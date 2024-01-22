@@ -63,7 +63,7 @@ Example:
 */
 
 func (p *mysqlParser) Validate() error {
-	tokens, err := Tokenize(p.ddl, SQLite)
+	tokens, err := Tokenize(p.ddl, MySQL)
 	if err != nil {
 		return err
 	}
@@ -427,7 +427,7 @@ func (p *mysqlParser) validateColumn() error {
 // Omitting data types is not supported.
 func (p *mysqlParser) validateColumnType() error {
 	p.flgOn()
-	if p.matchKeyword("BIT", "VARCHAR", "CHAR", "BINARY", "VARBINARY") {
+	if p.matchKeyword("VARCHAR", "CHAR", "BINARY", "VARBINARY", "BLOB", "TEXT") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -438,7 +438,7 @@ func (p *mysqlParser) validateColumnType() error {
 		return nil
 	}
 
-	if p.matchKeyword("NUMERIC", "DECIMAL") {
+	if p.matchKeyword("NUMERIC", "DECIMAL", "FLOAT", "REAL", "DOUBLE") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -449,7 +449,7 @@ func (p *mysqlParser) validateColumnType() error {
 		return nil
 	}
 
-	if p.matchKeyword("REAL", "DOUBLE") {
+	if p.matchKeyword("BIT", "TINYINT", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -467,6 +467,28 @@ func (p *mysqlParser) validateColumnType() error {
 	// TODO
 	//if p.matchKeyword("SET") {
 	//}
+
+	if p.matchKeyword("TIME", "DATETIME", "TIMESTAMP", "YEAR") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+		if err := p.validateTypeDigitP(); err != nil {
+			return err
+		}
+		if p.matchKeyword("WITH", "WITHOUT") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+			if err := p.validateKeyword("TIME"); err != nil {
+				return err
+			}
+			if err := p.validateKeyword("ZONE"); err != nil {
+				return err
+			}
+		}
+		p.flgOff()
+		return nil
+	}
 
 	if p.matchKeyword(DataType_MySQL...) {
 		if p.next() != nil {
@@ -1550,6 +1572,9 @@ func (p *mysqlParser) Parse() ([]Table, error) {
 }
 
 var DataType_MySQL = []string{
+	"SERIAL",
+	"BOOL",
+	"BOOLEAN",
 	"INTEGER",
 	"INT",
 	"SMALLINT",
