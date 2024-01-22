@@ -1268,57 +1268,126 @@ func TestValidate_MySQL(t *testing.T) {
 	fmt.Println("Table Options");
 	ddl = `create table users (
 		aaaa integer
+	)
+	AUTOEXTEND_SIZE = 1
+	AUTO_INCREMENT = 1
+	AVG_ROW_LENGTH = 1
+	DEFAULT CHARACTER SET = charset_zzzz
+	CHARACTER SET = charset_zzzz
+	CHECKSUM = 0
+	CHECKSUM = 1
+	DEFAULT COLLATE = collation_zzzz
+	COLLATE = collation_zzzz
+	COMMENT = 'string'
+	COMPRESSION = 'ZLIB'
+	COMPRESSION = 'LZ4'
+	COMPRESSION = 'NONE'
+	CONNECTION = 'connect_string'
+	DATA DIRECTORY = 'absolute path to directory'
+	INDEX DIRECTORY = 'absolute path to directory'
+	DELAY_KEY_WRITE = 0
+	DELAY_KEY_WRITE = 1
+	ENCRYPTION = 'Y' 
+	ENCRYPTION = 'N'
+	ENGINE = engine_zzzz
+	ENGINE_ATTRIBUTE = 'string'
+	INSERT_METHOD = NO
+	INSERT_METHOD = FIRST
+	INSERT_METHOD = LAST
+	KEY_BLOCK_SIZE = 1
+	MAX_ROWS = 1
+	MIN_ROWS = 1
+	PACK_KEYS = 0
+	PACK_KEYS = 1
+	PACK_KEYS = DEFAULT
+	PASSWORD = 'string'
+	ROW_FORMAT = DEFAULT 
+	ROW_FORMAT = DYNAMIC
+	ROW_FORMAT = FIXED
+	ROW_FORMAT = COMPRESSED
+	ROW_FORMAT = REDUNDANT
+	ROW_FORMAT = COMPACT
+	SECONDARY_ENGINE_ATTRIBUTE = 'string'
+	STATS_AUTO_RECALC = DEFAULT 
+	STATS_AUTO_RECALC = 0
+	STATS_AUTO_RECALC = 1
+	STATS_PERSISTENT = DEFAULT
+	STATS_PERSISTENT = 0
+	STATS_PERSISTENT = 1
+	STATS_SAMPLE_PAGES = 1
+	TABLESPACE tablespace_zzzz
+	TABLESPACE tablespace_zzzz STORAGE DISK
+	TABLESPACE tablespace_zzzz STORAGE MEMORY
+	UNION = (tbl_yyyy, tbl_zzzz);
+
+	create table users (
+		aaaa integer
+	)
+	AUTOEXTEND_SIZE 1
+	AUTO_INCREMENT 1
+	AVG_ROW_LENGTH 1
+	DEFAULT CHARACTER SET charset_zzzz
+	CHARACTER SET charset_zzzz
+	CHECKSUM 0
+	CHECKSUM 1
+	DEFAULT COLLATE collation_zzzz
+	COLLATE collation_zzzz
+	COMMENT 'string'
+	COMPRESSION 'ZLIB'
+	COMPRESSION 'LZ4'
+	COMPRESSION 'NONE'
+	CONNECTION 'connect_string'
+	DATA DIRECTORY 'absolute path to directory'
+	INDEX DIRECTORY 'absolute path to directory'
+	DELAY_KEY_WRITE 0
+	DELAY_KEY_WRITE 1
+	ENCRYPTION 'Y' 
+	ENCRYPTION 'N'
+	ENGINE engine_zzzz
+	ENGINE_ATTRIBUTE 'string'
+	INSERT_METHOD NO
+	INSERT_METHOD FIRST
+	INSERT_METHOD LAST
+	KEY_BLOCK_SIZE 1
+	MAX_ROWS 1
+	MIN_ROWS 1
+	PACK_KEYS 0
+	PACK_KEYS 1
+	PACK_KEYS DEFAULT
+	PASSWORD 'string'
+	ROW_FORMAT DEFAULT 
+	ROW_FORMAT DYNAMIC
+	ROW_FORMAT FIXED
+	ROW_FORMAT COMPRESSED
+	ROW_FORMAT REDUNDANT
+	ROW_FORMAT COMPACT
+	SECONDARY_ENGINE_ATTRIBUTE 'string'
+	STATS_AUTO_RECALC DEFAULT 
+	STATS_AUTO_RECALC 0
+	STATS_AUTO_RECALC 1
+	STATS_PERSISTENT DEFAULT
+	STATS_PERSISTENT 0
+	STATS_PERSISTENT 1
+	STATS_SAMPLE_PAGES = 1
+	TABLESPACE tablespace_zzzz
+	TABLESPACE tablespace_zzzz STORAGE DISK
+	TABLESPACE tablespace_zzzz STORAGE MEMORY
+	UNION (tbl_yyyy, tbl_zzzz);
+
+	create table users (
+		aaaa integer
 	),
-	with (aaaaa),
-	without oids,
-	tablespace tsn;
+	AUTOEXTEND_SIZE = 1,
+	AUTO_INCREMENT = 1,
+	AVG_ROW_LENGTH = 1,
+	DEFAULT CHARACTER SET = charset_zzzz,
+	CHARACTER SET = charset_zzzz;
 	
 	create table users (
 		aaaa integer
 	)
-	with (aaaaa)
-	without oids
-	tablespace tsn;
-	
-	CREATE TABLE users (
-		aaaa integer
-	)
-	WITH (aaaaa)
-	WITHOUT oids
-	TABLESPACE tsn;`
+	AUTOEXTEND_SIZE = 1 AUTO_INCREMENT = 1 AVG_ROW_LENGTH = 1 DEFAULT CHARACTER SET = charset_zzzz CHARACTER SET = charset_zzzz;`
 	test.ValidateOK(ddl)
-
-	ddl = `create table users (
-		aaaa integer
-	)
-	with (aaaaa),
-	without oids,
-	tablespace tsn;`
-	test.ValidateOK(ddl)
-
-	ddl = `create table users (
-		aaaa integer
-	),
-	with aaaaa,
-	without oids,
-	tablespaceeee tsn;`
-	test.ValidateNG(ddl, 4, "aaaaa")
-
-	ddl = `create table users (
-		aaaa integer
-	),
-	with (aaaaa),
-	without oids aaa,
-	tablespace tsn;`
-	test.ValidateNG(ddl, 5, "aaa")
-
-	ddl = `create table users (
-		aaaa integer
-	),
-	with (aaaaa),
-	without oids,
-	tablespaceeee tsn;`
-	test.ValidateNG(ddl, 6, "tablespaceeee")
 
 	/* -------------------------------------------------- */
 	fmt.Println("Table Constraints");

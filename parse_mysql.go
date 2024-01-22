@@ -1375,6 +1375,9 @@ func (p *mysqlParser) validateTableOptionsAux() error {
 			return err
 		}
 		if p.matchKeyword("STORAGE") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
 			if p.validateKeyword("DISK", "MEMORY") != nil {
 				return p.syntaxError()
 			}
@@ -1383,14 +1386,17 @@ func (p *mysqlParser) validateTableOptionsAux() error {
 		return nil
 	}
 
-	if p.matchKeyword("DEDAULT", "CHARACTER", "COLLATE") {
+	if p.matchKeyword("DEFAULT", "CHARACTER", "COLLATE") {
 		p.flgOff()
-		if p.matchKeyword("DEDAULT") {
+		if p.matchKeyword("DEFAULT") {
 			if p.next() != nil {
 				return p.syntaxError()
 			}
 		}
 		if p.matchKeyword("CHARACTER") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
 			if p.validateKeyword("SET") != nil {
 				return p.syntaxError()
 			}
@@ -1399,6 +1405,23 @@ func (p *mysqlParser) validateTableOptionsAux() error {
 				return p.syntaxError()
 			}
 		} else {
+			return p.syntaxError()
+		}
+		if p.matchSymbol("=") {
+			if p.next() != nil {
+				return p.syntaxError()
+			}
+		}
+		if err := p.validateName(); err != nil {
+			return err
+		}
+		p.flgOff()
+		return nil
+	}
+
+	if p.matchKeyword("ENGINE") {
+		p.flgOff()
+		if p.next() != nil {
 			return p.syntaxError()
 		}
 		if p.matchSymbol("=") {
