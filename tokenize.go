@@ -231,9 +231,8 @@ func (l *lexer) lexAsterisk(token *string) error {
 func (l *lexer) lexDoubleQuote(token *string) error {
 	c := l.char()
 	if c == "\"" {
-		if *token != "" {
-			return l.lexError()
-		}
+		l.appendToken(*token)
+		*token = ""
 		str, err := l.lexStringDoubleQuote()
 		if err != nil {
 			return err
@@ -247,9 +246,8 @@ func (l *lexer) lexDoubleQuote(token *string) error {
 func (l *lexer) lexSingleQuote(token *string) error {
 	c := l.char()
 	if c == "'" {
-		if *token != "" {
-			return l.lexError()
-		}
+		l.appendToken(*token)
+		*token = ""
 		str, err := l.lexStringSingleQuote()
 		if err != nil {
 			return err
@@ -266,9 +264,8 @@ func (l *lexer) lexBackQuote(token *string) error {
 	}
 	c := l.char()
 	if c == "`" {
-		if *token != "" {
-			return l.lexError()
-		}
+		l.appendToken(*token)
+		*token = ""
 		str, err := l.lexStringBackQuote()
 		if err != nil {
 			return err

@@ -407,7 +407,7 @@ func (p *mysqlParser) validateColumns() error {
 
 
 func (p *mysqlParser) validateColumn() error {
-	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "FOREIGN", "INDEX", "KEY", "FULLTEXT", "SPATIAL") {
+	if p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "FOREIGN", "INDEX", "KEY", "FULLTEXT", "SPATIAL", "CHECK") {
 		return p.validateTableConstraint()
 	}
 	if err := p.validateColumnName(); err != nil {
@@ -741,6 +741,16 @@ func (p *mysqlParser) validateConstraintCheck() error {
 	if err := p.validateExpr(); err != nil {
 		return err
 	}
+	if p.matchKeyword("NOT") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
+	if p.matchKeyword("ENFORCED") {
+		if p.next() != nil {
+			return p.syntaxError()
+		}
+	}
 	p.flgOn()
 	return nil
 }
@@ -922,7 +932,7 @@ func (p *mysqlParser) validateTableConstraintAux() error {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
-		if p.matchKeyword("INDEXT", "KEY") {
+		if p.matchKeyword("INDEX", "KEY") {
 			if p.next() != nil {
 				return p.syntaxError()
 			}
@@ -938,9 +948,10 @@ func (p *mysqlParser) validateTableConstraintAux() error {
 		if err := p.validateIndexOption(); err != nil {
 			return err
 		}
+		return nil
 	}
 
-	if p.matchKeyword("INDEXT", "KEY") {
+	if p.matchKeyword("INDEX", "KEY") {
 		return p.validateTableIndex()
 	}
 
@@ -979,7 +990,7 @@ func (p *mysqlParser) validateTableUnique() error {
 	if err := p.validateKeyword("UNIQUE"); err != nil {
 		return err
 	}
-	if p.matchKeyword("INDEXT", "KEY") {
+	if p.matchKeyword("INDEX", "KEY") {
 		if p.next() != nil {
 			return p.syntaxError()
 		}
@@ -989,6 +1000,12 @@ func (p *mysqlParser) validateTableUnique() error {
 			return err
 		}
 	}
+	p.flgOff()
+	if p.matchKeyword("USING") {
+		if err := p.validateIndexType(); err != nil {
+			return err
+		}
+	} 
 	if err := p.validateIndexKeysOn(); err != nil {
 		return err
 	}
@@ -1041,7 +1058,7 @@ func (p *mysqlParser) validateTableIndex() error {
 	if err := p.validateKeyword("INDEX", "KEY"); err != nil {
 		return err
 	}
-	if !p.matchKeyword("USING") && p.matchSymbol("(") {
+	if !p.matchKeyword("USING") && !p.matchSymbol("(") {
 		if err := p.validateName(); err != nil {
 			return err
 		}
@@ -1099,10 +1116,6 @@ func (p *mysqlParser) validateIndexKeysOnAux() error {
 			return err
 		}
 	}
-	if err := p.next(); err != nil {
-		return err
-	}
-	
 	if p.matchSymbol(",") {
 		p.flgOn()
 		if err := p.next(); err != nil {
@@ -1152,10 +1165,6 @@ func (p *mysqlParser) validateIndexKeysOffAux() error {
 			return err
 		}
 	}
-	if err := p.next(); err != nil {
-		return err
-	}
-
 	if p.matchSymbol(",") {
 		if err := p.next(); err != nil {
 			return err
@@ -1220,9 +1229,6 @@ func (p *mysqlParser) validateIndexOption() error {
 		p.flgOff()
 		if p.next() != nil {
 			return p.syntaxError()
-		}
-		if err := p.validateKeyword("PARSER"); err != nil {
-			return err
 		}
 		if err := p.validateStringValue(); err != nil {
 			return err
