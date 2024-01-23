@@ -1112,14 +1112,14 @@ func (p *mysqlParser) validateIndexKeysOnAux() error {
 		}
 	}
 	if p.matchKeyword("ASC", "DESC") {
-		if err := p.next(); err != nil {
-			return err
+		if p.next() != nil {
+			return p.syntaxError()
 		}
 	}
 	if p.matchSymbol(",") {
 		p.flgOn()
-		if err := p.next(); err != nil {
-			return err
+		if p.next() != nil {
+			return p.syntaxError()
 		}
 		p.flgOff()
 		return p.validateIndexKeysOnAux()
@@ -1161,13 +1161,13 @@ func (p *mysqlParser) validateIndexKeysOffAux() error {
 		}
 	}
 	if p.matchKeyword("ASC", "DESC") {
-		if err := p.next(); err != nil {
-			return err
+		if p.next() != nil {
+			return p.syntaxError()
 		}
 	}
 	if p.matchSymbol(",") {
-		if err := p.next(); err != nil {
-			return err
+		if p.next() != nil {
+			return p.syntaxError()
 		}
 		return p.validateIndexKeysOffAux()
 	}
