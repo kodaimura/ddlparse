@@ -29,32 +29,6 @@ type Column struct {
 	Default interface{}
 }
 
-type ValidateError struct {
-	Line int
-	Near string
-}
-
-func NewValidateError(line int, near string) error {
-	return ValidateError{line, near}
-}
-
-func (e ValidateError) Error() string {
-	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near, e.Line)
-}
-
-type ParseError struct {
-	message string
-}
-
-func NewParseError(message string) error {
-	return ParseError{message}
-}
-
-func (e ParseError) Error() string {
-	return fmt.Sprintf("ParseError: %s", e.message)
-}
-
-
 func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	tokens, err := tokenize(ddl, rdbms)
 	if err != nil {
@@ -93,4 +67,29 @@ func ParseForce(ddl string) ([]Table, error) {
 		}
 	}
 	return []Table{}, err
+}
+
+type ValidateError struct {
+	Line int
+	Near string
+}
+
+func NewValidateError(line int, near string) error {
+	return ValidateError{line, near}
+}
+
+func (e ValidateError) Error() string {
+	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near, e.Line)
+}
+
+type ParseError struct {
+	message string
+}
+
+func NewParseError(message string) error {
+	return ParseError{message}
+}
+
+func (e ParseError) Error() string {
+	return fmt.Sprintf("ParseError: %s", e.message)
 }
