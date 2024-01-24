@@ -1,0 +1,119 @@
+package ddlparse
+
+import (
+	"fmt"
+	"errors"
+)
+
+type Rdbms string
+
+const (
+	SQLite Rdbms = "SQLite"
+	PostgreSQL Rdbms = "PostgreSQL"
+	MySQL Rdbms = "MySQL"
+)
+
+type Table struct {
+	Schema string
+	Name string
+	Columns []Column
+}
+
+type Column struct {
+	Name string
+	DataType string
+	IsPK bool
+	IsNotNull bool
+	IsUnique bool
+	IsAutoIncrement bool
+	Default interface{}
+}
+
+type ValidateError struct {
+	Line int
+	Near string
+}
+
+func NewValidateError(line int, near string) error {
+	return ValidateError{line, near}
+}
+
+func (e ValidateError) Error() string {
+	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near, e.Line)
+}
+
+type ParseError struct {
+	message string
+}
+
+func NewParseError(message string) error {
+	return ParseError{message}
+}
+
+func (e ParseError) Error() string {
+	return fmt.Sprintf("ParseError: %s", e.message)
+}
+
+
+func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
+	switch rdbms {
+	case SQLite:
+		return ParseSQLite(ddl)
+	case PostgreSQL:
+		return ParsePostgreSQL(ddl)
+	case MySQL:
+		return ParseMySQL(ddl)
+	default:
+		return []Table{}, errors.New("Not yet supported.")
+	}
+}
+
+
+type parser interface {
+	Validate() error
+	Parse() ([]Table, error)
+}
+
+func ParseSQLite(ddl string) ([]Table, error) {
+	parser := newSQLiteParser(ddl)
+	return parser.Parse()
+}
+
+func ParsePostgreSQL(ddl string) ([]Table, error) {
+	parser := newPostgreSQLParser(ddl)
+	return parser.Parse()
+}
+
+func ParseMySQL(ddl string) ([]Table, error) {
+	parser := newMySQLParser(ddl)
+	return parser.Parse()
+}
+
+
+func Validate(ddl string, rdbms Rdbms) error {
+	switch rdbms {
+	case SQLite:
+		return ValidateSQLite(ddl)
+	case PostgreSQL:
+		return ValidatePostgreSQL(ddl)
+	case MySQL:
+		return ValidateMySQL(ddl)
+	default:
+		return errors.New("Not yet supported.")
+	}
+}
+
+func ValidateSQLite(ddl string) error {
+	parser := newSQLiteParser(ddl)
+	return parser.Validate()
+}
+
+func ValidatePostgreSQL(ddl string) error {
+	parser := newPostgreSQLParser(ddl)
+	return parser.Validate()
+}
+
+func ValidateMySQL(ddl string) error {
+	parser := newMySQLParser(ddl)
+	return parser.Validate()
+}

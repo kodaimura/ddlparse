@@ -39,17 +39,17 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func Tokenize (ddl string, rdbms Rdbms) ([]string, error) {
-	lex := newLexer(ddl, rdbms)
-	if err := lex.Lex(); err != nil {
-		return lex.Tokens, err
-	}
-	return lex.Tokens, nil
+func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
+	l := newLexer(rdbms, ddl)
+	return l.Lex()
 }
 
+type lexerI struct {
+	Lex() ([]string, error)
+}
 
 type lexer struct {
-	Tokens []string
+	tokens []string
 	rdbms Rdbms
 	ddlr []rune
 	size int
@@ -58,7 +58,7 @@ type lexer struct {
 }
 
 
-func newLexer(ddl string, rdbms Rdbms) *lexer {
+func newLexer(rdbms Rdbms, ddl string) lexerI {
 	return &lexer{ddlr: []rune(ddl), rdbms: rdbms}
 }
 
@@ -97,9 +97,12 @@ func (l *lexer) lexError() error {
 }
 
 
-func (l *lexer) Lex() error {
+func (l *lexer) Lex() ([]string, error) {
 	l.init()
-	return l.lexProc()
+	if err := l.lex(); err != nil {
+		return []string, err
+	}
+	return l.tokens, nil
 }
 
 
@@ -111,7 +114,7 @@ func (l *lexer) init() {
 }
 
 
-func (l *lexer) lexProc() error {
+func (l *lexer) lex() error {
 	token := ""
 	for l.size > l.i {
 		c := l.char()

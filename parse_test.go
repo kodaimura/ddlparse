@@ -1684,3 +1684,50 @@ func TestParse(t *testing.T) {
 func TestEnd(t *testing.T) {
 	fmt.Println("--------------------------------------------------")
 }
+
+
+func TestWork(t *testing.T) {
+	ddl1 := `CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+		username TEXT NOT NULL UNIQUE,
+		password TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+	);`
+
+	parser1 := &sqliteParser{ddl: ddl1}
+	if err := parser1.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} 
+	fmt.Println(parser1.validatedTokens)
+
+	ddl2 := `CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY,
+		username TEXT NOT NULL UNIQUE,
+		password TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+	);`
+
+	parser2 := &postgresqlParser{ddl: ddl2}
+	if err := parser2.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} 
+	fmt.Println(parser2.validatedTokens)
+
+	ddl3 := `CREATE TABLE IF NOT EXISTS users (
+		user_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+		username NOT NULL UNIQUE,
+		password TEXT NOT NULL,
+		email TEXT NOT NULL UNIQUE,
+		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+	);`
+	parser3 := &mysqlParser{ddl: ddl3}
+	if err := parser3.Validate(); err != nil {
+		fmt.Println(err.Error())
+	} 
+	fmt.Println(parser3.validatedTokens)
+}
