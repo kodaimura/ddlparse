@@ -34,11 +34,11 @@ func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	if err != nil {
 		return []Table{}, err
 	}
-	validatedTokens, err := validate(ddl, rdbms)
+	validatedTokens, err := validate(tokens, rdbms)
 	if err != nil {
 		return []Table{}, err
 	}
-	tables, err := validate(ddl, rdbms)
+	tables, err := parse(validatedTokens, rdbms)
 	if err != nil {
 		return []Table{}, err
 	}

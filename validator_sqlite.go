@@ -117,7 +117,7 @@ func (v *sqliteValidator) isIdentifier(token string) bool {
 
 
 func (v *sqliteValidator) isValidName(name string) bool {
-	pattern := regexv.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
 		!contains(ReservedWords_SQLite, strings.ToUpper(name))
 }

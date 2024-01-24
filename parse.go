@@ -1,8 +1,10 @@
 package ddlparse
 
 import (
+	"fmt"
 	"errors"
 	"strings"
+	"strconv"
 )
 
 /*
@@ -49,34 +51,87 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func parse (tokens []string) ([]Table, error) {
-	p := newParser(tokens)
+func parse (tokens []string, rdbms Rdbms) ([]Table, error) {
+	p := newParser(rdbms, tokens)
 	return p.Parse()
 }
 
-type parserI struct {
+type parserI interface {
 	Parse() ([]Table, error)
 }
 
 type parser struct {
-	validatedTokens []string
+	rdbms Rdbms
+	tokens []string
 	size int
 	i int
 	tables []Table
 }
 
-func newParser(tokens []string) parserI {
-	return &parser{tokens, len(tokens), 0, []Table{}}
+func newParser(rdbms Rdbms, tokens []string) parserI {
+	return &parser{tokens: tokens, rdbms: rdbms}
 }
 
-
 func (p *parser) Parse() ([]Table, error) {
+	p.initP()
 	if err := p.parse(); err != nil {
 		return nil, err
 	}
 	return p.tables, nil
 }
 
+func (p *parser) initP() {
+	p.i = 0
+	p.size = len(p.tokens)
+	p.tables = []Table{}
+}
+
+func (p *parser) token() string {
+	return p.tokens[p.i]
+}
+
+func (p *parser) isOutOfRange() bool {
+	return p.i > p.size - 1
+}
+
+func (p *parser) matchKeyword(keywords ...string) bool {
+	return contains(
+		append(
+			mapSlice(keywords, strings.ToLower), 
+			mapSlice(keywords, strings.ToUpper)...,
+		), p.token())
+}
+
+
+func (p *parser) matchSymbol(symbols ...string) bool {
+	return contains(symbols, p.token())
+}
+
+func (p *parser) isIdentifier(token string) bool {
+	c := token[0:1]
+	switch (p.rdbms) {
+		case SQLite:
+			return c == "\"" || c == "`"
+		case MySQL:
+			return c == "`"
+		case PostgreSQL:
+			return c == "\""
+	}
+	return false
+}
+
+func (p *parser) isStringValue(token string) bool {
+	c := token[0:1]
+	switch (p.rdbms) {
+		case SQLite:
+			return c == "'"
+		case MySQL:
+			return c == "\"" || c == "'"
+		case PostgreSQL:
+			return c == "'"
+	}
+	return false
+}
 
 func (p *parser) parse() error {
 	if p.isOutOfRange() {

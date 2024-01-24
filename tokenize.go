@@ -44,7 +44,7 @@ func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
 	return l.Lex()
 }
 
-type lexerI struct {
+type lexerI interface {
 	Lex() ([]string, error)
 }
 
@@ -79,7 +79,7 @@ func (l *lexer) char() string {
 
 func (l *lexer) appendToken(token string) {
 	if (token != "") {
-		l.Tokens = append(l.Tokens, token)
+		l.tokens = append(l.tokens, token)
 	}
 }
 
@@ -100,14 +100,14 @@ func (l *lexer) lexError() error {
 func (l *lexer) Lex() ([]string, error) {
 	l.init()
 	if err := l.lex(); err != nil {
-		return []string, err
+		return []string{}, err
 	}
 	return l.tokens, nil
 }
 
 
 func (l *lexer) init() {
-	l.Tokens = []string{}
+	l.tokens = []string{}
 	l.size = len(l.ddlr)
 	l.i = 0
 	l.line = 1

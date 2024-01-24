@@ -15,18 +15,18 @@ type postgresqlValidator struct {
 	flg bool
 }
 
-func newPostgreSQLValidator(tokens []string) parser {
+func newPostgreSQLValidator(tokens []string) validator {
 	return &postgresqlValidator{tokens: tokens}
 }
 
 
 func (v *postgresqlValidator) token() string {
-	return v .tokens[v .i]
+	return v.tokens[v.i]
 }
 
 
 func (v *postgresqlValidator) isOutOfRange() bool {
-	return v .i > v .size - 1
+	return v.i > v.size - 1
 }
 
 
@@ -40,41 +40,41 @@ func (v *postgresqlValidator) Validate() ([]string, error) {
 
 
 func (v *postgresqlValidator) initV() {
-	v .validatedTokens = []string{}
-	v .i = -1
-	v .line = 1
-	v .size = len(v .tokens)
-	v .flg = false
-	v .next()
+	v.validatedTokens = []string{}
+	v.i = -1
+	v.line = 1
+	v.size = len(v.tokens)
+	v.flg = false
+	v.next()
 }
 
 
 func (v *postgresqlValidator) flgOn() {
-	v .flg = true
+	v.flg = true
 }
 
 
 func (v *postgresqlValidator) flgOff() {
-	v .flg = false
+	v.flg = false
 }
 
 
 func (v *postgresqlValidator) next() error {
-	if v .flg {
-		v .validatedTokens = append(v .validatedTokens, v .token())
+	if v.flg {
+		v.validatedTokens = append(v.validatedTokens, v.token())
 	}
-	return v .nextAux()
+	return v.nextAux()
 }
 
 
 func (v *postgresqlValidator) nextAux() error {
-	v .i += 1
-	if (v .isOutOfRange()) {
+	v.i += 1
+	if (v.isOutOfRange()) {
 		return errors.New("out of range")
 	}
-	if (v .token() == "\n") {
-		v .line += 1
-		return v .nextAux()
+	if (v.token() == "\n") {
+		v.line += 1
+		return v.nextAux()
 	} else {
 		return nil
 	}
@@ -82,10 +82,10 @@ func (v *postgresqlValidator) nextAux() error {
 
 
 func (v *postgresqlValidator) syntaxError() error {
-	if v .isOutOfRange() {
-		return NewValidateError(v .line, v .tokens[v .size - 1])
+	if v.isOutOfRange() {
+		return NewValidateError(v.line, v.tokens[v.size - 1])
 	}
-	return NewValidateError(v .line, v .tokens[v .i])
+	return NewValidateError(v.line, v.tokens[v.i])
 }
 
 
@@ -94,12 +94,12 @@ func (v *postgresqlValidator) matchKeyword(keywords ...string) bool {
 		append(
 			mapSlice(keywords, strings.ToLower), 
 			mapSlice(keywords, strings.ToUpper)...,
-		), v .token())
+		), v.token())
 }
 
 
 func (v *postgresqlValidator) matchSymbol(symbols ...string) bool {
-	return contains(symbols, v .token())
+	return contains(symbols, v.token())
 }
 
 
@@ -114,7 +114,7 @@ func (v *postgresqlValidator) isIdentifier(token string) bool {
 
 
 func (v *postgresqlValidator) isValidName(name string) bool {
-	pattern := regexv .MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
 		!contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
 }
@@ -126,47 +126,47 @@ func (v *postgresqlValidator) isValidQuotedName(name string) bool {
 
 
 func (v *postgresqlValidator) validateKeyword(keywords ...string) error {
-	if (v .isOutOfRange()) {
-		return v .syntaxError()
+	if (v.isOutOfRange()) {
+		return v.syntaxError()
 	}
-	if v .matchKeyword(keywords...) {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword(keywords...) {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 		return nil
 	}
-	return v .syntaxError()
+	return v.syntaxError()
 }
 
 
 func (v *postgresqlValidator) validateSymbol(symbols ...string) error {
-	if (v .isOutOfRange()) {
-		return v .syntaxError()
+	if (v.isOutOfRange()) {
+		return v.syntaxError()
 	}
-	if v .matchSymbol(symbols...) {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchSymbol(symbols...) {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 		return nil
 	}
-	return v .syntaxError()
+	return v.syntaxError()
 }
 
 
 func (v *postgresqlValidator) validateName() error {
-	if v .isIdentifier(v .token()) {
-		if !v .isValidQuotedName(v .token()) {
-			return v .syntaxError()
+	if v.isIdentifier(v.token()) {
+		if !v.isValidQuotedName(v.token()) {
+			return v.syntaxError()
 		}
-		if v .next() != nil {
-			return v .syntaxError()
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 	} else {
-		if !v .isValidName(v .token()) {
-			return v .syntaxError()
+		if !v.isValidName(v.token()) {
+			return v.syntaxError()
 		}
-		if v .next() != nil {
-			return v .syntaxError()
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 	}
 
@@ -175,11 +175,11 @@ func (v *postgresqlValidator) validateName() error {
 
 
 func (v *postgresqlValidator) validateTableName() error {
-	if err := v .validateName(); err != nil {
+	if err := v.validateName(); err != nil {
 		return err
 	}
-	if v .validateSymbol(".") == nil {
-		if err := v .validateName(); err != nil {
+	if v.validateSymbol(".") == nil {
+		if err := v.validateName(); err != nil {
 			return err
 		}
 	}
@@ -189,29 +189,29 @@ func (v *postgresqlValidator) validateTableName() error {
 
 
 func (v *postgresqlValidator) validateColumnName() error {
-	return v .validateName()
+	return v.validateName()
 }
 
 
 func (v *postgresqlValidator) validatePositiveInteger() error {
-	if !isPositiveIntegerToken(v .token()) {
-		return v .syntaxError()
+	if !isPositiveIntegerToken(v.token()) {
+		return v.syntaxError()
 	}
-	if v .next() != nil {
-		return v .syntaxError()
+	if v.next() != nil {
+		return v.syntaxError()
 	}
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateBrackets() error {
-	if err := v .validateSymbol("("); err != nil {
+	if err := v.validateSymbol("("); err != nil {
 		return err
 	}
-	if err := v .validateBracketsAux(); err != nil {
+	if err := v.validateBracketsAux(); err != nil {
 		return err
 	}
-	if err := v .validateSymbol(")"); err != nil {
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
 	return nil
@@ -219,401 +219,401 @@ func (v *postgresqlValidator) validateBrackets() error {
 
 
 func (v *postgresqlValidator) validateBracketsAux() error {
-	if v .matchSymbol(")") {
+	if v.matchSymbol(")") {
 		return nil
 	}
-	if v .matchSymbol("(") {
-		if err := v .validateBrackets(); err != nil {
+	if v.matchSymbol("(") {
+		if err := v.validateBrackets(); err != nil {
 			return err
 		}
-		return v .validateBracketsAux()
+		return v.validateBracketsAux()
 	}
-	if v .next() != nil {
-		return v .syntaxError()
+	if v.next() != nil {
+		return v.syntaxError()
 	}
-	return v .validateBracketsAux()
+	return v.validateBracketsAux()
 }
 
 
 func (v *postgresqlValidator) validate() error {
-	if (v .isOutOfRange()) {
+	if (v.isOutOfRange()) {
 		return nil
 	}
-	if err := v .validateCreateTable(); err != nil {
+	if err := v.validateCreateTable(); err != nil {
 		return err
 	}
-	return v .validate()
+	return v.validate()
 }
 
 
 func (v *postgresqlValidator) validateCreateTable() error {
-	v .flgOn()
-	if err := v .validateKeyword("CREATE"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("CREATE"); err != nil {
 		return err
 	}
-	if err := v .validateKeyword("TABLE"); err != nil {
+	if err := v.validateKeyword("TABLE"); err != nil {
 		return err
 	}
 
-	v .flgOff()
-	if v .validateKeyword("IF") == nil {
-		if err := v .validateKeyword("NOT"); err != nil {
+	v.flgOff()
+	if v.validateKeyword("IF") == nil {
+		if err := v.validateKeyword("NOT"); err != nil {
 			return err
 		}
-		if err := v .validateKeyword("EXISTS"); err != nil {
+		if err := v.validateKeyword("EXISTS"); err != nil {
 			return err
 		}
 	}
 
-	v .flgOn()
-	if err := v .validateTableName(); err != nil {
+	v.flgOn()
+	if err := v.validateTableName(); err != nil {
 		return err
 	}
-	v .flgOn()
-	if err := v .validateSymbol("("); err != nil {
+	v.flgOn()
+	if err := v.validateSymbol("("); err != nil {
 		return err
 	}
-	if err := v .validateColumns(); err != nil {
+	if err := v.validateColumns(); err != nil {
 		return err
 	}
-	v .flgOn()
-	if err := v .validateSymbol(")"); err != nil {
+	v.flgOn()
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	if err := v .validateTableOptions(); err != nil {
+	if err := v.validateTableOptions(); err != nil {
 		return err
 	}
-	v .flgOn()
-	if v .matchSymbol(";") {
-		if v .next() != nil {
+	v.flgOn()
+	if v.matchSymbol(";") {
+		if v.next() != nil {
 			return nil
 		}
 	} else {
-		return v .syntaxError()
+		return v.syntaxError()
 	}
 
-	return v .validateCreateTable()
+	return v.validateCreateTable()
 }
 
 
 func (v *postgresqlValidator) validateColumns() error {
-	v .flgOn()
-	if err := v .validateColumn(); err != nil {
+	v.flgOn()
+	if err := v.validateColumn(); err != nil {
 		return err
 	}
-	v .flgOn()
-	if v .validateSymbol(",") == nil {
-		return v .validateColumns()
+	v.flgOn()
+	if v.validateSymbol(",") == nil {
+		return v.validateColumns()
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateColumn() error {
-	v .flgOn()
-	if v .matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "EXCLUDE") {
-		return v .validateTableConstraint()
+	v.flgOn()
+	if v.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "EXCLUDE") {
+		return v.validateTableConstraint()
 	}
-	if err := v .validateColumnName(); err != nil {
+	if err := v.validateColumnName(); err != nil {
 		return err
 	}
-	if err := v .validateColumnType(); err != nil {
+	if err := v.validateColumnType(); err != nil {
 		return err
 	}
-	if err := v .validateColumnConstraint(); err != nil {
+	if err := v.validateColumnConstraint(); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 // Omitting data types is not supported.
 func (v *postgresqlValidator) validateColumnType() error {
-	v .flgOn()
-	if v .matchKeyword("BIT", "CHARACTER") {
-		if v .next() != nil {
-			return v .syntaxError()
+	v.flgOn()
+	if v.matchKeyword("BIT", "CHARACTER") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if v .matchKeyword("VARYING") {
-			if v .next() != nil {
-				return v .syntaxError()
+		if v.matchKeyword("VARYING") {
+			if v.next() != nil {
+				return v.syntaxError()
 			}
 		}
-		if err := v .validateTypeDigitN(); err != nil {
+		if err := v.validateTypeDigitN(); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	if v .matchKeyword("VARBIT", "VARCHAR", "CHAR") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("VARBIT", "VARCHAR", "CHAR") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateTypeDigitN(); err != nil {
+		if err := v.validateTypeDigitN(); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	if v .matchKeyword("NUMERIC", "DECIMAL") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("NUMERIC", "DECIMAL") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateTypeDigitPS(); err != nil {
+		if err := v.validateTypeDigitPS(); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	if v .matchKeyword("DOUBLE") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("DOUBLE") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("PRECISION"); err != nil {
+		if err := v.validateKeyword("PRECISION"); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
 	// TODO
-	//if v .matchKeyword("INTERVAL") {
+	//if v.matchKeyword("INTERVAL") {
 	//}
 
-	if v .matchKeyword("TIME", "TIMESTAMP") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("TIME", "TIMESTAMP") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateTypeDigitP(); err != nil {
+		if err := v.validateTypeDigitP(); err != nil {
 			return err
 		}
-		if v .matchKeyword("WITH", "WITHOUT") {
-			if v .next() != nil {
-				return v .syntaxError()
+		if v.matchKeyword("WITH", "WITHOUT") {
+			if v.next() != nil {
+				return v.syntaxError()
 			}
-			if err := v .validateKeyword("TIME"); err != nil {
+			if err := v.validateKeyword("TIME"); err != nil {
 				return err
 			}
-			if err := v .validateKeyword("ZONE"); err != nil {
+			if err := v.validateKeyword("ZONE"); err != nil {
 				return err
 			}
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	if v .matchKeyword(DataType_PostgreSQL...) {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword(DataType_PostgreSQL...) {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	return v .syntaxError()
+	return v.syntaxError()
 }
 
 // (number)
 func (v *postgresqlValidator) validateTypeDigitN() error {
-	v .flgOn()
-	if v .matchSymbol("(") {
-		if v .next() != nil {
-			return v .syntaxError()
+	v.flgOn()
+	if v.matchSymbol("(") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 	} else {
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	if err := v .validatePositiveInteger(); err != nil {
+	if err := v.validatePositiveInteger(); err != nil {
 		return err
 	}
-	if err := v .validateSymbol(")"); err != nil {
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 // (presision)
 func (v *postgresqlValidator) validateTypeDigitP() error {
-	return v .validateTypeDigitN()
+	return v.validateTypeDigitN()
 }
 
 // (presision. scale)
 func (v *postgresqlValidator) validateTypeDigitPS() error {
-	v .flgOn()
-	if v .matchSymbol("(") {
-		if v .next() != nil {
-			return v .syntaxError()
+	v.flgOn()
+	if v.matchSymbol("(") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 	} else {
 		return nil
 	}
 
-	if err := v .validatePositiveInteger(); err != nil {
+	if err := v.validatePositiveInteger(); err != nil {
 		return err
 	}
-	v .flgOn()
-	if (v .matchSymbol(",")) {
-		if err := v .validateSymbol(","); err != nil {
+	v.flgOn()
+	if (v.matchSymbol(",")) {
+		if err := v.validateSymbol(","); err != nil {
 			return err
 		}
-		if err := v .validatePositiveInteger(); err != nil {
+		if err := v.validatePositiveInteger(); err != nil {
 			return err
 		}
 	}
-	v .flgOn()
-	if err := v .validateSymbol(")"); err != nil {
+	v.flgOn()
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 func (v *postgresqlValidator) validateColumnConstraint() error {
-	v .flgOff()
-	if v .validateKeyword("CONSTRAINT") == nil {
-		if err := v .validateName(); err != nil {
+	v.flgOff()
+	if v.validateKeyword("CONSTRAINT") == nil {
+		if err := v.validateName(); err != nil {
 			return err
 		}
 	}
-	return v .validateColumnConstraintAux([]string{})
+	return v.validateColumnConstraintAux([]string{})
 }
 
 
 func (v *postgresqlValidator) validateColumnConstraintAux(ls []string) error {
-	if v .matchKeyword("PRIMARY") {
+	if v.matchKeyword("PRIMARY") {
 		if contains(ls, "PRIMARY") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOn()
-		if err := v .validateConstraintPrimaryKey(); err != nil {
+		v.flgOn()
+		if err := v.validateConstraintPrimaryKey(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "PRIMARY"))
+		return v.validateColumnConstraintAux(append(ls, "PRIMARY"))
 	}
 
-	if v .matchKeyword("NOT") {
+	if v.matchKeyword("NOT") {
 		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOn()
-		if err := v .validateConstraintNotNull(); err != nil {
+		v.flgOn()
+		if err := v.validateConstraintNotNull(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "NOTNULL"))
+		return v.validateColumnConstraintAux(append(ls, "NOTNULL"))
 	}
 
-	if v .matchKeyword("NULL") {
+	if v.matchKeyword("NULL") {
 		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOff()
-		if err := v .validateConstraintNull(); err != nil {
+		v.flgOff()
+		if err := v.validateConstraintNull(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "NULL"))
+		return v.validateColumnConstraintAux(append(ls, "NULL"))
 	}
 
-	if v .matchKeyword("UNIQUE") {
+	if v.matchKeyword("UNIQUE") {
 		if contains(ls, "UNIQUE") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOn()
-		if err := v .validateConstraintUnique(); err != nil {
+		v.flgOn()
+		if err := v.validateConstraintUnique(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "UNIQUE"))
+		return v.validateColumnConstraintAux(append(ls, "UNIQUE"))
 	}
 
-	if v .matchKeyword("CHECK") {
+	if v.matchKeyword("CHECK") {
 		if contains(ls, "CHECK") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOff()
-		if err := v .validateConstraintCheck(); err != nil {
+		v.flgOff()
+		if err := v.validateConstraintCheck(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "CHECK"))
+		return v.validateColumnConstraintAux(append(ls, "CHECK"))
 	}
 
-	if v .matchKeyword("DEFAULT") {
+	if v.matchKeyword("DEFAULT") {
 		if contains(ls, "DEFAULT") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOn()
-		if err := v .validateConstraintDefault(); err != nil {
+		v.flgOn()
+		if err := v.validateConstraintDefault(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "DEFAULT"))
+		return v.validateColumnConstraintAux(append(ls, "DEFAULT"))
 	}
 
-	if v .matchKeyword("REFERENCES") {
+	if v.matchKeyword("REFERENCES") {
 		if contains(ls, "REFERENCES") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOff()
-		if err := v .validateConstraintForeignKey(); err != nil {
+		v.flgOff()
+		if err := v.validateConstraintForeignKey(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "REFERENCES"))
+		return v.validateColumnConstraintAux(append(ls, "REFERENCES"))
 	}
 
-	if v .matchKeyword("GENERATED", "AS") {
+	if v.matchKeyword("GENERATED", "AS") {
 		if contains(ls, "GENERATED") {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		v .flgOff()
-		if err := v .validateConstraintGenerated(); err != nil {
+		v.flgOff()
+		if err := v.validateConstraintGenerated(); err != nil {
 			return err
 		}
-		return v .validateColumnConstraintAux(append(ls, "GENERATED"))
+		return v.validateColumnConstraintAux(append(ls, "GENERATED"))
 	}
 
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintPrimaryKey() error {
-	v .flgOn()
-	if err := v .validateKeyword("PRIMARY"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("PRIMARY"); err != nil {
 		return err
 	}
-	if err := v .validateKeyword("KEY"); err != nil {
+	if err := v.validateKeyword("KEY"); err != nil {
 		return err
 	}
-	v .flgOff()
-	if err := v .validateIndexParameters(); err != nil {
+	v.flgOff()
+	if err := v.validateIndexParameters(); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintNotNull() error {
-	v .flgOn()
-	if err := v .validateKeyword("NOT"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("NOT"); err != nil {
 		return err
 	}
-	if err := v .validateKeyword("NULL"); err != nil {
+	if err := v.validateKeyword("NULL"); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintNull() error {
-	v .flgOff()
-	if err := v .validateKeyword("NULL"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("NULL"); err != nil {
 		return err
 	}
 	return nil
@@ -621,275 +621,275 @@ func (v *postgresqlValidator) validateConstraintNull() error {
 
 
 func (v *postgresqlValidator) validateConstraintUnique() error {
-	v .flgOn()
-	if err := v .validateKeyword("UNIQUE"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("UNIQUE"); err != nil {
 		return err
 	}
-	v .flgOff()
-	if err := v .validateIndexParameters(); err != nil {
+	v.flgOff()
+	if err := v.validateIndexParameters(); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintCheck() error {
-	v .flgOff()
-	if err := v .validateKeyword("CHECK"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("CHECK"); err != nil {
 		return err
 	}
-	if err := v .validateExpr(); err != nil {
+	if err := v.validateExpr(); err != nil {
 		return err
 	}
-	if v .matchKeyword("NO") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("NO") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("INHERIT"); err != nil {
+		if err := v.validateKeyword("INHERIT"); err != nil {
 			return err
 		}
 	}
 
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintDefault() error {
-	v .flgOn()
-	if err := v .validateKeyword("DEFAULT"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("DEFAULT"); err != nil {
 		return err
 	}
 
-	if v .matchSymbol("(") {
-		if err := v .validateExpr(); err != nil {
+	if v.matchSymbol("(") {
+		if err := v.validateExpr(); err != nil {
 			return err
 		}
 	} else {
-		if err := v .validateLiteralValue(); err != nil {
+		if err := v.validateLiteralValue(); err != nil {
 			return err
 		}
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintForeignKey() error {
-	v .flgOff()
-	if err := v .validateKeyword("REFERENCES"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("REFERENCES"); err != nil {
 		return err
 	}
-	if err := v .validateTableName(); err != nil {
+	if err := v.validateTableName(); err != nil {
 		return err
 	}
-	if v .validateSymbol("(") == nil {
-		if err := v .validateCommaSeparatedColumnNames(); err != nil {
+	if v.validateSymbol("(") == nil {
+		if err := v.validateCommaSeparatedColumnNames(); err != nil {
 			return err
 		}
-		if err := v .validateSymbol(")"); err != nil {
+		if err := v.validateSymbol(")"); err != nil {
 			return err
 		}
 	}
-	if err := v .validateConstraintForeignKeyAux(); err != nil {
-		return v .syntaxError()
+	if err := v.validateConstraintForeignKeyAux(); err != nil {
+		return v.syntaxError()
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintForeignKeyAux() error {
-	v .flgOff()
-	if v .validateKeyword("ON") == nil {
-		if err := v .validateKeyword("DELETE", "UPDATE"); err != nil {
+	v.flgOff()
+	if v.validateKeyword("ON") == nil {
+		if err := v.validateKeyword("DELETE", "UPDATE"); err != nil {
 			return err
 		}
-		if v .validateKeyword("SET") == nil {
-			if err := v .validateKeyword("NULL", "DEFAULT"); err != nil {
+		if v.validateKeyword("SET") == nil {
+			if err := v.validateKeyword("NULL", "DEFAULT"); err != nil {
 				return err
 			}
-		} else if v .validateKeyword("CASCADE", "RESTRICT") == nil {
+		} else if v.validateKeyword("CASCADE", "RESTRICT") == nil {
 
-		} else if v .validateKeyword("NO") == nil {
-			if err := v .validateKeyword("ACTION"); err != nil {
+		} else if v.validateKeyword("NO") == nil {
+			if err := v.validateKeyword("ACTION"); err != nil {
 				return err
 			}
 		} else {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-		return v .validateConstraintForeignKeyAux()
+		return v.validateConstraintForeignKeyAux()
 	}
 
-	if v .validateKeyword("MATCH") == nil {
-		if err := v .validateKeyword("SIMPLE", "PARTIAL", "FULL"); err != nil {
+	if v.validateKeyword("MATCH") == nil {
+		if err := v.validateKeyword("SIMPLE", "PARTIAL", "FULL"); err != nil {
 			return err
 		}
-		return v .validateConstraintForeignKeyAux()
+		return v.validateConstraintForeignKeyAux()
 	}
 
-	if v .matchKeyword("NOT", "DEFERRABLE") {
-		if v .matchKeyword("NOT") {
-			if v .next() != nil {
-				return v .syntaxError()
+	if v.matchKeyword("NOT", "DEFERRABLE") {
+		if v.matchKeyword("NOT") {
+			if v.next() != nil {
+				return v.syntaxError()
 			}
 		}
-		if err := v .validateKeyword("DEFERRABLE"); err != nil {
+		if err := v.validateKeyword("DEFERRABLE"); err != nil {
 			return err
 		}
-		if v .validateKeyword("INITIALLY") == nil {
-			if err := v .validateKeyword("DEFERRED", "IMMEDIATE"); err != nil {
+		if v.validateKeyword("INITIALLY") == nil {
+			if err := v.validateKeyword("DEFERRED", "IMMEDIATE"); err != nil {
 				return err
 			}
 		}
-		return v .validateConstraintForeignKeyAux()
+		return v.validateConstraintForeignKeyAux()
 	}
 
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateConstraintGenerated() error {
-	v .flgOff()
-	if err := v .validateKeyword("GENERATED"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("GENERATED"); err != nil {
 		return err
 	}
 
-	if v .matchKeyword("ALWAYS") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("ALWAYS") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("AS"); err != nil {
+		if err := v.validateKeyword("AS"); err != nil {
 			return err
 		}
-		if v .matchKeyword("IDENTITY") {
-			if v .next() != nil {
-				return v .syntaxError()
+		if v.matchKeyword("IDENTITY") {
+			if v.next() != nil {
+				return v.syntaxError()
 			}
-			if v .matchSymbol("(") {
-				if err := v .validateBrackets(); err != nil {
+			if v.matchSymbol("(") {
+				if err := v.validateBrackets(); err != nil {
 					return err
 				}
 			}
-			v .flgOff()
+			v.flgOff()
 			return nil
-		} else if v .matchSymbol("(") {
-			if err := v .validateBrackets(); err != nil {
+		} else if v.matchSymbol("(") {
+			if err := v.validateBrackets(); err != nil {
 				return err
 			}
-			if err := v .validateKeyword("STORED"); err != nil {
+			if err := v.validateKeyword("STORED"); err != nil {
 				return err
 			}
-			v .flgOff()
+			v.flgOff()
 			return nil
 		} else {
-			return v .syntaxError()
+			return v.syntaxError()
 		}
-	} else if v .matchKeyword("BY") {
-		if v .next() != nil {
-			return v .syntaxError()
+	} else if v.matchKeyword("BY") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("DEFAULT"); err != nil {
+		if err := v.validateKeyword("DEFAULT"); err != nil {
 			return err
 		}
-		if err := v .validateKeyword("AS"); err != nil {
+		if err := v.validateKeyword("AS"); err != nil {
 			return err
 		}
-		if err := v .validateKeyword("IDENTITY"); err != nil {
+		if err := v.validateKeyword("IDENTITY"); err != nil {
 			return err
 		}
-		if v .matchSymbol("(") {
-			if err := v .validateBrackets(); err != nil {
+		if v.matchSymbol("(") {
+			if err := v.validateBrackets(); err != nil {
 				return err
 			}
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
-	} else if v .matchKeyword("AS") {
-		if err := v .validateKeyword("AS"); err != nil {
+	} else if v.matchKeyword("AS") {
+		if err := v.validateKeyword("AS"); err != nil {
 			return err
 		}
-		if err := v .validateKeyword("IDENTITY"); err != nil {
+		if err := v.validateKeyword("IDENTITY"); err != nil {
 			return err
 		}
-		if v .matchSymbol("(") {
-			if err := v .validateBrackets(); err != nil {
+		if v.matchSymbol("(") {
+			if err := v.validateBrackets(); err != nil {
 				return err
 			}
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
 
-	return v .syntaxError()
+	return v.syntaxError()
 }
 
 
 func (v *postgresqlValidator) validateExpr() error {
-	return v .validateBrackets()
+	return v.validateBrackets()
 }
 
 
 func (v *postgresqlValidator) validateIndexParameters() error {
-	v .flgOff()
-	if v .matchKeyword("INCLUDE") {
-		if v .next() != nil {
-			return v .syntaxError()
+	v.flgOff()
+	if v.matchKeyword("INCLUDE") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateSymbol("("); err != nil {
+		if err := v.validateSymbol("("); err != nil {
 			return err
 		}
-		if err := v .validateCommaSeparatedColumnNames(); err != nil {
-			return v .syntaxError()
+		if err := v.validateCommaSeparatedColumnNames(); err != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateSymbol(")"); err != nil {
-			return err
-		}
-	}
-	if v .matchKeyword("WITH") {
-		if v .next() != nil {
-			return v .syntaxError()
-		}
-		if err := v .validateBrackets(); err != nil {
+		if err := v.validateSymbol(")"); err != nil {
 			return err
 		}
 	}
-	if v .matchKeyword("USING") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("WITH") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("INDEX"); err != nil {
-			return err
-		}
-		if err := v .validateKeyword("TABLESPACE"); err != nil {
-			return err
-		}
-		if err := v .validateName(); err != nil {
+		if err := v.validateBrackets(); err != nil {
 			return err
 		}
 	}
-	v .flgOff()
+	if v.matchKeyword("USING") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if err := v.validateKeyword("INDEX"); err != nil {
+			return err
+		}
+		if err := v.validateKeyword("TABLESPACE"); err != nil {
+			return err
+		}
+		if err := v.validateName(); err != nil {
+			return err
+		}
+	}
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateLiteralValue() error {
-	if isNumericToken(v .token()) {
-		if v .next() != nil {
-			return v .syntaxError()
+	if isNumericToken(v.token()) {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 		return nil
 	}
-	if v .isStringValue(v .token()) {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.isStringValue(v.token()) {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 		return nil
 	}
 	ls := []string{"NULL", "TRUE", "FALSE", "CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}
-	if err := v .validateKeyword(ls...); err != nil {
+	if err := v.validateKeyword(ls...); err != nil {
 		return err
 	}
 	return nil
@@ -897,226 +897,226 @@ func (v *postgresqlValidator) validateLiteralValue() error {
 
 
 func (v *postgresqlValidator) validateTableConstraint() error {
-	v .flgOff()
-	if v .validateKeyword("CONSTRAINT") == nil{
-		if err := v .validateName(); err != nil {
+	v.flgOff()
+	if v.validateKeyword("CONSTRAINT") == nil{
+		if err := v.validateName(); err != nil {
 			return err
 		}
 	}
-	return v .validateTableConstraintAux()
+	return v.validateTableConstraintAux()
 }
 
 
 func (v *postgresqlValidator) validateTableConstraintAux() error {
-	if v .matchKeyword("PRIMARY") {
-		return v .validateTablePrimaryKey()
+	if v.matchKeyword("PRIMARY") {
+		return v.validateTablePrimaryKey()
 	}
 
-	if v .matchKeyword("UNIQUE") {
-		return v .validateTableUnique()
+	if v.matchKeyword("UNIQUE") {
+		return v.validateTableUnique()
 	}
 
-	if v .matchKeyword("CHECK") {
-		return v .validateTableCheck()
+	if v.matchKeyword("CHECK") {
+		return v.validateTableCheck()
 	}
 
-	if v .matchKeyword("FOREIGN") {
-		return v .validateTableForeignKey()
+	if v.matchKeyword("FOREIGN") {
+		return v.validateTableForeignKey()
 	}
 
-	if v .matchKeyword("EXCLUDE") {
-		return v .validateTableExclude()
+	if v.matchKeyword("EXCLUDE") {
+		return v.validateTableExclude()
 	}
 
-	return v .syntaxError()
+	return v.syntaxError()
 }
 
 
 func (v *postgresqlValidator) validateTablePrimaryKey() error {
-	v .flgOn()
-	if err := v .validateKeyword("PRIMARY"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("PRIMARY"); err != nil {
 		return err
 	}
-	if err := v .validateKeyword("KEY"); err != nil {
+	if err := v.validateKeyword("KEY"); err != nil {
 		return err
 	}
-	if err := v .validateSymbol("("); err != nil {
+	if err := v.validateSymbol("("); err != nil {
 		return err
 	}
-	if err := v .validateCommaSeparatedColumnNames(); err != nil {
-		return v .syntaxError()
+	if err := v.validateCommaSeparatedColumnNames(); err != nil {
+		return v.syntaxError()
 	}
-	if err := v .validateSymbol(")"); err != nil {
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	v .flgOff()
-	if err := v .validateIndexParameters(); err != nil {
+	v.flgOff()
+	if err := v.validateIndexParameters(); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableUnique() error {
-	v .flgOn()
-	if err := v .validateKeyword("UNIQUE"); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("UNIQUE"); err != nil {
 		return err
 	}
-	if err := v .validateSymbol("("); err != nil {
+	if err := v.validateSymbol("("); err != nil {
 		return err
 	}
-	if err := v .validateCommaSeparatedColumnNames(); err != nil {
-		return v .syntaxError()
+	if err := v.validateCommaSeparatedColumnNames(); err != nil {
+		return v.syntaxError()
 	}
-	if err := v .validateSymbol(")"); err != nil {
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	v .flgOff()
-	if err := v .validateIndexParameters(); err != nil {
+	v.flgOff()
+	if err := v.validateIndexParameters(); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableCheck() error {
-	v .flgOff()
-	if err := v .validateKeyword("CHECK"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("CHECK"); err != nil {
 		return err
 	}
-	if err := v .validateExpr(); err != nil {
+	if err := v.validateExpr(); err != nil {
 		return err
 	}
-	if v .matchKeyword("NO") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("NO") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("INHERIT"); err != nil {
+		if err := v.validateKeyword("INHERIT"); err != nil {
 			return err
 		}
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableForeignKey() error {
-	v .flgOff()
-	if err := v .validateKeyword("FOREIGN"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("FOREIGN"); err != nil {
 		return err
 	}
-	if err := v .validateKeyword("KEY"); err != nil {
+	if err := v.validateKeyword("KEY"); err != nil {
 		return err
 	}
-	if err := v .validateSymbol("("); err != nil {
+	if err := v.validateSymbol("("); err != nil {
 		return err
 	}
-	if err := v .validateCommaSeparatedColumnNames(); err != nil {
-		return v .syntaxError()
+	if err := v.validateCommaSeparatedColumnNames(); err != nil {
+		return v.syntaxError()
 	}
-	if err := v .validateSymbol(")"); err != nil {
+	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	if err := v .validateConstraintForeignKey(); err != nil {
+	if err := v.validateConstraintForeignKey(); err != nil {
 		return err
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableExclude() error {
-	v .flgOff()
-	if err := v .validateKeyword("EXCLUDE"); err != nil {
+	v.flgOff()
+	if err := v.validateKeyword("EXCLUDE"); err != nil {
 		return err
 	}
-	if v .validateKeyword("USING") == nil {
-		if err := v .validateName(); err != nil {
+	if v.validateKeyword("USING") == nil {
+		if err := v.validateName(); err != nil {
 			return err
 		}
 	}
-	if err := v .validateBrackets(); err != nil {
-		return v .syntaxError()
+	if err := v.validateBrackets(); err != nil {
+		return v.syntaxError()
 	}
-	if err := v .validateIndexParameters(); err != nil {
+	if err := v.validateIndexParameters(); err != nil {
 		return err
 	}
-	if v .validateKeyword("WHERE") == nil{
-		if err := v .validateBrackets(); err != nil {
+	if v.validateKeyword("WHERE") == nil{
+		if err := v.validateBrackets(); err != nil {
 			return err
 		}
 	}
-	v .flgOff()
+	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateCommaSeparatedColumnNames() error {
-	if err := v .validateColumnName(); err != nil {
+	if err := v.validateColumnName(); err != nil {
 		return err
 	}
-	if v .matchSymbol(",") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchSymbol(",") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		return v .validateCommaSeparatedColumnNames()
+		return v.validateCommaSeparatedColumnNames()
 	}
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableOptions() error {
-	v .flgOff()
-	if v .matchKeyword(";") {
+	v.flgOff()
+	if v.matchKeyword(";") {
 		return nil
 	}
-	if v .matchSymbol(",") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchSymbol(",") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
 	}
-	if err := v .validateTableOptionsAux(); err != nil {
+	if err := v.validateTableOptionsAux(); err != nil {
 		return err
 	}
-	return v .validateTableOptions()
+	return v.validateTableOptions()
 }
 
 
 func (v *postgresqlValidator) validateTableOptionsAux() error {
-	v .flgOff()
-	if v .matchKeyword("WITH") {
-		if v .next() != nil {
-			return v .syntaxError()
+	v.flgOff()
+	if v.matchKeyword("WITH") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateBrackets(); err != nil {
+		if err := v.validateBrackets(); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
-	if v .matchKeyword("WITHOUT") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("WITHOUT") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateKeyword("OIDS"); err != nil {
+		if err := v.validateKeyword("OIDS"); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
-	if v .matchKeyword("TABLESPACE") {
-		if v .next() != nil {
-			return v .syntaxError()
+	if v.matchKeyword("TABLESPACE") {
+		if v.next() != nil {
+			return v.syntaxError()
 		}
-		if err := v .validateName(); err != nil {
+		if err := v.validateName(); err != nil {
 			return err
 		}
-		v .flgOff()
+		v.flgOff()
 		return nil
 	}
-	return v .syntaxError()
+	return v.syntaxError()
 }
 
 
