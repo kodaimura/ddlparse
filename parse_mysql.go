@@ -528,13 +528,24 @@ func (p *mysqlParser) validateColumnConstraintAux(ls []string) error {
 	}
 
 	if p.matchKeyword("NOT") {
-		if contains(ls, "NOT") {
+		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
 			return p.syntaxError()
 		}
 		if err := p.validateConstraintNotNull(); err != nil {
 			return err
 		}
-		return p.validateColumnConstraintAux(append(ls, "NOT"))
+		return p.validateColumnConstraintAux(append(ls, "NOTNULL"))
+	}
+
+	if p.matchKeyword("NULL") {
+		if contains(ls, "NOTNULL") || contains(ls, "NULL") {
+			return p.syntaxError()
+		}
+		p.flgOff()
+		if err := p.validateConstraintNull(); err != nil {
+			return err
+		}
+		return p.validateColumnConstraintAux(append(ls, "NULL"))
 	}
 
 	if p.matchKeyword("UNIQUE") {
@@ -714,6 +725,15 @@ func (p *mysqlParser) validateConstraintNotNull() error {
 		return err
 	}
 	p.flgOff()
+	return nil
+}
+
+
+func (p *mysqlParser) validateConstraintNull() error {
+	p.flgOff()
+	if err := p.validateKeyword("NULL"); err != nil {
+		return err
+	}
 	return nil
 }
 
