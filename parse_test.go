@@ -16,6 +16,8 @@ type testerI interface {
 	TokenizeNG(ddl string, line int, near string)
 	ValidateOK(ddl string)
 	ValidateNG(ddl string, line int, near string)
+	ParseOK(ddl string)
+	ParseNG(ddl string)
 } 
 
 func newTester(rdbms Rdbms, t *testing.T) testerI {
@@ -87,6 +89,29 @@ func (te *tester) ValidateNG(ddl string, line int, near string) {
 		}
 	} else {
 		te.t.Errorf("%d: failed ValidateNG", l)
+	}
+}
+
+func (te *tester) ParseOK(ddl string) {
+	_, _, l, _ := runtime.Caller(1)
+	parser := te.getParser(ddl)
+	tables, err := parser.Parse();
+	if err != nil {
+		te.t.Errorf("%d: failed ParseOK: %s", l, err.Error())
+	} else {
+		fmt.Println(tables)
+	}
+}
+
+func (te *tester) ParseNG(ddl string) {
+	_, _, l, _ := runtime.Caller(1)
+	parser := te.getParser(ddl)
+	tables, err := parser.Parse();
+	if err != nil {
+		fmt.Println(err.Error())
+	} else {
+		te.t.Errorf("%d: failed ParseNG", l)
+		fmt.Println(tables)
 	}
 }
 
@@ -1605,9 +1630,12 @@ func TestValidate_MySQL(t *testing.T) {
 	test.ValidateNG(ddl, 2, "primary")
 }
 
-/*
+
 func TestParse(t *testing.T) {
-	ddl := `CREATE TABLE IF NOT EXISTS users (
+	test := newTester(SQLite, t)
+
+	ddl := ""
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
@@ -1626,63 +1654,33 @@ func TestParse(t *testing.T) {
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		UNIQUE(project_name, username)
 	);`
-	parser := newTestParser(ddl)
-	tables, err := parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-		t.Errorf("failed")
-	}
-	fmt.Println(tables)
+	test.ParseOK(ddl)
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER,
 		aaaa INTEGER
 	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.ParseNG(ddl)
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER PRIMARY KEY,
 		PRIMARY KEY(aaaa)
 	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.ParseNG(ddl)
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER UNIQUE,
 		UNIQUE(aaaa)
 	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.ParseNG(ddl)
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		aaaa INTEGER UNIQUE,
 		UNIQUE(bbbb)
 	);`
-	parser = newTestParser(ddl)
-	_, err = parser.Parse();
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		t.Errorf("failed")
-	}
+	test.ParseNG(ddl)
 }
-*/
+
 func TestEnd(t *testing.T) {
 	fmt.Println("--------------------------------------------------")
 }
