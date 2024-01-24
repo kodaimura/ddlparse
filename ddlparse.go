@@ -56,64 +56,41 @@ func (e ParseError) Error() string {
 
 
 func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
-	switch rdbms {
-	case SQLite:
-		return ParseSQLite(ddl)
-	case PostgreSQL:
-		return ParsePostgreSQL(ddl)
-	case MySQL:
-		return ParseMySQL(ddl)
-	default:
-		return []Table{}, errors.New("Not yet supported.")
+	tokens, err := tokenize(ddl, rdbms)
+	if err != nil {
+		return []Table{}, err
 	}
-}
-
-
-type parser interface {
-	Validate() error
-	Parse() ([]Table, error)
+	validatedTokens, err := validate(ddl, rdbms)
+	if err != nil {
+		return []Table{}, err
+	}
+	tables, err := validate(ddl, rdbms)
+	if err != nil {
+		return []Table{}, err
+	}
+	return tables, nil
 }
 
 func ParseSQLite(ddl string) ([]Table, error) {
-	parser := newSQLiteParser(ddl)
-	return parser.Parse()
+	return Parse(ddl, SQLite)
 }
 
 func ParsePostgreSQL(ddl string) ([]Table, error) {
-	parser := newPostgreSQLParser(ddl)
-	return parser.Parse()
+	return Parse(ddl, PostgreSQL)
 }
 
 func ParseMySQL(ddl string) ([]Table, error) {
-	parser := newMySQLParser(ddl)
-	return parser.Parse()
+	return Parse(ddl, MySQL)
 }
 
-
-func Validate(ddl string, rdbms Rdbms) error {
-	switch rdbms {
-	case SQLite:
-		return ValidateSQLite(ddl)
-	case PostgreSQL:
-		return ValidatePostgreSQL(ddl)
-	case MySQL:
-		return ValidateMySQL(ddl)
-	default:
-		return errors.New("Not yet supported.")
+func ParseForce(ddl string) ([]Table, error) {
+	ls := []Rdbms{SQLite, PostgreSQL, MySQL}
+	var err error
+	for _, rdbms := range ls {
+		tables, err := Parse(ddl, rdbms)
+		if err == nil {
+			return tables, nil
+		}
 	}
-}
-
-func ValidateSQLite(ddl string) error {
-	parser := newSQLiteParser(ddl)
-	return parser.Validate()
-}
-
-func ValidatePostgreSQL(ddl string) error {
-	parser := newPostgreSQLParser(ddl)
-	return parser.Validate()
-}
-
-func ValidateMySQL(ddl string) error {
-	parser := newMySQLParser(ddl)
-	return parser.Validate()
+	return []Table{}, err
 }
