@@ -2,7 +2,6 @@ package ddlparse
 
 import (
 	"fmt"
-	"errors"
 )
 
 type Rdbms string

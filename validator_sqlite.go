@@ -1,8 +1,6 @@
 package ddlparse
 
 import (
-	"fmt"
-	"strconv"
 	"errors"
 	"regexp"
 	"strings"

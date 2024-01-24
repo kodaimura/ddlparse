@@ -27,7 +27,7 @@ func newTester(rdbms Rdbms, t *testing.T) testerI {
 
 func (te *tester) TokenizeOK(ddl string, size int) {
 	_, _, l, _ := runtime.Caller(1)
-	tokens, err := Tokenize(ddl, te.rdbms)
+	tokens, err := tokenize(ddl, te.rdbms)
 	if err != nil {
 		te.t.Errorf("%d: failed TokenizeOK: %s", l, err.Error())
 	} else {
@@ -40,7 +40,7 @@ func (te *tester) TokenizeOK(ddl string, size int) {
 
 func (te *tester) TokenizeNG(ddl string, line int, near string) {
 	_, _, l, _ := runtime.Caller(1)
-	_, err := Tokenize(ddl, te.rdbms)
+	_, err := tokenize(ddl, te.rdbms)
 	if err != nil {
 		verr, _ := err.(ValidateError)
 		if (verr.Line == line && verr.Near == near) {
@@ -56,28 +56,30 @@ func (te *tester) TokenizeNG(ddl string, line int, near string) {
 	}
 }
 
-
-func (te *tester) getParser(ddl string) parser {
-	if te.rdbms == PostgreSQL {
-		return newPostgreSQLParser(ddl)
-	} else if te.rdbms == MySQL {
-		return newMySQLParser(ddl)
+func (te *tester) validate(ddl string) ([]string, error) {
+	tokens, err := tokenize(ddl, te.rdbms)
+	if err != nil {
+		return []string{}, err
 	}
-	return newSQLiteParser(ddl)
+	tokens, err = validate(tokens, te.rdbms)
+	if err != nil {
+		return []string{}, err
+	}
+	return tokens, nil
 }
 
 func (te *tester) ValidateOK(ddl string) {
 	_, _, l, _ := runtime.Caller(1)
-	parser := te.getParser(ddl)
-	if err := parser.Validate(); err != nil {
+	_, err := te.validate(ddl)
+	if err != nil {
 		te.t.Errorf("%d: failed ValidateOK: %s", l, err.Error())
 	}
 }
 
 func (te *tester) ValidateNG(ddl string, line int, near string) {
 	_, _, l, _ := runtime.Caller(1)
-	parser := te.getParser(ddl)
-	if err := parser.Validate(); err != nil {
+	_, err := te.validate(ddl)
+	if err != nil {
 		verr, _ := err.(ValidateError)
 		if (verr.Line == line && verr.Near == near) {
 			fmt.Println(err.Error())
@@ -94,8 +96,7 @@ func (te *tester) ValidateNG(ddl string, line int, near string) {
 
 func (te *tester) ParseOK(ddl string) {
 	_, _, l, _ := runtime.Caller(1)
-	parser := te.getParser(ddl)
-	tables, err := parser.Parse();
+	tables, err := Parse(ddl, te.rdbms)
 	if err != nil {
 		te.t.Errorf("%d: failed ParseOK: %s", l, err.Error())
 	} else {
@@ -105,8 +106,7 @@ func (te *tester) ParseOK(ddl string) {
 
 func (te *tester) ParseNG(ddl string) {
 	_, _, l, _ := runtime.Caller(1)
-	parser := te.getParser(ddl)
-	tables, err := parser.Parse();
+	tables, err := Parse(ddl, te.rdbms)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -1687,7 +1687,8 @@ func TestEnd(t *testing.T) {
 
 
 func TestWork(t *testing.T) {
-	ddl1 := `CREATE TABLE IF NOT EXISTS users (
+	ddl := ""
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTOINCREMENT,
 		username TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
@@ -1696,13 +1697,17 @@ func TestWork(t *testing.T) {
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
 	);`
 
-	parser1 := &sqliteParser{ddl: ddl1}
-	if err := parser1.Validate(); err != nil {
+	tokens, err := tokenize(ddl, SQLite)
+	if err != nil {
 		fmt.Println(err.Error())
 	} 
-	fmt.Println(parser1.validatedTokens)
+	validatedTokens, err := validate(tokens, SQLite)
+	if err != nil {
+		fmt.Println(err.Error())
+	} 
+	fmt.Println(validatedTokens)
 
-	ddl2 := `CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY,
 		username TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
@@ -1710,24 +1715,31 @@ func TestWork(t *testing.T) {
 		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
 	);`
-
-	parser2 := &postgresqlParser{ddl: ddl2}
-	if err := parser2.Validate(); err != nil {
+	tokens, err = tokenize(ddl, PostgreSQL)
+	if err != nil {
 		fmt.Println(err.Error())
 	} 
-	fmt.Println(parser2.validatedTokens)
+	validatedTokens, err = validate(tokens, PostgreSQL)
+	if err != nil {
+		fmt.Println(err.Error())
+	} 
+	fmt.Println(validatedTokens)
 
-	ddl3 := `CREATE TABLE IF NOT EXISTS users (
+	ddl = `CREATE TABLE IF NOT EXISTS users (
 		user_id INTEGER PRIMARY KEY AUTO_INCREMENT,
-		username NOT NULL UNIQUE,
+		username TEXT NOT NULL UNIQUE,
 		password TEXT NOT NULL,
 		email TEXT NOT NULL UNIQUE,
 		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
 	);`
-	parser3 := &mysqlParser{ddl: ddl3}
-	if err := parser3.Validate(); err != nil {
+	tokens, err = tokenize(ddl, MySQL)
+	if err != nil {
 		fmt.Println(err.Error())
 	} 
-	fmt.Println(parser3.validatedTokens)
+	validatedTokens, err = validate(tokens, MySQL)
+	if err != nil {
+		fmt.Println(err.Error())
+	} 
+	fmt.Println(validatedTokens)
 }
