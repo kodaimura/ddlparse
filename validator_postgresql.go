@@ -1033,7 +1033,10 @@ func (v *postgresqlValidator) validateTableConstraintExclude() error {
 	if err := v.validateKeyword("EXCLUDE"); err != nil {
 		return err
 	}
-	if v.validateKeyword("USING") == nil {
+	if v.matchKeyword("USING") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
 		if err := v.validateName(); err != nil {
 			return err
 		}
