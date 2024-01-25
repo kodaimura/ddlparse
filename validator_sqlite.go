@@ -20,18 +20,8 @@ func newSQLiteValidator(tokens []string) validator {
 }
 
 
-func (v *sqliteValidator) token() string {
-	return v.tokens[v.i]
-}
-
-
-func (v *sqliteValidator) isOutOfRange() bool {
-	return v.i > v.size - 1
-}
-
-
 func (v *sqliteValidator) Validate() ([]string, error) {
-	v.initV()
+	v.init()
 	if err := v.validate(); err != nil {
 		return nil, err
 	}
@@ -39,13 +29,18 @@ func (v *sqliteValidator) Validate() ([]string, error) {
 }
 
 
-func (v *sqliteValidator) initV() {
+func (v *sqliteValidator) init() {
 	v.validatedTokens = []string{}
 	v.i = -1
 	v.line = 1
 	v.size = len(v.tokens)
 	v.flg = false
 	v.next()
+}
+
+
+func (v *sqliteValidator) token() string {
+	return v.tokens[v.i]
 }
 
 
@@ -56,6 +51,11 @@ func (v *sqliteValidator) flgOn() {
 
 func (v *sqliteValidator) flgOff() {
 	v.flg = false
+}
+
+
+func (v *sqliteValidator) isOutOfRange() bool {
+	return v.i > v.size - 1
 }
 
 
