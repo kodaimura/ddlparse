@@ -68,31 +68,50 @@ type parser struct {
 	tables []Table
 }
 
+
 func newParser(rdbms Rdbms, tokens []string) parserI {
 	return &parser{tokens: tokens, rdbms: rdbms}
 }
 
+
 func (p *parser) Parse() ([]Table, error) {
-	p.initP()
+	p.init()
 	if err := p.parse(); err != nil {
 		return nil, err
 	}
 	return p.tables, nil
 }
 
-func (p *parser) initP() {
+
+func (p *parser) init() {
 	p.i = 0
 	p.size = len(p.tokens)
 	p.tables = []Table{}
 }
 
+
 func (p *parser) token() string {
 	return p.tokens[p.i]
 }
 
+
 func (p *parser) isOutOfRange() bool {
 	return p.i > p.size - 1
 }
+
+
+func (p *parser) next() error {
+	pre := p.token()
+	p.i += 1
+	if (p.isOutOfRange()) {
+		return errors.New("out of range")
+	}
+	if pre == "," && p.token() == "," {
+		return p.next()
+	}
+	return nil
+}
+
 
 func (p *parser) matchKeyword(keywords ...string) bool {
 	return contains(
@@ -107,6 +126,7 @@ func (p *parser) matchSymbol(symbols ...string) bool {
 	return contains(symbols, p.token())
 }
 
+
 func (p *parser) isIdentifier(token string) bool {
 	c := token[0:1]
 	switch (p.rdbms) {
@@ -120,6 +140,7 @@ func (p *parser) isIdentifier(token string) bool {
 	return false
 }
 
+
 func (p *parser) isStringValue(token string) bool {
 	c := token[0:1]
 	switch (p.rdbms) {
@@ -132,6 +153,7 @@ func (p *parser) isStringValue(token string) bool {
 	}
 	return false
 }
+
 
 func (p *parser) parse() error {
 	if p.isOutOfRange() {
@@ -150,7 +172,8 @@ func (p *parser) parse() error {
 
 func (p *parser) parseTable() (Table, error) {
 	var table Table
-	p.i += 2
+	p.next() // skip "CREATE"
+	p.next() // skip "TABLE"
 
 	schemaName, tableName := p.parseTableName()
 	table.Schema = schemaName
@@ -164,7 +187,7 @@ func (p *parser) parseTable() (Table, error) {
 
 	if (p.size > p.i) {
 		if p.matchSymbol(";") {
-			p.i += 1
+			p.next()
 		}
 	}
 	return table, nil
@@ -175,8 +198,8 @@ func (p *parser) parseTableName() (string, string) {
 	schemaName := p.parseName()
 	tableName := ""
 
-	if p.token() == "." {
-		p.i += 1
+	if p.matchSymbol(".") {
+		p.next()
 		tableName = p.parseName()
 	} else {
 		tableName = schemaName
@@ -189,7 +212,7 @@ func (p *parser) parseTableName() (string, string) {
 
 func (p *parser) parseName() string {
 	token := p.token()
-	p.i += 1
+	p.next()
 	if p.isIdentifier(token) {
 		return token[1 : len(token)-1]
 	} else {
@@ -199,13 +222,9 @@ func (p *parser) parseName() string {
 
 
 func (p *parser) parseColumns() ([]Column, error) {
-	p.i += 1
+	p.next()
 	var columns []Column
 	for !p.matchSymbol(")") {
-		if p.matchSymbol(",") {
-			p.i += 1
-			continue
-		}
 		var err error
 		if (p.matchKeyword("PRIMARY", "UNIQUE")) {
 			err = p.parseTableConstraint(&columns)
@@ -217,7 +236,7 @@ func (p *parser) parseColumns() ([]Column, error) {
 			return nil, err
 		}
 	}
-	p.i += 1
+	p.next()
 	return columns, nil
 }
 
@@ -234,7 +253,7 @@ func (p *parser) parseColumn(columns *[]Column) error {
 	var column Column
 	column.Name = name
 	column.DataType = p.token()
-	p.i += 1
+	p.next()
 	p.parseConstraint(&column)
 
 	*columns = append(*columns, column)
@@ -244,7 +263,7 @@ func (p *parser) parseColumn(columns *[]Column) error {
 
 func (p *parser) parseConstraint(column *Column) error {
 	if p.matchSymbol(",") {
-		p.i += 1
+		p.next()
 		return nil
 	}
 	if p.matchSymbol(")") {
@@ -252,7 +271,8 @@ func (p *parser) parseConstraint(column *Column) error {
 	}
 
 	if p.matchKeyword("PRIMARY") {
-		p.i += 2
+		p.next() // skip "PRIMARY"
+		p.next() // skip "KEY"
 		column.IsPK = true
 		if p.matchKeyword("AUTOINCREMENT") {
 			p.i += 1
@@ -261,20 +281,27 @@ func (p *parser) parseConstraint(column *Column) error {
 		return p.parseConstraint(column)
 	}
 
+	if p.matchKeyword("AUTO_INCREMENT") {
+		p.next()
+		column.IsAutoIncrement = true
+		return p.parseConstraint(column)
+	}
+
 	if p.matchKeyword("NOT") {
-		p.i += 2
+		p.next() // skip "NOT"
+		p.next() // skip "NULL"
 		column.IsNotNull = true
 		return p.parseConstraint(column)
 	}
 
 	if p.matchKeyword("UNIQUE") {
-		p.i += 1
+		p.next()
 		column.IsUnique = true
 		return p.parseConstraint(column)
 	}
 
 	if p.matchKeyword("DEFAULT") {
-		p.i += 1
+		p.next()
 		column.Default = p.parseDefaultValue()
 		return p.parseConstraint(column)
 	}
@@ -293,12 +320,13 @@ func (p *parser) parseDefaultValue() interface{} {
 	}
 }
 
+
 func (p *parser) parseExpr(expr *string) {
-	*expr +=  p.token()
-	p.i += 1
+	*expr +=  p.token() 
+	p.next() // skip "("
 	p.parseExprAux(expr)
-	*expr +=  p.token()
-	p.i += 1
+	*expr +=  p.token() 
+	p.next() // skip ")"
 }
 
 
@@ -311,14 +339,14 @@ func (p *parser) parseExprAux(expr *string) {
 		return
 	}
 	*expr += p.token()
-	p.i += 1
+	p.next()
 	p.parseExprAux(expr)
 }
 
 
 func (p *parser) parseLiteralValue() interface{} {
 	token := p.token()
-	p.i += 1
+	p.next()
 	if isNumericToken(token) {
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
@@ -333,10 +361,11 @@ func (p *parser) parseLiteralValue() interface{} {
 func (p *parser) parseTableConstraint(columns *[]Column) error {
 	c := strings.ToUpper(p.token())
 	if p.matchKeyword("PRIMARY") {
-		p.i += 2
+		p.next() // skip "PRIMARY"
+		p.next() // skip "KEY"
 	}
 	if p.matchKeyword("UNIQUE") {
-		p.i += 1
+		p.next()
 	}
 
 	columnNames, err := p.parseCommaSeparatedColumnNames()
@@ -375,20 +404,18 @@ func (p *parser) parseTableConstraint(columns *[]Column) error {
 
 
 func (p *parser) parseCommaSeparatedColumnNames() ([]string, error) {
-	p.i += 1
+	p.next()
 	ls := []string{}
 	for {
-		ls = append(ls, p.token())
-		p.i += 1
 		if p.matchSymbol(")") {
 			break
 		} else if p.matchSymbol(",") {
-			p.i += 1
+			p.next()
 			continue
-		} else {
-			return nil, errors.New("program error")
 		}
+		ls = append(ls, p.token())
+		p.next()
 	}
-	p.i += 1
+	p.next()
 	return ls, nil
 }
