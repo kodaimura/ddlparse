@@ -398,10 +398,10 @@ func (v *postgresqlValidator) validateColumnType() error {
 		if v.next() != nil {
 			return v.syntaxError()
 		}
+		v.flgOff()
 		if err := v.validateKeyword("PRECISION"); err != nil {
 			return err
 		}
-		v.flgOff()
 		return nil
 	}
 
@@ -416,6 +416,7 @@ func (v *postgresqlValidator) validateColumnType() error {
 		if err := v.validateTypeDigitP(); err != nil {
 			return err
 		}
+		v.flgOff()
 		if v.matchKeyword("WITH", "WITHOUT") {
 			if v.next() != nil {
 				return v.syntaxError()
@@ -427,7 +428,6 @@ func (v *postgresqlValidator) validateColumnType() error {
 				return err
 			}
 		}
-		v.flgOff()
 		return nil
 	}
 

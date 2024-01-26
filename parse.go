@@ -252,22 +252,55 @@ func (p *parser) parseColumn(columns *[]Column) error {
 	
 	var column Column
 	column.Name = name
-	column.DataType = p.token()
-	p.next()
+	p.parseDateType(&column)
 	p.parseConstraint(&column)
-
 	*columns = append(*columns, column)
 	return nil
 }
 
 
-func (p *parser) parseConstraint(column *Column) error {
+func (p *parser) parseDateType(column *Column) {
+	column.DataType = strings.ToUpper(p.token())
+	p.next()
+	if p.matchKeyword("VARYING") {
+		if column.DataType == "BIT" {
+			column.DataType = "VARBIT"
+		} 
+		if column.DataType == "CHARACTER" {
+			column.DataType = "VARCHAR"
+		} else {
+			column.DataType += " " + strings.ToUpper(p.token())
+		}
+		p.next()
+	}
+	p.parseTypeDigit(column)
+}
+
+
+func (p *parser) parseTypeDigit(column *Column) {
+	if p.matchSymbol("(") {
+		p.next()
+		n, _ := strconv.Atoi(p.token())
+		column.DigitN = n
+		p.next()
+		if p.matchSymbol(",") {
+			p.next()
+			m, _ := strconv.Atoi(p.token())
+			column.DigitM = m
+			p.next()
+		}
+		p.next()   //skip ")"
+	}
+}
+
+
+func (p *parser) parseConstraint(column *Column) {
 	if p.matchSymbol(",") {
 		p.next()
-		return nil
+		return
 	}
 	if p.matchSymbol(")") {
-		return nil
+		return
 	}
 
 	if p.matchKeyword("PRIMARY") {
@@ -278,35 +311,38 @@ func (p *parser) parseConstraint(column *Column) error {
 			p.i += 1
 			column.IsAutoIncrement = true
 		}
-		return p.parseConstraint(column)
+		p.parseConstraint(column)
+		return 
 	}
 
 	if p.matchKeyword("AUTO_INCREMENT") {
 		p.next()
 		column.IsAutoIncrement = true
-		return p.parseConstraint(column)
+		p.parseConstraint(column)
+		return
 	}
 
 	if p.matchKeyword("NOT") {
 		p.next() // skip "NOT"
 		p.next() // skip "NULL"
 		column.IsNotNull = true
-		return p.parseConstraint(column)
+		p.parseConstraint(column)
+		return
 	}
 
 	if p.matchKeyword("UNIQUE") {
 		p.next()
 		column.IsUnique = true
-		return p.parseConstraint(column)
+		p.parseConstraint(column)
+		return
 	}
 
 	if p.matchKeyword("DEFAULT") {
 		p.next()
 		column.Default = p.parseDefaultValue()
-		return p.parseConstraint(column)
+		p.parseConstraint(column)
+		return
 	}
-
-	return errors.New("program error")
 }
 
 
@@ -368,11 +404,7 @@ func (p *parser) parseTableConstraint(columns *[]Column) error {
 		p.next()
 	}
 
-	columnNames, err := p.parseCommaSeparatedColumnNames()
-	if err != nil {
-		return err
-	}
-
+	columnNames := p.parseCommaSeparatedColumnNames()
 	for _, name := range columnNames {
 		exists := false
 		for i, column := range *columns {
@@ -403,7 +435,7 @@ func (p *parser) parseTableConstraint(columns *[]Column) error {
 }
 
 
-func (p *parser) parseCommaSeparatedColumnNames() ([]string, error) {
+func (p *parser) parseCommaSeparatedColumnNames() []string {
 	p.next()
 	ls := []string{}
 	for {
@@ -417,5 +449,5 @@ func (p *parser) parseCommaSeparatedColumnNames() ([]string, error) {
 		p.next()
 	}
 	p.next()
-	return ls, nil
+	return ls
 }

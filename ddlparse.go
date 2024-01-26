@@ -21,6 +21,8 @@ type Table struct {
 type Column struct {
 	Name string
 	DataType string
+	DigitN int
+	DigitM int
 	IsPK bool
 	IsNotNull bool
 	IsUnique bool
