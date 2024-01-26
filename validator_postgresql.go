@@ -442,7 +442,6 @@ func (v *postgresqlValidator) validateColumnType() error {
 
 // (number)
 func (v *postgresqlValidator) validateTypeDigitN() error {
-	v.flgOn()
 	if v.matchSymbol("(") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -454,7 +453,6 @@ func (v *postgresqlValidator) validateTypeDigitN() error {
 			return err
 		}
 	} 
-	v.flgOff()
 	return nil
 }
 
@@ -465,7 +463,6 @@ func (v *postgresqlValidator) validateTypeDigitP() error {
 
 // (presision. scale)
 func (v *postgresqlValidator) validateTypeDigitPS() error {
-	v.flgOn()
 	if v.matchSymbol("(") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -473,7 +470,6 @@ func (v *postgresqlValidator) validateTypeDigitPS() error {
 		if err := v.validatePositiveInteger(); err != nil {
 			return err
 		}
-		v.flgOn()
 		if v.matchSymbol(",") {
 			if v.next() != nil {
 				return v.syntaxError()
@@ -482,12 +478,10 @@ func (v *postgresqlValidator) validateTypeDigitPS() error {
 				return err
 			}
 		}
-		v.flgOn()
 		if err := v.validateSymbol(")"); err != nil {
 			return err
 		}
 	}
-	v.flgOff()
 	return nil
 }
 

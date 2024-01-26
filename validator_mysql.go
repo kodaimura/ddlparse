@@ -439,10 +439,8 @@ func (v *mysqlValidator) validateColumnType() error {
 	return nil
 }
 
-
 // (number)
 func (v *mysqlValidator) validateTypeDigitN() error {
-	v.flgOn()
 	if v.matchSymbol("(") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -454,7 +452,6 @@ func (v *mysqlValidator) validateTypeDigitN() error {
 			return err
 		}
 	} 
-	v.flgOff()
 	return nil
 }
 
@@ -467,7 +464,6 @@ func (v *mysqlValidator) validateTypeDigitP() error {
 
 // (presision. scale)
 func (v *mysqlValidator) validateTypeDigitPS() error {
-	v.flgOn()
 	if v.matchSymbol("(") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -475,7 +471,6 @@ func (v *mysqlValidator) validateTypeDigitPS() error {
 		if err := v.validatePositiveInteger(); err != nil {
 			return err
 		}
-		v.flgOn()
 		if v.matchSymbol(",") {
 			if v.next() != nil {
 				return v.syntaxError()
@@ -484,12 +479,10 @@ func (v *mysqlValidator) validateTypeDigitPS() error {
 				return err
 			}
 		}
-		v.flgOn()
 		if err := v.validateSymbol(")"); err != nil {
 			return err
 		}
 	}
-	v.flgOff()
 	return nil
 }
 
@@ -741,7 +734,7 @@ func (v *mysqlValidator) validateConstraintForeignKey() error {
 	if err := v.validateConstraintForeignKeyAux(); err != nil {
 		return v.syntaxError()
 	}
-	v.flgOn()
+	v.flgOff()
 	return nil
 }
 
