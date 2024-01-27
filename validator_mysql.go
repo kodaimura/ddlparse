@@ -400,14 +400,6 @@ func (v *mysqlValidator) validateColumnType() error {
 		return nil
 	}
 
-	// TODO
-	//if v.matchKeyword("ENUM") {
-	//}
-
-	// TODO
-	//if v.matchKeyword("SET") {
-	//}
-
 	if v.matchKeyword("TIME", "DATETIME", "TIMESTAMP", "YEAR") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -427,14 +419,54 @@ func (v *mysqlValidator) validateColumnType() error {
 				return err
 			}
 		}
+		v.flgOff()
 		return nil
 	}
+
+	// TODO if v.matchKeyword("ENUM") {}
+	// TODO if v.matchKeyword("SET") {}
 
 	v.flgOn()
 	if err := v.validateKeyword(DataType_MySQL...); err != nil {
 		return err
 	}
 
+	v.flgOff()
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTypeDate() error {
+	v.flgOn()
+	if err := v.validateKeyword("TIME", "DATETIME", "TIMESTAMP", "YEAR"); err != nil {
+		return err
+	}
+	if err := v.validateTypeDigitP(); err != nil {
+		return err
+	}
+	v.flgOff()
+	if v.matchKeyword("WITH", "WITHOUT") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if err := v.validateKeyword("TIME"); err != nil {
+			return err
+		}
+		if err := v.validateKeyword("ZONE"); err != nil {
+			return err
+		}
+	}
+	if v.matchKeyword("ON") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if err := v.validateKeyword("UPDATE"); err != nil {
+			return err
+		}
+		if err := v.validateKeyword("CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"); err != nil {
+			return err
+		}
+	}
 	v.flgOff()
 	return nil
 }
@@ -700,6 +732,17 @@ func (v *mysqlValidator) validateConstraintDefault() error {
 	} else {
 		if err := v.validateLiteralValue(); err != nil {
 			return err
+		}
+		if v.matchKeyword("ON") {
+			if v.next() != nil {
+				return v.syntaxError()
+			}
+			if err := v.validateKeyword("UPDATE"); err != nil {
+				return err
+			}
+			if err := v.validateKeyword("CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"); err != nil {
+				return err
+			}
 		}
 	}
 	v.flgOff()
