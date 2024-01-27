@@ -231,10 +231,13 @@ func (p *parser) parseColumns() ([]Column, error) {
 		} else {
 			err = p.parseColumn(&columns)
 		}
-
 		if err != nil {
 			return nil, err
 		}
+		if p.matchKeyword(")") {
+			break
+		}
+		p.next()
 	}
 	p.next()
 	return columns, nil
@@ -265,8 +268,7 @@ func (p *parser) parseDateType(column *Column) {
 	if p.matchKeyword("VARYING") {
 		if column.DataType == "BIT" {
 			column.DataType = "VARBIT"
-		} 
-		if column.DataType == "CHARACTER" {
+		} else if column.DataType == "CHARACTER" {
 			column.DataType = "VARCHAR"
 		} else {
 			column.DataType += " " + strings.ToUpper(p.token())
@@ -296,7 +298,6 @@ func (p *parser) parseTypeDigit(column *Column) {
 
 func (p *parser) parseConstraint(column *Column) {
 	if p.matchSymbol(",") {
-		p.next()
 		return
 	}
 	if p.matchSymbol(")") {
@@ -308,7 +309,7 @@ func (p *parser) parseConstraint(column *Column) {
 		p.next() // skip "KEY"
 		column.IsPK = true
 		if p.matchKeyword("AUTOINCREMENT") {
-			p.i += 1
+			p.next()
 			column.IsAutoIncrement = true
 		}
 		p.parseConstraint(column)
@@ -390,7 +391,16 @@ func (p *parser) parseLiteralValue() interface{} {
 	if p.isStringValue(token) {
 		return token[1 : len(token)-1]
 	}
-	return token
+	if strings.ToUpper(token) == "NULL" {
+		return nil
+	}
+	if strings.ToUpper(token) == "TRUE" {
+		return true
+	}
+	if strings.ToUpper(token) == "FALSE" {
+		return false
+	}
+	return token	
 }
 
 
@@ -399,8 +409,7 @@ func (p *parser) parseTableConstraint(columns *[]Column) error {
 	if p.matchKeyword("PRIMARY") {
 		p.next() // skip "PRIMARY"
 		p.next() // skip "KEY"
-	}
-	if p.matchKeyword("UNIQUE") {
+	} else if p.matchKeyword("UNIQUE") {
 		p.next()
 	}
 
@@ -418,8 +427,7 @@ func (p *parser) parseTableConstraint(columns *[]Column) error {
 				}
 				(*columns)[i].IsPK = true
 				break
-			}
-			if c == "UNIQUE" {
+			} else if c == "UNIQUE" {
 				if column.IsUnique {
 					return NewParseError(fmt.Sprintf("Multiple unique constraint defined: '%s'.", name))
 				}
@@ -436,7 +444,7 @@ func (p *parser) parseTableConstraint(columns *[]Column) error {
 
 
 func (p *parser) parseCommaSeparatedColumnNames() []string {
-	p.next()
+	p.next() // skip "(""
 	ls := []string{}
 	for {
 		if p.matchSymbol(")") {
