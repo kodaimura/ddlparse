@@ -1,8 +1,8 @@
 # ddlparse
-SQLのCREATE TABLE文をGoオブジェクトに変換する。  
+SQLのCREATE TABLE文を下記のTableオブジェクトの形に変換する。  
 SQLite、MySQL、PostgreSQLに対応。
 
-### Goオブジェクト
+### Table
 ```go
 type Table struct {
     Schema string        //スキーマ名
@@ -58,3 +58,81 @@ func main() {
     }
 }
 ```
+
+## Learn more
+### DDL構文サポート状況
+パース前に下記ルールに沿って構文チェックを行います。  
+構文チェックに失敗した場合はValidateErrorを返し、成功した場合にのみパースが行われ、Tableオブジェクトに変換されます。  
+構文チェックを通過した場合でもパース時チェックによりParseErrorを返すことがあります。  
+※RDBMSの実際のエラーチェックとは完全に一致していないためパースが成功した場合でも、REBMSではエラーとなることがあります。
+
+#### パース時チェック
+```sql
+# カラム名が重複
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT
+);
+
+# PKを重複して指定
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    PRIMARY KEY(id)
+);
+
+# UNIQUEを重複して指定
+CREATE TABLE users (
+    email VARCHAR(50) NOT NULL UNIQUE,
+    UNIQUE(email)
+);
+
+# 存在しないカラムを指定
+CREATE TABLE users (
+    email VARCHAR(50) NOT NULL UNIQUE,
+    UNIQUE(email2)
+);
+```
+### SQLite
+```
+CREATE TABLE [IF NOT EXISTS] [schema-name.]table-name (
+    column-name type-name [column-constraint ...],
+    [table-constraint, ...]
+)[table-options][;]
+```
+* column-constraint
+```
+[CONSTRAINT name] RIMARY KEY [DESC|ASC] [conflict-clause] [AUTOINCREMENT]
+[CONSTRAINT name] NOT NULL [conflict-clause]
+[CONSTRAINT name] UNIQUE [conflict-clause]
+[CONSTRAINT name] CHECK (expr)
+[CONSTRAINT name] DEFAULT {literal-value|(expr)}
+[CONSTRAINT name] COLLATE {BINARY|NOCASE|RTRIM}
+[CONSTRAINT name] GENERATED ALWAYS AS (expr) [STORED|VIRTUAL]
+[CONSTRAINT name] AS (expr) [STORED|VIRTUAL]
+foreign-key-clause
+```
+* table-constraint
+```
+[CONSTRAINT name] RIMARY KEY (column-name, ...) [conflict-clause]
+[CONSTRAINT name] UNIQUE (column-name, ...) [conflict-clause]
+[CONSTRAINT name] CHECK (expr)
+[CONSTRAINT name] FOREIGN KEY (column-name, ...) foreign-key-clause
+```
+* conflict-clause
+```
+ON CONFLICT {ROLLBACK|ABORT|FAIL|IGNORE|REPLACE}
+```
+
+* foreign-key-clause
+```
+REFERENCES table-name [(column-name, ...)]
+  [
+    ON {DELETE|UPDATE} {SET NULL|SET DEFAULT|CASCADE|RESTRICT|NO ACTION} |
+    MATCH name |
+    [NOT] DEFERRABLE [INITIALLY DEFERRED | INITIALLY IMMEDIATE]
+  ]
+```
+* table-options
+```
+WITHOUT ROWID|STRICT
+```  
