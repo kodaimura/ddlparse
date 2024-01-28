@@ -501,7 +501,6 @@ func TestValidate_SQLite(t *testing.T) {
 		aaaa INTEGER collate nocase,
 		aaaa INTEGER collate rtrim,
 		aaaa INTEGER REFERENCES bbb(ccc),
-		aaaa INTEGER REFERENCES bbb(ccc, ddd),
 		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET NULL,
 		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET DEFAULT,
 		aaaa INTEGER REFERENCES bbb(ccc) ON UPDATE CASCADE,
