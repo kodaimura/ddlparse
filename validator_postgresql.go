@@ -260,7 +260,6 @@ func (v *postgresqlValidator) validateCreateTable() error {
 		return err
 	}
 
-	v.flgOn()
 	if err := v.validateTableName(); err != nil {
 		return err
 	}
@@ -283,7 +282,6 @@ func (v *postgresqlValidator) validateCreateTable() error {
 
 
 func (v *postgresqlValidator) validateIfNotExists() error {
-	v.flgOff()
 	if v.matchKeyword("IF") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -336,10 +334,10 @@ func (v *postgresqlValidator) validateColumnDefinitions() error {
 
 
 func (v *postgresqlValidator) validateColumnDefinition() error {
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN", "EXCLUDE") {
 		return v.validateTableConstraint()
 	}
-	v.flgOn()
 	if err := v.validateColumnName(); err != nil {
 		return err
 	}
@@ -488,7 +486,7 @@ func (v *postgresqlValidator) validateTypeDigitPS() error {
 
 func (v *postgresqlValidator) validateColumnConstraints() error {
 	if v.matchKeyword("CONSTRAINT") {
-		v.flgOff()
+		v.flgOn()
 		if v.next() != nil {
 			return nil
 		}
@@ -552,7 +550,7 @@ func (v *postgresqlValidator) validateColumnConstraint() error {
 		return v.validateConstraintDefault()
 	}
 	if v.matchKeyword("REFERENCES") {
-		return v.validateConstraintForeignKey()
+		return v.validateConstraintReferences()
 	}
 	if v.matchKeyword("GENERATED", "AS") {
 		return v.validateConstraintGenerated()
@@ -615,13 +613,14 @@ func (v *postgresqlValidator) validateConstraintUnique() error {
 
 
 func (v *postgresqlValidator) validateConstraintCheck() error {
-	v.flgOff()
+	v.flgOn()
 	if err := v.validateKeyword("CHECK"); err != nil {
 		return err
 	}
 	if err := v.validateExpr(); err != nil {
 		return err
 	}
+	v.flgOff()
 	if v.matchKeyword("NO") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -654,8 +653,8 @@ func (v *postgresqlValidator) validateConstraintDefault() error {
 }
 
 
-func (v *postgresqlValidator) validateConstraintForeignKey() error {
-	v.flgOff()
+func (v *postgresqlValidator) validateConstraintReferences() error {
+	v.flgOn()
 	if err := v.validateKeyword("REFERENCES"); err != nil {
 		return err
 	}
@@ -666,14 +665,14 @@ func (v *postgresqlValidator) validateConstraintForeignKey() error {
 		if v.next() != nil {
 			return v.syntaxError()
 		}
-		if err := v.validateCommaSeparatedColumnNames(); err != nil {
+		if err := v.validateColumnName(); err != nil {
 			return err
 		}
 		if err := v.validateSymbol(")"); err != nil {
 			return err
 		}
 	}
-	if err := v.validateConstraintForeignKeyAux(); err != nil {
+	if err := v.validateConstraintReferencesAux(); err != nil {
 		return err
 	}
 	v.flgOff()
@@ -681,7 +680,7 @@ func (v *postgresqlValidator) validateConstraintForeignKey() error {
 }
 
 
-func (v *postgresqlValidator) validateConstraintForeignKeyAux() error {
+func (v *postgresqlValidator) validateConstraintReferencesAux() error {
 	v.flgOff()
 	if v.matchKeyword("ON") {
 		if v.next() != nil {
@@ -711,7 +710,7 @@ func (v *postgresqlValidator) validateConstraintForeignKeyAux() error {
 		} else {
 			return v.syntaxError()
 		}
-		return v.validateConstraintForeignKeyAux()
+		return v.validateConstraintReferencesAux()
 	}
 
 	if v.matchKeyword("MATCH") {
@@ -721,7 +720,7 @@ func (v *postgresqlValidator) validateConstraintForeignKeyAux() error {
 		if err := v.validateKeyword("SIMPLE", "PARTIAL", "FULL"); err != nil {
 			return err
 		}
-		return v.validateConstraintForeignKeyAux()
+		return v.validateConstraintReferencesAux()
 	}
 
 	if v.matchKeyword("NOT", "DEFERRABLE") {
@@ -741,7 +740,7 @@ func (v *postgresqlValidator) validateConstraintForeignKeyAux() error {
 				return err
 			}
 		}
-		return v.validateConstraintForeignKeyAux()
+		return v.validateConstraintReferencesAux()
 	}
 
 	v.flgOff()
@@ -898,7 +897,7 @@ func (v *postgresqlValidator) validateLiteralValue() error {
 
 
 func (v *postgresqlValidator) validateTableConstraint() error {
-	v.flgOff()
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -977,7 +976,7 @@ func (v *postgresqlValidator) validateTableConstraintUnique() error {
 
 
 func (v *postgresqlValidator) validateTableConstraintCheck() error {
-	v.flgOff()
+	v.flgOn()
 	if err := v.validateKeyword("CHECK"); err != nil {
 		return err
 	}
@@ -998,7 +997,7 @@ func (v *postgresqlValidator) validateTableConstraintCheck() error {
 
 
 func (v *postgresqlValidator) validateTableConstraintForeignKey() error {
-	v.flgOff()
+	v.flgOn()
 	if err := v.validateKeyword("FOREIGN"); err != nil {
 		return err
 	}
@@ -1014,7 +1013,26 @@ func (v *postgresqlValidator) validateTableConstraintForeignKey() error {
 	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	if err := v.validateConstraintForeignKey(); err != nil {
+	v.flgOn()
+	if err := v.validateKeyword("REFERENCES"); err != nil {
+		return err
+	}
+	if err := v.validateTableName(); err != nil {
+		return err
+	}
+	if v.matchSymbol("(") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if err := v.validateCommaSeparatedColumnNames(); err != nil {
+			return v.syntaxError()
+		}
+		if err := v.validateSymbol(")"); err != nil {
+			return err
+		}
+	}
+	v.flgOff()
+	if err := v.validateConstraintReferencesAux(); err != nil {
 		return err
 	}
 	v.flgOff()
@@ -1108,7 +1126,6 @@ func (v *postgresqlValidator) validateTableOptionWith() error {
 	if err := v.validateBrackets(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
@@ -1121,7 +1138,6 @@ func (v *postgresqlValidator) validateTableOptionWithout() error {
 	if err := v.validateKeyword("OIDS"); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
@@ -1134,7 +1150,6 @@ func (v *postgresqlValidator) validateTableOptionTablespace() error {
 	if err := v.validateName(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 

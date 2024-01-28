@@ -272,8 +272,6 @@ func (v *mysqlValidator) validateCreateTable() error {
 	if err := v.validateIfNotExists(); err != nil {
 		return err
 	}
-
-	v.flgOn()
 	if err := v.validateTableName(); err != nil {
 		return err
 	}
@@ -294,7 +292,6 @@ func (v *mysqlValidator) validateCreateTable() error {
 
 
 func (v *mysqlValidator) validateIfNotExists() error {
-	v.flgOff()
 	if v.matchKeyword("IF") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -347,10 +344,10 @@ func (v *mysqlValidator) validateColumnDefinitions() error {
 
 
 func (v *mysqlValidator) validateColumnDefinition() error {
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "FOREIGN", "INDEX", "KEY", "FULLTEXT", "SPATIAL", "CHECK") {
 		return v.validateTableConstraint()
 	}
-	v.flgOn()
 	if err := v.validateColumnName(); err != nil {
 		return err
 	}
@@ -520,8 +517,8 @@ func (v *mysqlValidator) validateTypeDigitPS() error {
 
 
 func (v *mysqlValidator) validateColumnConstraints() error {
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT") {
-		v.flgOff()
 		if v.next() != nil {
 			return nil
 		}
@@ -602,7 +599,7 @@ func (v *mysqlValidator) validateColumnConstraint() error {
 		return v.validateConstraintCollate()
 	}
 	if v.matchKeyword("REFERENCES") {
-		return v.validateConstraintForeignKey()
+		return v.validateConstraintReferences()
 	}
 	if v.matchKeyword("GENERATED", "AS") {
 		return v.validateConstraintGenerated()
@@ -698,13 +695,14 @@ func (v *mysqlValidator) validateConstraintUnique() error {
 
 
 func (v *mysqlValidator) validateConstraintCheck() error {
-	v.flgOff()
+	v.flgOn()
 	if err := v.validateKeyword("CHECK"); err != nil {
 		return err
 	}
 	if err := v.validateExpr(); err != nil {
 		return err
 	}
+	v.flgOff()
 	if v.matchKeyword("NOT") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -715,7 +713,6 @@ func (v *mysqlValidator) validateConstraintCheck() error {
 			return v.syntaxError()
 		}
 	}
-	v.flgOn()
 	return nil
 }
 
@@ -733,6 +730,7 @@ func (v *mysqlValidator) validateConstraintDefault() error {
 		if err := v.validateLiteralValue(); err != nil {
 			return err
 		}
+		v.flgOff()
 		if v.matchKeyword("ON") {
 			if v.next() != nil {
 				return v.syntaxError()
@@ -763,18 +761,26 @@ func (v *mysqlValidator) validateConstraintCollate() error {
 }
 
 
-func (v *mysqlValidator) validateConstraintForeignKey() error {
-	v.flgOff()
+func (v *mysqlValidator) validateConstraintReferences() error {
+	v.flgOn()
 	if err := v.validateKeyword("REFERENCES"); err != nil {
 		return err
 	}
 	if err := v.validateTableName(); err != nil {
 		return err
 	}
-	if err := v.validateIndexKeysOff(); err != nil {
-		return err
+	if v.matchSymbol("(") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if err := v.validateColumnName(); err != nil {
+			return err
+		}
+		if err := v.validateSymbol(")"); err != nil {
+			return err
+		}
 	}
-	if err := v.validateConstraintForeignKeyAux(); err != nil {
+	if err := v.validateConstraintReferencesAux(); err != nil {
 		return v.syntaxError()
 	}
 	v.flgOff()
@@ -782,7 +788,7 @@ func (v *mysqlValidator) validateConstraintForeignKey() error {
 }
 
 
-func (v *mysqlValidator) validateConstraintForeignKeyAux() error {
+func (v *mysqlValidator) validateConstraintReferencesAux() error {
 	v.flgOff()
 	if v.matchKeyword("ON") {
 		if v.next() != nil {
@@ -812,7 +818,7 @@ func (v *mysqlValidator) validateConstraintForeignKeyAux() error {
 		} else {
 			return v.syntaxError()
 		}
-		return v.validateConstraintForeignKeyAux()
+		return v.validateConstraintReferencesAux()
 	}
 
 	if v.matchKeyword("MATCH") {
@@ -822,7 +828,7 @@ func (v *mysqlValidator) validateConstraintForeignKeyAux() error {
 		if err := v.validateKeyword("SIMPLE", "PARTIAL", "FULL"); err != nil {
 			return err
 		}
-		return v.validateConstraintForeignKeyAux()
+		return v.validateConstraintReferencesAux()
 	}
 
 	v.flgOff()
@@ -935,7 +941,7 @@ func (v *mysqlValidator) validateLiteralValue() error {
 
 
 func (v *mysqlValidator) validateTableConstraint() error {
-	v.flgOff()
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT") {
 		if v.next() != nil {
 			return v.syntaxError()
@@ -1055,7 +1061,7 @@ func (v *mysqlValidator) validateTableConstraintUnique() error {
 
 
 func (v *mysqlValidator) validateTableConstraintForeignKey() error {
-	v.flgOff()
+	v.flgOn()
 	if err := v.validateKeyword("FOREIGN"); err != nil {
 		return err
 	}
@@ -1063,10 +1069,12 @@ func (v *mysqlValidator) validateTableConstraintForeignKey() error {
 		return err
 	}
 	if !v.matchSymbol("(") {
+		v.flgOff()
 		if err := v.validateName(); err != nil {
 			return err
 		}
 	}
+	v.flgOn()
 	if err := v.validateSymbol("("); err != nil {
 		return err
 	}
@@ -1076,7 +1084,17 @@ func (v *mysqlValidator) validateTableConstraintForeignKey() error {
 	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	if err := v.validateConstraintForeignKey(); err != nil {
+	if err := v.validateKeyword("REFERENCES"); err != nil {
+		return err
+	}
+	if err := v.validateTableName(); err != nil {
+		return err
+	}
+	if err := v.validateIndexKeysOn(); err != nil {
+		return v.syntaxError()
+	}
+	v.flgOff()
+	if err := v.validateConstraintReferencesAux(); err != nil {
 		return err
 	}
 	v.flgOff()

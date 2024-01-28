@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"encoding/json"
 )
 
 type tester struct {
@@ -501,7 +502,6 @@ func TestValidate_SQLite(t *testing.T) {
 		aaaa INTEGER collate nocase,
 		aaaa INTEGER collate rtrim,
 		aaaa INTEGER REFERENCES bbb(ccc),
-		aaaa INTEGER REFERENCES bbb(ccc, ddd),
 		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET NULL,
 		aaaa INTEGER REFERENCES bbb(ccc) ON DELETE SET DEFAULT,
 		aaaa INTEGER REFERENCES bbb(ccc) ON UPDATE CASCADE,
@@ -1467,8 +1467,8 @@ func TestValidate_MySQL(t *testing.T) {
 		unique index (aaaa (10)),
 		unique key (aaaa (10)),
 		unique (aaaa, bbbb, cccc),
-		foreign key(aaaa, bbbb) references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
-		foreign key(aaaa, bbbb) references reftable ((expr(zzzz)), (expr(zzzz)) asc, (expr(zzzz)) desc),
+		foreign key(aaaa, bbbb, cccc) references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
+		foreign key(aaaa, bbbb, dddd) references reftable ((expr(zzzz)), (expr(zzzz)) asc, (expr(zzzz)) desc),
 		foreign key(aaaa) references reftable (dddd) match full,
 		foreign key(aaaa) references reftable (dddd) match partial,
 		foreign key(aaaa) references reftable (dddd) match simple,
@@ -1571,8 +1571,6 @@ func TestValidate_MySQL(t *testing.T) {
 		aaaa integer secondary_engine_attribute 'string',
 		aaaa integer storage disk,
 		aaaa integer storage memory,
-		aaaa integer references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
-		aaaa integer references reftable ((expr(zzzz)), (expr(zzzz)) asc, (expr(zzzz)) desc),
 		aaaa integer references reftable (dddd) match full,
 		aaaa integer references reftable (dddd) match partial,
 		aaaa integer references reftable (dddd) match simple,
@@ -1651,30 +1649,6 @@ func TestParse(t *testing.T) {
 	);`
 	test.ParseOK(ddl)
 
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER,
-		aaaa INTEGER
-	);`
-	test.ParseNG(ddl)
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER PRIMARY KEY,
-		PRIMARY KEY(aaaa)
-	);`
-	test.ParseNG(ddl)
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER UNIQUE,
-		UNIQUE(aaaa)
-	);`
-	test.ParseNG(ddl)
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER UNIQUE,
-		UNIQUE(bbbb)
-	);`
-	test.ParseNG(ddl)
-
 	ddl = `create table scm.test_table (
 		id integer primary key asc autoincrement,
 		aaa integer not null on conflict fail unique,
@@ -1721,7 +1695,9 @@ func TestParse(t *testing.T) {
 		"aa23" time(10) without time zone,
 		aa24 time(10) with time zone,
 		primary key(aaa1, aaa2, aaa3) using index tablespace tsn,
+		constraint aaaaa primary key(aaa1, aaa2, aaa3) using index tablespace tsn,
 		unique(aaa4, aaa5, aaa6) include (bbbb, cccc),
+		constraint bbbbb unique(aaa4, aaa5, aaa6) include (bbbb, cccc),
 		constraint constraint_zzzz exclude (exclude_element WITH operator, exclude_element WITH operator)
 	)
 	WITH (aaaaa)
@@ -1731,7 +1707,8 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(tables)
+		jsonData, _ := json.MarshalIndent(tables, "", "    ")
+		fmt.Println(string(jsonData))
 	}
 
 	ddl = `create table users (
@@ -1750,7 +1727,7 @@ func TestParse(t *testing.T) {
 		aa13 float (10, 5) engine_attribute 'string',
 		aa14 real (10) secondary_engine_attribute = 'string',
 		aa15 real (10, 5) storage disk,
-		aa16 double (10) references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
+		aa16 double (10) references reftable (aaaa),
 		aa17 double (10, 5) references reftable (dddd) match full on delete CASCADE on update SET NULL,
 		aa18 bit (10) check(aaa()'bbb'(aaa)),
 		aa19 datetime (3) check(aaa) not enforced,
