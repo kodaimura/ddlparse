@@ -723,26 +723,6 @@ func (v *postgresqlValidator) validateConstraintReferencesAux() error {
 		return v.validateConstraintReferencesAux()
 	}
 
-	if v.matchKeyword("NOT", "DEFERRABLE") {
-		if v.matchKeyword("NOT") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateKeyword("DEFERRABLE"); err != nil {
-			return err
-		}
-		if v.matchKeyword("INITIALLY") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-			if err := v.validateKeyword("DEFERRED", "IMMEDIATE"); err != nil {
-				return err
-			}
-		}
-		return v.validateConstraintReferencesAux()
-	}
-
 	v.flgOff()
 	return nil
 }

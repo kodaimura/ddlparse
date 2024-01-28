@@ -909,10 +909,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		foreign key(aaaa) references reftable (dddd) match full on delete NO ACTION,
 		foreign key(aaaa) references reftable (dddd) match full on update RESTRICT,
 		foreign key(aaaa) references reftable (dddd) match full on update SET DEFAULT,
-		foreign key(aaaa) references reftable (dddd) match full on delete CASCADE on update SET NULL,
-		foreign key(aaaa) references reftable (dddd) match full DEFERRABLE,
-		foreign key(aaaa) references reftable (dddd) match full DEFERRABLE INITIALLY DEFERRED,
-		foreign key(aaaa) references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
+		foreign key(aaaa) references reftable (dddd) match full on delete CASCADE on update SET NULL
 	);`
 	test.ValidateOK(ddl)
 
@@ -1011,10 +1008,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa integer references reftable (dddd) match full on delete NO ACTION,
 		aaaa integer references reftable (dddd) match full on update RESTRICT,
 		aaaa integer references reftable (dddd) match full on update SET DEFAULT,
-		aaaa integer references reftable (dddd) match full on delete CASCADE on update SET NULL,
-		aaaa integer references reftable (dddd) match full DEFERRABLE,
-		aaaa integer references reftable (dddd) match full DEFERRABLE INITIALLY DEFERRED,
-		aaaa integer references reftable (dddd) match full NOT DEFERRABLE INITIALLY IMMEDIATE
+		aaaa integer references reftable (dddd) match full on delete CASCADE on update SET NULL
 	);`
 	test.ValidateOK(ddl)
 
