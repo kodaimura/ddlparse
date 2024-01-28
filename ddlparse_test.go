@@ -1695,7 +1695,9 @@ func TestParse(t *testing.T) {
 		"aa23" time(10) without time zone,
 		aa24 time(10) with time zone,
 		primary key(aaa1, aaa2, aaa3) using index tablespace tsn,
+		constraint aaaaa primary key(aaa1, aaa2, aaa3) using index tablespace tsn,
 		unique(aaa4, aaa5, aaa6) include (bbbb, cccc),
+		constraint bbbbb unique(aaa4, aaa5, aaa6) include (bbbb, cccc),
 		constraint constraint_zzzz exclude (exclude_element WITH operator, exclude_element WITH operator)
 	)
 	WITH (aaaaa)

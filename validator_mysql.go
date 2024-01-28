@@ -941,7 +941,7 @@ func (v *mysqlValidator) validateLiteralValue() error {
 
 
 func (v *mysqlValidator) validateTableConstraint() error {
-	v.flgOff()
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT") {
 		if v.next() != nil {
 			return v.syntaxError()

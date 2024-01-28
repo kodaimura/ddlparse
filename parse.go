@@ -1,6 +1,7 @@
 package ddlparse
 
 import (
+	"fmt"
 	"errors"
 	"strings"
 	"strconv"
@@ -165,6 +166,13 @@ func (p *parser) parse() error {
 }
 
 
+func (p *parser) parseToken() string {
+	token := p.token()
+	p.next()
+	return token
+}
+
+
 func (p *parser) parseTable() Table {
 	var table Table
 	p.next() // skip "CREATE"
@@ -211,8 +219,7 @@ func (p *parser) parseTableName() (string, string) {
 
 
 func (p *parser) parseName() string {
-	token := p.token()
-	p.next()
+	token := p.parseToken()
 	if p.isIdentifier(token) {
 		return token[1 : len(token)-1]
 	} else {
@@ -255,8 +262,7 @@ func (p *parser) parseColumnDefinition() Column {
 
 func (p *parser) parseDateType() DataType {
 	var dataType DataType
-	dataType.Name = strings.ToUpper(p.token())
-	p.next()
+	dataType.Name = strings.ToUpper(p.parseToken())
 	if p.matchKeyword("VARYING") {
 		if dataType.Name == "BIT" {
 			dataType.Name = "VARBIT"
@@ -279,12 +285,10 @@ func (p *parser) parseTypeDigit() (int, int) {
 	m := 0
 	if p.matchSymbol("(") {
 		p.next()
-		n, _ = strconv.Atoi(p.token())
-		p.next()
+		n, _ = strconv.Atoi(p.parseToken())
 		if p.matchSymbol(",") {
 			p.next()
-			m, _ = strconv.Atoi(p.token())
-			p.next()
+			m, _ = strconv.Atoi(p.parseToken())
 		}
 		p.next()   //skip ")"
 	}
@@ -348,13 +352,12 @@ func (p *parser) parseConstraintAux(constraint *Constraint) {
 		return
 	}
 	if p.matchKeyword("COLLATE") {
-		p.next() // skip "DEFAULT"
+		p.next() // skip "COLLATE"
 		constraint.Collate = p.parseName()
 		p.parseConstraintAux(constraint)
 		return
 	}
 	if p.matchKeyword("REFERENCES") {
-		p.next() // skip "DEFAULT"
 		constraint.References = p.parseReference()
 		p.parseConstraintAux(constraint)
 		return
@@ -372,32 +375,18 @@ func (p *parser) parseDefaultValue() interface{} {
 
 
 func (p *parser) parseExpr() string {
-	expr := ""
-	p.parseExprAux(&expr)
-	return expr
+	return p.parseToken() + p.parseExprAux() + p.parseToken()
 }
 
 
-func (p *parser) parseExprAux(expr *string) {
-	*expr +=  p.token() 
-	p.next() // skip "("
-	p.parseExprAux2(expr)
-	*expr +=  p.token() 
-	p.next() // skip ")"
-}
-
-
-func (p *parser) parseExprAux2(expr *string) {
+func (p *parser) parseExprAux() string {
 	if p.matchSymbol(")") {
-		return
+		return ""
 	}
 	if p.matchSymbol("(") {
-		p.parseExprAux(expr)
-		return
+		return p.parseExpr() + p.parseExprAux()
 	}
-	*expr += p.token()
-	p.next()
-	p.parseExprAux2(expr)
+	return p.parseToken() + p.parseExprAux()
 }
 
 
@@ -439,6 +428,7 @@ func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
 		p.next() // skip "CONSTRAINT"
 		if !p.matchKeyword("PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
 			name = p.parseName()
+			fmt.Println(name)
 		}
 	}
 
@@ -471,7 +461,6 @@ func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
 		foreignKey.Name = name
 		foreignKey.ColumnNames = p.parseCommaSeparatedColumnNames()
 		foreignKey.References = p.parseReference()
-
 	}
 	return
 }

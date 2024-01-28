@@ -897,7 +897,7 @@ func (v *postgresqlValidator) validateLiteralValue() error {
 
 
 func (v *postgresqlValidator) validateTableConstraint() error {
-	v.flgOff()
+	v.flgOn()
 	if v.matchKeyword("CONSTRAINT") {
 		if v.next() != nil {
 			return v.syntaxError()
