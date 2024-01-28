@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"encoding/json"
 )
 
 type tester struct {
@@ -1704,7 +1705,8 @@ func TestParse(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println(tables)
+		jsonData, _ := json.MarshalIndent(tables, "", "    ")
+		fmt.Println(string(jsonData))
 	}
 
 	ddl = `create table users (
