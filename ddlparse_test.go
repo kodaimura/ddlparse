@@ -1466,8 +1466,8 @@ func TestValidate_MySQL(t *testing.T) {
 		unique index (aaaa (10)),
 		unique key (aaaa (10)),
 		unique (aaaa, bbbb, cccc),
-		foreign key(aaaa, bbbb) references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
-		foreign key(aaaa, bbbb) references reftable ((expr(zzzz)), (expr(zzzz)) asc, (expr(zzzz)) desc),
+		foreign key(aaaa, bbbb, cccc) references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
+		foreign key(aaaa, bbbb, dddd) references reftable ((expr(zzzz)), (expr(zzzz)) asc, (expr(zzzz)) desc),
 		foreign key(aaaa) references reftable (dddd) match full,
 		foreign key(aaaa) references reftable (dddd) match partial,
 		foreign key(aaaa) references reftable (dddd) match simple,
@@ -1648,30 +1648,6 @@ func TestParse(t *testing.T) {
 	);`
 	test.ParseOK(ddl)
 
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER,
-		aaaa INTEGER
-	);`
-	test.ParseNG(ddl)
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER PRIMARY KEY,
-		PRIMARY KEY(aaaa)
-	);`
-	test.ParseNG(ddl)
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER UNIQUE,
-		UNIQUE(aaaa)
-	);`
-	test.ParseNG(ddl)
-
-	ddl = `CREATE TABLE IF NOT EXISTS users (
-		aaaa INTEGER UNIQUE,
-		UNIQUE(bbbb)
-	);`
-	test.ParseNG(ddl)
-
 	ddl = `create table scm.test_table (
 		id integer primary key asc autoincrement,
 		aaa integer not null on conflict fail unique,
@@ -1747,7 +1723,7 @@ func TestParse(t *testing.T) {
 		aa13 float (10, 5) engine_attribute 'string',
 		aa14 real (10) secondary_engine_attribute = 'string',
 		aa15 real (10, 5) storage disk,
-		aa16 double (10) references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
+		aa16 double (10) references reftable (aaaa),
 		aa17 double (10, 5) references reftable (dddd) match full on delete CASCADE on update SET NULL,
 		aa18 bit (10) check(aaa()'bbb'(aaa)),
 		aa19 datetime (3) check(aaa) not enforced,

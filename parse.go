@@ -1,7 +1,6 @@
 package ddlparse
 
 import (
-	"fmt"
 	"errors"
 	"strings"
 	"strconv"
@@ -159,38 +158,39 @@ func (p *parser) parse() error {
 	if p.isOutOfRange() {
 		return nil
 	} else {
-		table, err := p.parseTable()
-		if err != nil {
-			return err
-		}
+		table := p.parseTable()
 		p.tables = append(p.tables, table)
 	}
-
 	return p.parse()
 }
 
 
-func (p *parser) parseTable() (Table, error) {
+func (p *parser) parseTable() Table {
 	var table Table
 	p.next() // skip "CREATE"
 	p.next() // skip "TABLE"
 
+	if p.matchKeyword("IF") {
+		p.next() // skip "IF"
+		p.next() // skip "NOT"
+		p.next() // skip "EXISTS"
+		table.IfNotExists = true
+	}
+
 	schemaName, tableName := p.parseTableName()
+	columns, constraints := p.parseTableDefinition();
+
 	table.Schema = schemaName
 	table.Name = tableName
-
-	columns, err := p.parseColumns()
-	if err != nil {
-		return Table{}, err
-	}
 	table.Columns = columns
+	table.Constraints = constraints
 
 	if (p.size > p.i) {
 		if p.matchSymbol(";") {
 			p.next()
 		}
 	}
-	return table, nil
+	return table
 }
 
 
@@ -221,127 +221,142 @@ func (p *parser) parseName() string {
 }
 
 
-func (p *parser) parseColumns() ([]Column, error) {
+func (p *parser) parseTableDefinition() ([]Column, TableConstraint) {
 	p.next()
 	var columns []Column
+	var constraints TableConstraint
 	for !p.matchSymbol(")") {
-		var err error
-		if (p.matchKeyword("PRIMARY", "UNIQUE")) {
-			err = p.parseTableConstraint(&columns)
+		if (p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN")) {
+			p.parseTableConstraint(&constraints);
 		} else {
-			err = p.parseColumn(&columns)
+			column := p.parseColumnDefinition()
+			columns = append(columns, column)
 		}
-		if err != nil {
-			return nil, err
-		}
+		
 		if p.matchKeyword(")") {
 			break
 		}
 		p.next()
 	}
 	p.next()
-	return columns, nil
+	return columns, constraints
 }
 
 
-func (p *parser) parseColumn(columns *[]Column) error {
-	name := p.parseName()
-
-	for _, column := range *columns {
-		if column.Name == name {
-			return NewParseError(fmt.Sprintf("Duplicate column name: '%s'.", name))
-		}
-	}
-	
+func (p *parser) parseColumnDefinition() Column {
 	var column Column
-	column.Name = name
-	p.parseDateType(&column)
-	p.parseConstraint(&column)
-	*columns = append(*columns, column)
-	return nil
+	column.Name = p.parseName()
+	column.DataType = p.parseDateType()
+	column.Constraint = p.parseConstraint()
+	
+	return column
 }
 
 
-func (p *parser) parseDateType(column *Column) {
-	column.DataType = strings.ToUpper(p.token())
+func (p *parser) parseDateType() DataType {
+	var dataType DataType
+	dataType.Name = strings.ToUpper(p.token())
 	p.next()
 	if p.matchKeyword("VARYING") {
-		if column.DataType == "BIT" {
-			column.DataType = "VARBIT"
-		} else if column.DataType == "CHARACTER" {
-			column.DataType = "VARCHAR"
+		if dataType.Name == "BIT" {
+			dataType.Name = "VARBIT"
+		} else if dataType.Name == "CHARACTER" {
+			dataType.Name = "VARCHAR"
 		} else {
-			column.DataType += " " + strings.ToUpper(p.token())
+			dataType.Name += " " + strings.ToUpper(p.token())
 		}
 		p.next()
 	}
-	p.parseTypeDigit(column)
+	n, m := p.parseTypeDigit()
+	dataType.DigitN = n
+	dataType.DigitM = m
+	return dataType
 }
 
 
-func (p *parser) parseTypeDigit(column *Column) {
+func (p *parser) parseTypeDigit() (int, int) {
+	n := 0
+	m := 0
 	if p.matchSymbol("(") {
 		p.next()
-		n, _ := strconv.Atoi(p.token())
-		column.DigitN = n
+		n, _ = strconv.Atoi(p.token())
 		p.next()
 		if p.matchSymbol(",") {
 			p.next()
-			m, _ := strconv.Atoi(p.token())
-			column.DigitM = m
+			m, _ = strconv.Atoi(p.token())
 			p.next()
 		}
 		p.next()   //skip ")"
 	}
+	return n, m
 }
 
 
-func (p *parser) parseConstraint(column *Column) {
-	if p.matchSymbol(",") {
-		return
+func (p *parser) parseConstraint() Constraint {
+	var constraint Constraint
+	if p.matchKeyword("CONSTRAINT") {
+		p.next() // skip "CONSTRAINT"
+		if (!p.matchKeyword("PRIMARY", "UNIQUE", "NOT", "AUTOINCREMENT", "AUTO_INCREMENT", "DEFAULT", "CHECK", "REFERENCES", "COLLATE")) {
+			constraint.Name = p.parseName()
+		}
 	}
-	if p.matchSymbol(")") {
-		return
-	}
+	p.parseConstraintAux(&constraint)
+	return constraint
+}
 
+
+func (p *parser) parseConstraintAux(constraint *Constraint) {
+	if p.matchSymbol(",", ")") {
+		return
+	}
 	if p.matchKeyword("PRIMARY") {
 		p.next() // skip "PRIMARY"
 		p.next() // skip "KEY"
-		column.IsPK = true
-		if p.matchKeyword("AUTOINCREMENT") {
-			p.next()
-			column.IsAutoIncrement = true
-		}
-		p.parseConstraint(column)
+		constraint.IsPrimaryKey = true
+		p.parseConstraintAux(constraint)
 		return 
 	}
-
-	if p.matchKeyword("AUTO_INCREMENT") {
-		p.next()
-		column.IsAutoIncrement = true
-		p.parseConstraint(column)
+	if p.matchKeyword("AUTOINCREMENT", "AUTO_INCREMENT") {
+		p.next() // skip "AUTOINCREMENT"
+		constraint.IsAutoincrement = true
+		p.parseConstraintAux(constraint)
 		return
 	}
-
 	if p.matchKeyword("NOT") {
 		p.next() // skip "NOT"
 		p.next() // skip "NULL"
-		column.IsNotNull = true
-		p.parseConstraint(column)
+		constraint.IsNotNull = true
+		p.parseConstraintAux(constraint)
 		return
 	}
-
 	if p.matchKeyword("UNIQUE") {
-		p.next()
-		column.IsUnique = true
-		p.parseConstraint(column)
+		p.next() // skip "UNIQUE"
+		constraint.IsUnique = true
+		p.parseConstraintAux(constraint)
 		return
 	}
-
 	if p.matchKeyword("DEFAULT") {
-		p.next()
-		column.Default = p.parseDefaultValue()
-		p.parseConstraint(column)
+		p.next() // skip "DEFAULT"
+		constraint.Default = p.parseDefaultValue()
+		p.parseConstraintAux(constraint)
+		return
+	}
+	if p.matchKeyword("CHECK") {
+		p.next() // skip "CHECK"
+		constraint.Check = p.parseExpr()
+		p.parseConstraintAux(constraint)
+		return
+	}
+	if p.matchKeyword("COLLATE") {
+		p.next() // skip "DEFAULT"
+		constraint.Collate = p.parseName()
+		p.parseConstraintAux(constraint)
+		return
+	}
+	if p.matchKeyword("REFERENCES") {
+		p.next() // skip "DEFAULT"
+		constraint.References = p.parseReference()
+		p.parseConstraintAux(constraint)
 		return
 	}
 }
@@ -349,35 +364,40 @@ func (p *parser) parseConstraint(column *Column) {
 
 func (p *parser) parseDefaultValue() interface{} {
 	if p.matchSymbol("(") {
-		expr := ""
-		p.parseExpr(&expr)
-		return expr
+		return p.parseExpr()
 	} else {
 		return p.parseLiteralValue()
 	}
 }
 
 
-func (p *parser) parseExpr(expr *string) {
+func (p *parser) parseExpr() string {
+	expr := ""
+	p.parseExprAux(&expr)
+	return expr
+}
+
+
+func (p *parser) parseExprAux(expr *string) {
 	*expr +=  p.token() 
 	p.next() // skip "("
-	p.parseExprAux(expr)
+	p.parseExprAux2(expr)
 	*expr +=  p.token() 
 	p.next() // skip ")"
 }
 
 
-func (p *parser) parseExprAux(expr *string) {
+func (p *parser) parseExprAux2(expr *string) {
 	if p.matchSymbol(")") {
 		return
 	}
 	if p.matchSymbol("(") {
-		p.parseExpr(expr)
+		p.parseExprAux(expr)
 		return
 	}
 	*expr += p.token()
 	p.next()
-	p.parseExprAux(expr)
+	p.parseExprAux2(expr)
 }
 
 
@@ -404,42 +424,56 @@ func (p *parser) parseLiteralValue() interface{} {
 }
 
 
-func (p *parser) parseTableConstraint(columns *[]Column) error {
-	c := strings.ToUpper(p.token())
-	if p.matchKeyword("PRIMARY") {
-		p.next() // skip "PRIMARY"
-		p.next() // skip "KEY"
-	} else if p.matchKeyword("UNIQUE") {
-		p.next()
+func (p *parser) parseReference() Reference {
+	var reference Reference
+	p.next() // skip "REFERENCES"
+	reference.TableName = p.parseName()
+	reference.ColumnNames = p.parseCommaSeparatedColumnNames()
+	return reference
+}
+
+
+func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
+	name := ""
+	if p.matchKeyword("CONSTRAINT") {
+		p.next() // skip "CONSTRAINT"
+		if !p.matchKeyword("PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
+			name = p.parseName()
+		}
 	}
 
-	columnNames := p.parseCommaSeparatedColumnNames()
-	for _, name := range columnNames {
-		exists := false
-		for i, column := range *columns {
-			if column.Name != name {
-				continue
-			}
-			exists = true
-			if c == "PRIMARY" {
-				if column.IsPK {
-					return NewParseError(fmt.Sprintf("Multiple primary key defined: '%s'.", name))
-				}
-				(*columns)[i].IsPK = true
-				break
-			} else if c == "UNIQUE" {
-				if column.IsUnique {
-					return NewParseError(fmt.Sprintf("Multiple unique constraint defined: '%s'.", name))
-				}
-				(*columns)[i].IsUnique = true
-				break
-			}
-		}
-		if !exists {
-			return NewParseError(fmt.Sprintf("Unknown column: '%s'.", name))
-		}
+	if p.matchKeyword("PRIMARY") {
+		var primaryKey PrimaryKey
+		p.next() // skip "PRIMARY"
+		p.next() // skip "KEY"
+		primaryKey.Name = name
+		primaryKey.ColumnNames = p.parseCommaSeparatedColumnNames()
+		tableConstraint.PrimaryKey = append(tableConstraint.PrimaryKey, primaryKey)
+
+	} else if p.matchKeyword("UNIQUE") {
+		var unique Unique
+		p.next() // skip "UNIQUE"
+		unique.Name = name
+		unique.ColumnNames = p.parseCommaSeparatedColumnNames()
+		tableConstraint.Unique = append(tableConstraint.Unique, unique)
+
+	} else if p.matchKeyword("CHECK") {
+		var check Check
+		p.next() // skip "CHECK"
+		check.Name = name
+		check.Expr = p.parseExpr()
+		tableConstraint.Check = append(tableConstraint.Check, check)
+
+	} else if p.matchKeyword("FOREIGN") {
+		var foreignKey ForeignKey
+		p.next() // skip "FOREIGN"
+		p.next() // skip "KEY"
+		foreignKey.Name = name
+		foreignKey.ColumnNames = p.parseCommaSeparatedColumnNames()
+		foreignKey.References = p.parseReference()
+
 	}
-	return nil
+	return
 }
 
 
