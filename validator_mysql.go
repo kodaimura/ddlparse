@@ -1343,7 +1343,7 @@ func (v *mysqlValidator) validateCommaSeparatedTableNames() error {
 
 
 func (v *mysqlValidator) validateTableOptions() error {
-	v.flgOn()
+	v.flgOff()
 	if v.matchKeyword(";") {
 		return nil
 	}
@@ -1360,7 +1360,7 @@ func (v *mysqlValidator) validateTableOptions() error {
 
 
 func (v *mysqlValidator) validateTableOptionsAux() error {
-	v.flgOn()
+	v.flgOff()
 	if v.matchKeyword(
 		"AUTOEXTEND_SIZE", "AUTO_INCREMENT", "AVG_ROW_LENGTH", 
 		"KEY_BLOCK_SIZE", "MAX_ROWS", "MIN_ROWS", "STATS_SAMPLE_PAGES",

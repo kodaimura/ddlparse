@@ -835,7 +835,7 @@ func (v *sqliteValidator) validateCommaSeparatedColumnNames() error {
 
 
 func (v *sqliteValidator) validateTableOptions() error {
-	v.flgOn()
+	v.flgOff()
 	if v.matchKeyword("WITHOUT") {
 		if v.next() != nil {
 			return v.syntaxError()

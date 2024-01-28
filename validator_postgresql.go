@@ -1087,7 +1087,7 @@ func (v *postgresqlValidator) validateCommaSeparatedColumnNames() error {
 
 
 func (v *postgresqlValidator) validateTableOptions() error {
-	v.flgOn()
+	v.flgOff()
 	if v.matchKeyword(";") {
 		return nil
 	}
@@ -1104,7 +1104,7 @@ func (v *postgresqlValidator) validateTableOptions() error {
 
 
 func (v *postgresqlValidator) validateTableOption() error {
-	v.flgOn()
+	v.flgOff()
 	if v.matchKeyword("WITH") {
 		return v.validateTableOptionWith()
 	}
@@ -1119,40 +1119,37 @@ func (v *postgresqlValidator) validateTableOption() error {
 
 
 func (v *postgresqlValidator) validateTableOptionWith() error {
-	v.flgOn()
+	v.flgOff()
 	if err := v.validateKeyword("WITH"); err != nil {
 		return err
 	}
 	if err := v.validateBrackets(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableOptionWithout() error {
-	v.flgOn()
+	v.flgOff()
 	if err := v.validateKeyword("WITHOUT"); err != nil {
 		return err
 	}
 	if err := v.validateKeyword("OIDS"); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
 
 func (v *postgresqlValidator) validateTableOptionTablespace() error {
-	v.flgOn()
+	v.flgOff()
 	if err := v.validateKeyword("TABLESPACE"); err != nil {
 		return err
 	}
 	if err := v.validateName(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
