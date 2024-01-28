@@ -250,23 +250,22 @@ func (v *sqliteValidator) validateCreateTable() error {
 	if err := v.validateIfNotExists(); err != nil {
 		return err
 	}
-
-	v.flgOn()
 	if err := v.validateTableName(); err != nil {
 		return err
 	}
-
 	if err := v.validateTableDefinition(); err != nil {
 		return err
 	}
 	
+	if v.isOutOfRange() {
+		return nil
+	}
 	if v.matchSymbol(";") {
 		v.flgOn()
 		if v.next() != nil {
 			return nil
 		}
 	}
-
 	return v.validateCreateTable()
 }
 
@@ -297,7 +296,8 @@ func (v *sqliteValidator) validateTableDefinition() error {
 	}
 	v.flgOn()
 	if err := v.validateSymbol(")"); err != nil {
-		return err
+		// ";"の省略があり得る
+		return nil
 	}
 	if err := v.validateTableOptions(); err != nil {
 		return err

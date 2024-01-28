@@ -259,11 +259,9 @@ func (v *postgresqlValidator) validateCreateTable() error {
 	if err := v.validateIfNotExists(); err != nil {
 		return err
 	}
-
 	if err := v.validateTableName(); err != nil {
 		return err
 	}
-
 	if err := v.validateTableDefinition(); err != nil {
 		return err
 	}

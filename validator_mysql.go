@@ -275,7 +275,6 @@ func (v *mysqlValidator) validateCreateTable() error {
 	if err := v.validateTableName(); err != nil {
 		return err
 	}
-
 	if err := v.validateTableDefinition(); err != nil {
 		return err
 	}
