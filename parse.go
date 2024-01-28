@@ -51,13 +51,13 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func parse (tokens []string, rdbms Rdbms) ([]Table, error) {
+func parse (tokens []string, rdbms Rdbms) []Table {
 	p := newParser(rdbms, tokens)
 	return p.Parse()
 }
 
 type parserI interface {
-	Parse() ([]Table, error)
+	Parse() []Table
 }
 
 type parser struct {
@@ -74,12 +74,10 @@ func newParser(rdbms Rdbms, tokens []string) parserI {
 }
 
 
-func (p *parser) Parse() ([]Table, error) {
+func (p *parser) Parse() []Table {
 	p.init()
-	if err := p.parse(); err != nil {
-		return nil, err
-	}
-	return p.tables, nil
+	p.parse()
+	return p.tables
 }
 
 
@@ -155,14 +153,14 @@ func (p *parser) isStringValue(token string) bool {
 }
 
 
-func (p *parser) parse() error {
+func (p *parser) parse() {
 	if p.isOutOfRange() {
-		return nil
+		return
 	} else {
 		table := p.parseTable()
 		p.tables = append(p.tables, table)
 	}
-	return p.parse()
+	p.parse()
 }
 
 

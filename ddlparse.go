@@ -87,10 +87,7 @@ func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	if err != nil {
 		return []Table{}, err
 	}
-	tables, err := parse(validatedTokens, rdbms)
-	if err != nil {
-		return []Table{}, err
-	}
+	tables:= parse(validatedTokens, rdbms)
 	return tables, nil
 }
 
