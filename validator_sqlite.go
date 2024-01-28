@@ -794,16 +794,6 @@ func (v *sqliteValidator) validateTableConstraintForeignKey() error {
 	if err := v.validateSymbol(")"); err != nil {
 		return err
 	}
-	if err := v.validateTableConstraintForeignKeyReferences(); err != nil {
-		return err
-	}
-	v.flgOff()
-	return nil
-}
-
-
-func (v *sqliteValidator) validateTableConstraintForeignKeyReferences() error {
-	v.flgOn()
 	if err := v.validateKeyword("REFERENCES"); err != nil {
 		return err
 	}
