@@ -963,6 +963,7 @@ func (v *postgresqlValidator) validateTableConstraintCheck() error {
 	if err := v.validateExpr(); err != nil {
 		return err
 	}
+	v.flgOff()
 	if v.matchKeyword("NO") {
 		if v.next() != nil {
 			return v.syntaxError()

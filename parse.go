@@ -1,7 +1,6 @@
 package ddlparse
 
 import (
-	"fmt"
 	"errors"
 	"strings"
 	"strconv"
@@ -415,7 +414,9 @@ func (p *parser) parseReference() Reference {
 	var reference Reference
 	p.next() // skip "REFERENCES"
 	reference.TableName = p.parseName()
-	reference.ColumnNames = p.parseCommaSeparatedColumnNames()
+	if p.matchSymbol("(") {
+		reference.ColumnNames = p.parseCommaSeparatedColumnNames()
+	}
 	return reference
 }
 
@@ -426,7 +427,6 @@ func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
 		p.next() // skip "CONSTRAINT"
 		if !p.matchKeyword("PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
 			name = p.parseName()
-			fmt.Println(name)
 		}
 	}
 
@@ -459,6 +459,7 @@ func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
 		foreignKey.Name = name
 		foreignKey.ColumnNames = p.parseCommaSeparatedColumnNames()
 		foreignKey.References = p.parseReference()
+		tableConstraint.ForeignKey = append(tableConstraint.ForeignKey, foreignKey)
 	}
 	return
 }

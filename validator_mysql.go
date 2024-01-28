@@ -749,7 +749,7 @@ func (v *mysqlValidator) validateConstraintDefault() error {
 
 
 func (v *mysqlValidator) validateConstraintCollate() error {
-	v.flgOff()
+	v.flgOn()
 	if err := v.validateKeyword("COLLATE"); err != nil {
 		return err
 	}
