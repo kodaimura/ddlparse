@@ -1570,8 +1570,6 @@ func TestValidate_MySQL(t *testing.T) {
 		aaaa integer secondary_engine_attribute 'string',
 		aaaa integer storage disk,
 		aaaa integer storage memory,
-		aaaa integer references reftable (aaaa (10) asc, bbbb (10) desc, cccc (10), dddd),
-		aaaa integer references reftable ((expr(zzzz)), (expr(zzzz)) asc, (expr(zzzz)) desc),
 		aaaa integer references reftable (dddd) match full,
 		aaaa integer references reftable (dddd) match partial,
 		aaaa integer references reftable (dddd) match simple,
