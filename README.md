@@ -101,8 +101,8 @@ CREATE TABLE [IF NOT EXISTS] [schema-name.]table-name (
 * column-constraint
 ```
 [CONSTRAINT name] RIMARY KEY [DESC|ASC] [conflict-clause] [AUTOINCREMENT]
-[CONSTRAINT name] NOT NULL [conflict-clause]
 [CONSTRAINT name] UNIQUE [conflict-clause]
+[CONSTRAINT name] NOT NULL [conflict-clause]
 [CONSTRAINT name] CHECK (expr)
 [CONSTRAINT name] DEFAULT {literal-value|(expr)}
 [CONSTRAINT name] COLLATE {BINARY|NOCASE|RTRIM}
@@ -134,4 +134,54 @@ REFERENCES table-name [(column-name, ...)]
 * table-options
 ```
 WITHOUT ROWID|STRICT
-```  
+```
+
+### PostgreSQL
+```
+CREATE TABLE [IF NOT EXISTS] [schema-name.]table-name (
+    column-name type-name [column-constraint ...],
+    [table-constraint, ...]
+)[table-options][;]
+```
+
+* column-constraint
+```
+[CONSTRAINT name] 
+{ RIMARY KEY [index_parameters]
+  UNIQUE [index_parameters]
+  NOT NULL
+  NULL
+  CHECK (expr) [NO INHERIT]
+  DEFAULT {literal-value|(expr)}
+  GENERATED ALWAYS AS (expr) STORED
+  GENERATED {ALWAYS|BY DEFAULT} AS IDENTITY [(sequence_options)] 
+  AS (expr) [STORED|VIRTUAL]
+  foreign-key-clause }
+[ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
+```
+
+* table-constraint
+```
+[CONSTRAINT name] RIMARY KEY (column-name, ...) [conflict-clause]
+[CONSTRAINT name] UNIQUE (column-name, ...) [conflict-clause]
+[CONSTRAINT name] CHECK (expr)
+[CONSTRAINT name] FOREIGN KEY (column-name, ...) foreign-key-clause
+```
+* conflict-clause
+```
+ON CONFLICT {ROLLBACK|ABORT|FAIL|IGNORE|REPLACE}
+```
+
+* foreign-key-clause
+```
+REFERENCES table-name [(column-name, ...)]
+  [
+    ON {DELETE|UPDATE} {SET NULL|SET DEFAULT|CASCADE|RESTRICT|NO ACTION} |
+    MATCH name |
+    [NOT] DEFERRABLE [INITIALLY DEFERRED | INITIALLY IMMEDIATE]
+  ]
+```
+* table-options
+```
+WITHOUT ROWID|STRICT
+```
