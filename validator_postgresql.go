@@ -1093,6 +1093,15 @@ func (v *postgresqlValidator) validateTableOption() error {
 	if v.matchKeyword("TABLESPACE") {
 		return v.validateTableOptionTablespace()
 	}
+	if v.matchKeyword("INHERITS") {
+		return v.validateTableOptionInherits()
+	}
+	if v.matchKeyword("PARTITION") {
+		return v.validateTableOptionPartition()
+	}
+	if v.matchKeyword("USING") {
+		return v.validateTableOptionUsing()
+	}
 	return v.syntaxError()
 }
 
@@ -1124,6 +1133,48 @@ func (v *postgresqlValidator) validateTableOptionWithout() error {
 func (v *postgresqlValidator) validateTableOptionTablespace() error {
 	v.flgOff()
 	if err := v.validateKeyword("TABLESPACE"); err != nil {
+		return err
+	}
+	if err := v.validateName(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *postgresqlValidator) validateTableOptionInherits() error {
+	v.flgOff()
+	if err := v.validateKeyword("INHERITS"); err != nil {
+		return err
+	}
+	if err := v.validateBrackets(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *postgresqlValidator) validateTableOptionPartition() error {
+	v.flgOff()
+	if err := v.validateKeyword("PARTITION"); err != nil {
+		return err
+	}
+	if err := v.validateKeyword("BY"); err != nil {
+		return err
+	}
+	if err := v.validateKeyword("RANGE", "LIST", "HASH"); err != nil {
+		return err
+	}
+	if err := v.validateBrackets(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *postgresqlValidator) validateTableOptionUsing() error {
+	v.flgOff()
+	if err := v.validateKeyword("USING"); err != nil {
 		return err
 	}
 	if err := v.validateName(); err != nil {

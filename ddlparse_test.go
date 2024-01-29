@@ -825,21 +825,29 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	),
 	with (aaaaa),
 	without oids,
-	tablespace tsn;
+	tablespace tsn,
+	inherits (parent_table1, parent_table2),
+	partition by range (aaaa aaaa aaaa),
+	partition by list (aaaa aaaa aaaa),
+	partition by hash (aaaa aaaa aaaa),
+	using aaaa;
 	
 	create table users (
 		aaaa integer
 	)
 	with (aaaaa)
 	without oids
-	tablespace tsn;
+	tablespace tsn
+	PARTITION BY RANGE ( { column_name | ( expression ) } [ COLLATE collation ] [ opclass ] [, ... ] )
+	USING aaaa;
 	
 	CREATE TABLE users (
 		aaaa integer
 	)
 	WITH (aaaaa)
 	WITHOUT oids
-	TABLESPACE tsn;`
+	TABLESPACE tsn
+	INHERITS ( parent_table [, ... ] ) ;`
 	test.ValidateOK(ddl)
 
 	ddl = `create table users (
