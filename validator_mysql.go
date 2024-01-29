@@ -1351,268 +1351,295 @@ func (v *mysqlValidator) validateTableOptions() error {
 			return v.syntaxError()
 		}
 	}
-	if err := v.validateTableOptionsAux(); err != nil {
+	if err := v.validateTableOption(); err != nil {
 		return err
 	}
 	return v.validateTableOptions()
 }
 
 
-func (v *mysqlValidator) validateTableOptionsAux() error {
+func (v *mysqlValidator) validateTableOption() error {
 	v.flgOff()
 	if v.matchKeyword(
 		"AUTOEXTEND_SIZE", "AUTO_INCREMENT", "AVG_ROW_LENGTH", 
 		"KEY_BLOCK_SIZE", "MAX_ROWS", "MIN_ROWS", "STATS_SAMPLE_PAGES",
 	) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateLiteralValue(); err != nil {
-			return err
-		}
-		return nil
+		return v.validateTableOptionCommonLiteral()
 	}
-
 	if v.matchKeyword(
 		"COMMENT", "ENGINE_ATTRIBUTE", "PASSWORD", "SECONDARY_ENGINE_ATTRIBUTE", "CONNECTION",
+		"COMPRESSION", "ENCRYPTION",
 	) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateStringValue(); err != nil {
-			return err
-		}
-		return nil
+		return v.validateTableOptionCommonString()
 	}
-
-	if v.matchKeyword("DATA", "INDEX") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if err := v.validateKeyword("DIRECTORY"); err != nil {
-			return err
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateStringValue(); err != nil {
-			return err
-		}
-		return nil
+	if v.matchKeyword("COLLATE", "ENGINE", "CHARACTER") {
+		return v.validateTableOptionCommonName()
 	}
-
-	if v.matchKeyword("TABLESPACE") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if err := v.validateName(); err != nil {
-			return err
-		}
-		if v.matchKeyword("STORAGE") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-			if v.validateKeyword("DISK", "MEMORY") != nil {
-				return v.syntaxError()
-			}
-		}
-		return nil
-	}
-
-	if v.matchKeyword("DEFAULT", "CHARACTER", "COLLATE") {
-		if v.matchKeyword("DEFAULT") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if v.matchKeyword("CHARACTER") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-			if v.validateKeyword("SET") != nil {
-				return v.syntaxError()
-			}
-		} else if v.matchKeyword("COLLATE") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateName(); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if v.matchKeyword("ENGINE") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateName(); err != nil {
-			return err
-		}
-		return nil
-	}
-
 	if v.matchKeyword("CHECKSUM", "DELAY_KEY_WRITE") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if (v.matchSymbol("0", "1")) {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		return nil
+		return v.validateTableOptionCommon01()
 	}
-
 	if v.matchKeyword("PACK_KEYS", "STATS_AUTO_RECALC", "STATS_PERSISTENT") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if (v.matchSymbol("0", "1") || v.matchKeyword("DEFAULT")) {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		return nil
+		return v.validateTableOptionCommon01Default()
 	}
-
-	if v.matchKeyword("COMPRESSION") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if (v.matchKeyword("'ZLIB'", "'LZ4'", "'NONE'")) {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		return nil
+	if v.matchKeyword("DATA", "INDEX") {
+		return v.validateTableOptionDirectory()
 	}
-
-	if v.matchKeyword("ENCRYPTION") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if (v.matchKeyword("'Y'", "'N'")) {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		return nil
+	if v.matchKeyword("TABLESPACE") {
+		return v.validateTableOptionTablespace()
 	}
-
-	if v.matchKeyword("INSERT_METHOD") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if (v.matchKeyword("NO", "FIRST", "LAST")) {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		return nil
+	if v.matchKeyword("DEFAULT") {
+		return v.validateTableOptionDefault()
 	}
-
-	if v.matchKeyword("ROW_FORMAT") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if (v.matchKeyword("DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT")) {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		} else {
-			return v.syntaxError()
-		}
-		return nil
-	}
-
 	if v.matchKeyword("UNION") {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		if v.matchSymbol("=") {
-			if v.next() != nil {
-				return v.syntaxError()
-			}
-		}
-		if err := v.validateSymbol("("); err != nil {
-			return err
-		}
-		if err := v.validateCommaSeparatedTableNames(); err != nil {
-			return v.syntaxError()
-		}
-		if err := v.validateSymbol(")"); err != nil {
-			return err
-		}
-		return nil
+		return v.validateTableOptionUnion()
+	}
+	if v.matchKeyword("INSERT_METHOD") {
+		return v.validateTableOptionInsertMethod()
+	}
+	if v.matchKeyword("ROW_FORMAT") {
+		return v.validateTableOptionRowFormat()
 	}
 	
 	return v.syntaxError()
+}
+
+
+// option [=] 'value'
+func (v *mysqlValidator) validateTableOptionCommonLiteral() error {
+	v.flgOff()
+	if v.next() != nil {
+		return v.syntaxError()
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateLiteralValue(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+// option [=] 'string'
+func (v *mysqlValidator) validateTableOptionCommonString() error {
+	v.flgOff()
+	if v.next() != nil {
+		return v.syntaxError()
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateStringValue(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+// option [=] name 
+func (v *mysqlValidator) validateTableOptionCommonName() error {
+	v.flgOff()
+	if v.matchKeyword("CHARACTER") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if v.validateKeyword("SET") != nil {
+			return v.syntaxError()
+		}
+	} else {
+		if err := v.validateKeyword("COLLATE", "ENGINE"); err != nil {
+			return err
+		}
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateName(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+// option [=] {0 | 1}
+func (v *mysqlValidator) validateTableOptionCommon01() error {
+	v.flgOff()
+	if v.next() != nil {
+		return v.syntaxError()
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateSymbol("0", "1"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+// option [=] {0 | 1 | DEFAULT}
+func (v *mysqlValidator) validateTableOptionCommon01Default() error {
+	v.flgOff()
+	if v.next() != nil {
+		return v.syntaxError()
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if (v.matchSymbol("0", "1") || v.matchKeyword("DEFAULT")) {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	} else {
+		return v.syntaxError()
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTableOptionDirectory() error {
+	v.flgOff()
+	if err := v.validateKeyword("DATA", "INDEX"); err != nil {
+		return err
+	}
+	if err := v.validateKeyword("DIRECTORY"); err != nil {
+		return err
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateLiteralValue(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTableOptionTablespace() error {
+	v.flgOff()
+	if err := v.validateKeyword("TABLESPACE"); err != nil {
+		return err
+	}
+	if err := v.validateName(); err != nil {
+		return err
+	}
+	if v.matchKeyword("STORAGE") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if v.validateKeyword("DISK", "MEMORY") != nil {
+			return v.syntaxError()
+		}
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTableOptionDefault() error {
+	v.flgOff()
+	if err := v.validateKeyword("DEFAULT"); err != nil {
+		return err
+	}
+	if v.matchKeyword("CHARACTER") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+		if v.validateKeyword("SET") != nil {
+			return v.syntaxError()
+		}
+	} else if v.matchKeyword("COLLATE") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	} else {
+		return v.syntaxError()
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateName(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTableOptionUnion() error {
+	v.flgOff()
+	if err := v.validateKeyword("UNION"); err != nil {
+		return err
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if err := v.validateSymbol("("); err != nil {
+		return err
+	}
+	if err := v.validateCommaSeparatedTableNames(); err != nil {
+		return v.syntaxError()
+	}
+	if err := v.validateSymbol(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTableOptionInsertMethod() error {
+	v.flgOff()
+	if err := v.validateKeyword("INSERT_METHOD"); err != nil {
+		return err
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if (v.matchKeyword("NO", "FIRST", "LAST")) {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	} else {
+		return v.syntaxError()
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateTableOptionRowFormat() error {
+	v.flgOff()
+	if err := v.validateKeyword("ROW_FORMAT"); err != nil {
+		return err
+	}
+	if v.matchSymbol("=") {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	}
+	if (v.matchKeyword("DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT")) {
+		if v.next() != nil {
+			return v.syntaxError()
+		}
+	} else {
+		return v.syntaxError()
+	}
+	return nil
 }
 
 
