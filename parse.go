@@ -11,40 +11,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////
 
   PARSE: 
-    Tokenize, validate and convert to a Table object and return it.
-	Return an ParseError if there are errors other than syntax errors in the DDL.
-
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
-
-Example:
-
-***** ddl *****
-"CREATE TABLE IF NOT users (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	name TEXT NOT NULL,
-	password TEXT NOT NULL, --hashing
-	created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-	updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
-	UNIQUE(name)
-);"
-
-***** Table *****
-{ 
-	Name: users 
-	Columns: [
-		{ Name: id, DataType: INTEGER, IsPK: true, IsNotNull: false, 
-			IsUnique: false, IsAutoIncrement: true, Default: nil },
-		{ Name: name, DataType: TEXT, IsPK: false, IsNotNull: true, 
-			IsUnique: true, IsAutoIncrement: false, Default: nil },
-		{ Name: password, DataType: TEXT, IsPK: false, IsNotNull: true, 
-			IsUnique: true, IsAutoIncrement: false, Default: nil },
-		{ Name: created_at, DataType: TEXT, IsPK: false, IsNotNull: true, 
-			IsUnique: true, IsAutoIncrement: false, Default: (DATETIME('now','localtime') },
-		{ Name: updated_at, DataType: TEXT, IsPK: false, IsNotNull: true, 
-			IsUnique: true, IsAutoIncrement: false, Default: (DATETIME('now','localtime') },
-	]
-}
+    Convert the validated token to a Table object.
 
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////

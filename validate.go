@@ -11,23 +11,6 @@ package ddlparse
 
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
-
-Example:
-
-***** tokens *****
-[CREATE TABLE IF NOT users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
- name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
- DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
- DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n UNIQUE ( name ) \n ) ;]
-
-***** validatedTokens *****
-[CREATE TABLE users ( \n id INTEGER PRIMARY KEY AUTOINCREMENT , \n
- name TEXT NOT NULL , \n password TEXT NOT NULL , \n created_at TEXT NOT NULL 
- DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n updated_at TEXT NOT NULL 
- DEFAULT ( DATETIME ( 'now' , 'localtime' ) ) , \n UNIQUE ( name ) \n ) ;]
-
-////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////
 */
 
 func validate (tokens []string, rdbms Rdbms) ([]string, error) {
