@@ -616,12 +616,7 @@ func (v *mysqlValidator) validateColumnConstraint() error {
 		return v.validateConstraintStorage()
 	}
 	if v.matchKeyword("AUTO_INCREMENT") {
-		v.flgOn()
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		v.flgOff()
-		return nil
+		return v.validateConstraintAutoincrement()
 	}
 	if v.matchKeyword("VISIBLE", "INVISIBLE", "VIRTUAL", "STORED") {
 		v.flgOff()
@@ -906,6 +901,16 @@ func (v *mysqlValidator) validateConstraintStorage() error {
 		return err
 	}
 	if err := v.validateKeyword("DISK", "MEMORY"); err != nil {
+		return err
+	}
+	v.flgOff()
+	return nil
+}
+
+
+func (v *mysqlValidator) validateConstraintAutoincrement() error {
+	v.flgOn()
+	if err := v.validateKeyword("AUTO_INCREMENT"); err != nil {
 		return err
 	}
 	v.flgOff()
