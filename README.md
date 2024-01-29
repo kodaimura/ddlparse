@@ -190,9 +190,12 @@ CREATE TABLE [IF NOT EXISTS] [schema_name.]table_name (
 ```
 * table-options
 ```
-[WITH](...)
-[WITHOUT OIDS]
-[TABLESPACE tablespace_name]
+WITH (...)
+WITHOUT OIDS
+TABLESPACE tablespace_name
+INHERITS (...)
+PARTITION BY {RANGE | LIST | HASH} (...)
+USING method
 ```
 
 ### MySQL
