@@ -131,9 +131,7 @@ func (v *sqliteValidator) validateKeyword(keywords ...string) error {
 		return v.syntaxError()
 	}
 	if v.matchKeyword(keywords...) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
+		v.next()
 		return nil
 	}
 	return v.syntaxError()
@@ -145,9 +143,7 @@ func (v *sqliteValidator) validateSymbol(symbols ...string) error {
 		return v.syntaxError()
 	}
 	if v.matchSymbol(symbols...) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
+		v.next()
 		return nil
 	}
 	return v.syntaxError()
@@ -240,6 +236,9 @@ func (v *sqliteValidator) validate() error {
 
 
 func (v *sqliteValidator) validateCreateTable() error {
+	if v.isOutOfRange() {
+		return nil
+	}
 	v.flgOn()
 	if err := v.validateKeyword("CREATE"); err != nil {
 		return err
@@ -256,15 +255,8 @@ func (v *sqliteValidator) validateCreateTable() error {
 	if err := v.validateTableDefinition(); err != nil {
 		return err
 	}
-	
-	if v.isOutOfRange() {
-		return nil
-	}
-	if v.matchSymbol(";") {
-		v.flgOn()
-		if v.next() != nil {
-			return nil
-		}
+	if err := v.validateSymbol(";"); err != nil {
+		return err
 	}
 	return v.validateCreateTable()
 }
@@ -296,8 +288,7 @@ func (v *sqliteValidator) validateTableDefinition() error {
 	}
 	v.flgOn()
 	if err := v.validateSymbol(")"); err != nil {
-		// ";"の省略があり得る
-		return nil
+		return err
 	}
 	if err := v.validateTableOptions(); err != nil {
 		return err
@@ -836,6 +827,9 @@ func (v *sqliteValidator) validateCommaSeparatedColumnNames() error {
 
 func (v *sqliteValidator) validateTableOptions() error {
 	v.flgOff()
+	if (v.isOutOfRange()) {
+		return nil
+	}
 	if v.matchKeyword("WITHOUT") {
 		if v.next() != nil {
 			return v.syntaxError()

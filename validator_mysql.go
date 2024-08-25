@@ -131,9 +131,7 @@ func (v *mysqlValidator) validateKeyword(keywords ...string) error {
 		return v.syntaxError()
 	}
 	if v.matchKeyword(keywords...) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
+		v.next()
 		return nil
 	}
 	return v.syntaxError()
@@ -145,9 +143,7 @@ func (v *mysqlValidator) validateSymbol(symbols ...string) error {
 		return v.syntaxError()
 	}
 	if v.matchSymbol(symbols...) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
+		v.next()
 		return nil
 	}
 	return v.syntaxError()
@@ -262,6 +258,9 @@ func (v *mysqlValidator) validate() error {
 
 
 func (v *mysqlValidator) validateCreateTable() error {
+	if v.isOutOfRange() {
+		return nil
+	}
 	v.flgOn()
 	if err := v.validateKeyword("CREATE"); err != nil {
 		return err
@@ -278,14 +277,9 @@ func (v *mysqlValidator) validateCreateTable() error {
 	if err := v.validateTableDefinition(); err != nil {
 		return err
 	}
-
-	if v.matchSymbol(";") {
-		v.flgOn()
-		if v.next() != nil {
-			return nil
-		}
+	if err := v.validateSymbol(";"); err != nil {
+		return err
 	}
-
 	return v.validateCreateTable()
 }
 
@@ -1348,6 +1342,9 @@ func (v *mysqlValidator) validateCommaSeparatedTableNames() error {
 
 func (v *mysqlValidator) validateTableOptions() error {
 	v.flgOff()
+	if (v.isOutOfRange()) {
+		return nil
+	}
 	if v.matchKeyword(";") {
 		return nil
 	}
