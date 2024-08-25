@@ -1,22 +1,20 @@
 package ddlparse
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 )
 
 type sqliteValidator struct {
-	tokens []string
-	validatedTokens []string
-	size int
-	i int
-	line int
-	flg bool
+	validator
 }
 
-func newSQLiteValidator(tokens []string) validator {
-	return &sqliteValidator{tokens: tokens}
+func newSQLiteValidator(tokens []string) Validator {
+	return &sqliteValidator{
+		validator: validator{
+			tokens: tokens,
+        },
+	}
 }
 
 
@@ -29,77 +27,14 @@ func (v *sqliteValidator) Validate() ([]string, error) {
 }
 
 
-func (v *sqliteValidator) init() {
-	v.validatedTokens = []string{}
-	v.i = -1
-	v.line = 1
-	v.size = len(v.tokens)
-	v.flg = false
-	v.next()
-}
-
-
-func (v *sqliteValidator) token() string {
-	return v.tokens[v.i]
-}
-
-
-func (v *sqliteValidator) flgOn() {
-	v.flg = true
-}
-
-
-func (v *sqliteValidator) flgOff() {
-	v.flg = false
-}
-
-
-func (v *sqliteValidator) isOutOfRange() bool {
-	return v.i > v.size - 1
-}
-
-
-func (v *sqliteValidator) next() error {
-	if v.flg {
-		v.validatedTokens = append(v.validatedTokens, v.token())
-	}
-	return v.nextAux()
-}
-
-
-func (v *sqliteValidator) nextAux() error {
-	v.i += 1
+func (v *sqliteValidator) validate() error {
 	if (v.isOutOfRange()) {
-		return errors.New("out of range")
-	}
-	if (v.token() == "\n") {
-		v.line += 1
-		return v.nextAux()
-	} else {
 		return nil
 	}
-}
-
-
-func (v *sqliteValidator) syntaxError() error {
-	if v.isOutOfRange() {
-		return NewValidateError(v.line, v.tokens[v.size - 1])
+	if err := v.validateCreateTable(); err != nil {
+		return err
 	}
-	return NewValidateError(v.line, v.tokens[v.i])
-}
-
-
-func (v *sqliteValidator) matchKeyword(keywords ...string) bool {
-	return contains(
-		append(
-			mapSlice(keywords, strings.ToLower), 
-			mapSlice(keywords, strings.ToUpper)...,
-		), v.token())
-}
-
-
-func (v *sqliteValidator) matchSymbol(symbols ...string) bool {
-	return contains(symbols, v.token())
+	return v.validate()
 }
 
 
@@ -123,34 +58,6 @@ func (v *sqliteValidator) isValidName(name string) bool {
 
 func (v *sqliteValidator) isValidQuotedName(name string) bool {
 	return true
-}
-
-
-func (v *sqliteValidator) validateKeyword(keywords ...string) error {
-	if (v.isOutOfRange()) {
-		return v.syntaxError()
-	}
-	if v.matchKeyword(keywords...) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		return nil
-	}
-	return v.syntaxError()
-}
-
-
-func (v *sqliteValidator) validateSymbol(symbols ...string) error {
-	if (v.isOutOfRange()) {
-		return v.syntaxError()
-	}
-	if v.matchSymbol(symbols...) {
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-		return nil
-	}
-	return v.syntaxError()
 }
 
 
@@ -228,17 +135,6 @@ func (v *sqliteValidator) validateBracketsAux() error {
 }
 
 
-func (v *sqliteValidator) validate() error {
-	if (v.isOutOfRange()) {
-		return nil
-	}
-	if err := v.validateCreateTable(); err != nil {
-		return err
-	}
-	return v.validate()
-}
-
-
 func (v *sqliteValidator) validateCreateTable() error {
 	v.flgOn()
 	if err := v.validateKeyword("CREATE"); err != nil {
@@ -256,17 +152,10 @@ func (v *sqliteValidator) validateCreateTable() error {
 	if err := v.validateTableDefinition(); err != nil {
 		return err
 	}
-	
-	if v.isOutOfRange() {
-		return nil
+	if err := v.validateSymbol(";"); err != nil {
+		return err
 	}
-	if v.matchSymbol(";") {
-		v.flgOn()
-		if v.next() != nil {
-			return nil
-		}
-	}
-	return v.validateCreateTable()
+	return nil
 }
 
 
@@ -296,8 +185,7 @@ func (v *sqliteValidator) validateTableDefinition() error {
 	}
 	v.flgOn()
 	if err := v.validateSymbol(")"); err != nil {
-		// ";"の省略があり得る
-		return nil
+		return err
 	}
 	if err := v.validateTableOptions(); err != nil {
 		return err
@@ -836,6 +724,9 @@ func (v *sqliteValidator) validateCommaSeparatedColumnNames() error {
 
 func (v *sqliteValidator) validateTableOptions() error {
 	v.flgOff()
+	if (v.isOutOfRange()) {
+		return nil
+	}
 	if v.matchKeyword("WITHOUT") {
 		if v.next() != nil {
 			return v.syntaxError()
