@@ -1,22 +1,20 @@
 package ddlparse
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 )
 
 type postgresqlValidator struct {
-	tokens []string
-	validatedTokens []string
-	size int
-	i int
-	line int
-	flg bool
+	validator
 }
 
-func newPostgreSQLValidator(tokens []string) validator {
-	return &postgresqlValidator{tokens: tokens}
+func newPostgreSQLValidator(tokens []string) Validator {
+	return &postgresqlValidator{
+		validator: validator{
+			tokens: tokens,
+        },
+	}
 }
 
 
@@ -26,80 +24,6 @@ func (v *postgresqlValidator) Validate() ([]string, error) {
 		return nil, err
 	}
 	return v.validatedTokens, nil
-}
-
-
-func (v *postgresqlValidator) init() {
-	v.validatedTokens = []string{}
-	v.i = -1
-	v.line = 1
-	v.size = len(v.tokens)
-	v.flg = false
-	v.next()
-}
-
-
-func (v *postgresqlValidator) token() string {
-	return v.tokens[v.i]
-}
-
-
-func (v *postgresqlValidator) flgOn() {
-	v.flg = true
-}
-
-
-func (v *postgresqlValidator) flgOff() {
-	v.flg = false
-}
-
-
-func (v *postgresqlValidator) isOutOfRange() bool {
-	return v.i > v.size - 1
-}
-
-
-func (v *postgresqlValidator) next() error {
-	if v.flg {
-		v.validatedTokens = append(v.validatedTokens, v.token())
-	}
-	return v.nextAux()
-}
-
-
-func (v *postgresqlValidator) nextAux() error {
-	v.i += 1
-	if (v.isOutOfRange()) {
-		return errors.New("out of range")
-	}
-	if (v.token() == "\n") {
-		v.line += 1
-		return v.nextAux()
-	} else {
-		return nil
-	}
-}
-
-
-func (v *postgresqlValidator) syntaxError() error {
-	if v.isOutOfRange() {
-		return NewValidateError(v.line, v.tokens[v.size - 1])
-	}
-	return NewValidateError(v.line, v.tokens[v.i])
-}
-
-
-func (v *postgresqlValidator) matchKeyword(keywords ...string) bool {
-	return contains(
-		append(
-			mapSlice(keywords, strings.ToLower), 
-			mapSlice(keywords, strings.ToUpper)...,
-		), v.token())
-}
-
-
-func (v *postgresqlValidator) matchSymbol(symbols ...string) bool {
-	return contains(symbols, v.token())
 }
 
 
@@ -122,30 +46,6 @@ func (v *postgresqlValidator) isValidName(name string) bool {
 
 func (v *postgresqlValidator) isValidQuotedName(name string) bool {
 	return true
-}
-
-
-func (v *postgresqlValidator) validateKeyword(keywords ...string) error {
-	if (v.isOutOfRange()) {
-		return v.syntaxError()
-	}
-	if v.matchKeyword(keywords...) {
-		v.next()
-		return nil
-	}
-	return v.syntaxError()
-}
-
-
-func (v *postgresqlValidator) validateSymbol(symbols ...string) error {
-	if (v.isOutOfRange()) {
-		return v.syntaxError()
-	}
-	if v.matchSymbol(symbols...) {
-		v.next()
-		return nil
-	}
-	return v.syntaxError()
 }
 
 
