@@ -27,6 +27,17 @@ func (v *mysqlValidator) Validate() ([]string, error) {
 }
 
 
+func (v *mysqlValidator) validate() error {
+	if (v.isOutOfRange()) {
+		return nil
+	}
+	if err := v.validateCreateTable(); err != nil {
+		return err
+	}
+	return v.validate()
+}
+
+
 func (v *mysqlValidator) isStringValue(token string) bool {
 	tmp := token[0:1]
 	return tmp == "\"" || tmp == "'"
@@ -146,21 +157,7 @@ func (v *mysqlValidator) validateStringValue() error {
 }
 
 
-func (v *mysqlValidator) validate() error {
-	if (v.isOutOfRange()) {
-		return nil
-	}
-	if err := v.validateCreateTable(); err != nil {
-		return err
-	}
-	return v.validate()
-}
-
-
 func (v *mysqlValidator) validateCreateTable() error {
-	if v.isOutOfRange() {
-		return nil
-	}
 	v.flgOn()
 	if err := v.validateKeyword("CREATE"); err != nil {
 		return err
@@ -180,7 +177,7 @@ func (v *mysqlValidator) validateCreateTable() error {
 	if err := v.validateSymbol(";"); err != nil {
 		return err
 	}
-	return v.validateCreateTable()
+	return nil
 }
 
 

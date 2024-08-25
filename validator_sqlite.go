@@ -27,6 +27,17 @@ func (v *sqliteValidator) Validate() ([]string, error) {
 }
 
 
+func (v *sqliteValidator) validate() error {
+	if (v.isOutOfRange()) {
+		return nil
+	}
+	if err := v.validateCreateTable(); err != nil {
+		return err
+	}
+	return v.validate()
+}
+
+
 func (v *sqliteValidator) isStringValue(token string) bool {
 	return token[0:1] == "'"
 }
@@ -124,21 +135,7 @@ func (v *sqliteValidator) validateBracketsAux() error {
 }
 
 
-func (v *sqliteValidator) validate() error {
-	if (v.isOutOfRange()) {
-		return nil
-	}
-	if err := v.validateCreateTable(); err != nil {
-		return err
-	}
-	return v.validate()
-}
-
-
 func (v *sqliteValidator) validateCreateTable() error {
-	if v.isOutOfRange() {
-		return nil
-	}
 	v.flgOn()
 	if err := v.validateKeyword("CREATE"); err != nil {
 		return err
@@ -158,7 +155,7 @@ func (v *sqliteValidator) validateCreateTable() error {
 	if err := v.validateSymbol(";"); err != nil {
 		return err
 	}
-	return v.validateCreateTable()
+	return nil
 }
 
 

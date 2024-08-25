@@ -27,6 +27,17 @@ func (v *postgresqlValidator) Validate() ([]string, error) {
 }
 
 
+func (v *postgresqlValidator) validate() error {
+	if (v.isOutOfRange()) {
+		return nil
+	}
+	if err := v.validateCreateTable(); err != nil {
+		return err
+	}
+	return v.validate()
+}
+
+
 func (v *postgresqlValidator) isStringValue(token string) bool {
 	return token[0:1] == "'"
 }
@@ -133,21 +144,7 @@ func (v *postgresqlValidator) validateBracketsAux() error {
 }
 
 
-func (v *postgresqlValidator) validate() error {
-	if (v.isOutOfRange()) {
-		return nil
-	}
-	if err := v.validateCreateTable(); err != nil {
-		return err
-	}
-	return v.validate()
-}
-
-
 func (v *postgresqlValidator) validateCreateTable() error {
-	if v.isOutOfRange() {
-		return nil
-	}
 	v.flgOn()
 	if err := v.validateKeyword("CREATE"); err != nil {
 		return err
@@ -167,7 +164,7 @@ func (v *postgresqlValidator) validateCreateTable() error {
 	if err := v.validateSymbol(";"); err != nil {
 		return err
 	}
-	return v.validateCreateTable()
+	return nil
 }
 
 
