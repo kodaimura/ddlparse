@@ -1,7 +1,9 @@
-package ddlparse
+package lexer
 
 import (
 	"errors"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 /*
@@ -39,18 +41,13 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
-	l := newLexer(rdbms, ddl)
-	return l.Lex()
-}
-
 type lexerI interface {
 	Lex() ([]string, error)
 }
 
 type lexer struct {
 	tokens []string
-	rdbms Rdbms
+	rdbms common.Rdbms
 	ddlr []rune
 	size int
 	i int
@@ -58,7 +55,7 @@ type lexer struct {
 }
 
 
-func newLexer(rdbms Rdbms, ddl string) lexerI {
+func NewLexer(rdbms common.Rdbms, ddl string) lexerI {
 	return &lexer{ddlr: []rune(ddl), rdbms: rdbms}
 }
 
@@ -262,7 +259,7 @@ func (l *lexer) lexSingleQuote(token *string) error {
 
 
 func (l *lexer) lexBackQuote(token *string) error {
-	if l.rdbms == PostgreSQL {
+	if l.rdbms == common.PostgreSQL {
 		return l.lexError()
 	}
 	c := l.char()
@@ -282,7 +279,7 @@ func (l *lexer) lexBackQuote(token *string) error {
 func (l *lexer) lexSharp(token *string) {
 	c := l.char()
 	if c == "#" {
-		if l.rdbms == MySQL {
+		if l.rdbms == common.MySQL {
 			l.appendToken(*token)
 			*token = ""
 			l.skipComment()

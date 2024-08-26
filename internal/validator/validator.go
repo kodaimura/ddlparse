@@ -1,21 +1,23 @@
-package ddlparse
+package validator
 
 import (
 	"errors"
 	"strings"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 type Validator interface {
 	Validate() ([]string, error)
 }
 
-func newValidator(rdbms Rdbms, tokens []string) Validator {
-	if rdbms == PostgreSQL {
-		return newPostgreSQLValidator(tokens)
-	} else if rdbms == MySQL {
-		return newMySQLValidator(tokens)
+func NewValidator(rdbms common.Rdbms, tokens []string) Validator {
+	if rdbms == common.PostgreSQL {
+		return NewPostgreSQLValidator(tokens)
+	} else if rdbms == common.MySQL {
+		return NewMySQLValidator(tokens)
 	}
-	return newSQLiteValidator(tokens)
+	return NewSQLiteValidator(tokens)
 }
 
 type validator struct {
@@ -91,8 +93,8 @@ func (v *validator) syntaxError() error {
 func (v *validator) matchKeyword(keywords ...string) bool {
 	return common.Contains(
 		append(
-			MapSlice(keywords, strings.ToLower), 
-			MapSlice(keywords, strings.ToUpper)...,
+			common.MapSlice(keywords, strings.ToLower), 
+			common.MapSlice(keywords, strings.ToUpper)...,
 		), v.token())
 }
 

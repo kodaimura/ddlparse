@@ -1,9 +1,12 @@
-package ddlparse
+package parser
 
 import (
 	"errors"
 	"strings"
 	"strconv"
+
+	"github.com/kodaimura/ddlparse/types"
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 /*
@@ -17,30 +20,25 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func parse (tokens []string, rdbms Rdbms) []Table {
-	p := newParser(rdbms, tokens)
-	return p.Parse()
-}
-
 type parserI interface {
-	Parse() []Table
+	Parse() []types.Table
 }
 
 type parser struct {
-	rdbms Rdbms
+	rdbms common.Rdbms
 	tokens []string
 	size int
 	i int
-	tables []Table
+	tables []types.Table
 }
 
 
-func newParser(rdbms Rdbms, tokens []string) parserI {
+func NewParser(rdbms common.Rdbms, tokens []string) parserI {
 	return &parser{tokens: tokens, rdbms: rdbms}
 }
 
 
-func (p *parser) Parse() []Table {
+func (p *parser) Parse() []types.Table {
 	p.init()
 	p.parse()
 	return p.tables
@@ -50,7 +48,7 @@ func (p *parser) Parse() []Table {
 func (p *parser) init() {
 	p.i = 0
 	p.size = len(p.tokens)
-	p.tables = []Table{}
+	p.tables = []types.Table{}
 }
 
 
@@ -78,27 +76,27 @@ func (p *parser) next() error {
 
 
 func (p *parser) matchKeyword(keywords ...string) bool {
-	return contains(
+	return common.Contains(
 		append(
-			mapSlice(keywords, strings.ToLower), 
-			mapSlice(keywords, strings.ToUpper)...,
+			common.MapSlice(keywords, strings.ToLower), 
+			common.MapSlice(keywords, strings.ToUpper)...,
 		), p.token())
 }
 
 
 func (p *parser) matchSymbol(symbols ...string) bool {
-	return contains(symbols, p.token())
+	return common.Contains(symbols, p.token())
 }
 
 
 func (p *parser) isIdentifier(token string) bool {
 	c := token[0:1]
 	switch (p.rdbms) {
-		case SQLite:
+		case common.SQLite:
 			return c == "\"" || c == "`"
-		case MySQL:
+		case common.MySQL:
 			return c == "`"
-		case PostgreSQL:
+		case common.PostgreSQL:
 			return c == "\""
 	}
 	return false
@@ -108,11 +106,11 @@ func (p *parser) isIdentifier(token string) bool {
 func (p *parser) isStringValue(token string) bool {
 	c := token[0:1]
 	switch (p.rdbms) {
-		case SQLite:
+		case common.SQLite:
 			return c == "'"
-		case MySQL:
+		case common.MySQL:
 			return c == "\"" || c == "'"
-		case PostgreSQL:
+		case common.PostgreSQL:
 			return c == "'"
 	}
 	return false
@@ -137,8 +135,8 @@ func (p *parser) parseToken() string {
 }
 
 
-func (p *parser) parseTable() Table {
-	var table Table
+func (p *parser) parseTable() types.Table {
+	var table types.Table
 	p.next() // skip "CREATE"
 	p.next() // skip "TABLE"
 
@@ -192,10 +190,10 @@ func (p *parser) parseName() string {
 }
 
 
-func (p *parser) parseTableDefinition() ([]Column, TableConstraint) {
+func (p *parser) parseTableDefinition() ([]types.Column, types.TableConstraint) {
 	p.next()
-	var columns []Column
-	var constraints TableConstraint
+	var columns []types.Column
+	var constraints types.TableConstraint
 	for !p.matchSymbol(")") {
 		if (p.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN")) {
 			p.parseTableConstraint(&constraints);
@@ -214,8 +212,8 @@ func (p *parser) parseTableDefinition() ([]Column, TableConstraint) {
 }
 
 
-func (p *parser) parseColumnDefinition() Column {
-	var column Column
+func (p *parser) parseColumnDefinition() types.Column {
+	var column types.Column
 	column.Name = p.parseName()
 	column.DataType = p.parseDateType()
 	column.Constraint = p.parseConstraint()
@@ -224,8 +222,8 @@ func (p *parser) parseColumnDefinition() Column {
 }
 
 
-func (p *parser) parseDateType() DataType {
-	var dataType DataType
+func (p *parser) parseDateType() types.DataType {
+	var dataType types.DataType
 	dataType.Name = strings.ToUpper(p.parseToken())
 	if p.matchKeyword("VARYING") {
 		if dataType.Name == "BIT" {
@@ -260,8 +258,8 @@ func (p *parser) parseTypeDigit() (int, int) {
 }
 
 
-func (p *parser) parseConstraint() Constraint {
-	var constraint Constraint
+func (p *parser) parseConstraint() types.Constraint {
+	var constraint types.Constraint
 	if p.matchKeyword("CONSTRAINT") {
 		p.next() // skip "CONSTRAINT"
 		if (!p.matchKeyword("PRIMARY", "UNIQUE", "NOT", "AUTOINCREMENT", "AUTO_INCREMENT", "DEFAULT", "CHECK", "REFERENCES", "COLLATE")) {
@@ -273,7 +271,7 @@ func (p *parser) parseConstraint() Constraint {
 }
 
 
-func (p *parser) parseConstraintAux(constraint *Constraint) {
+func (p *parser) parseConstraintAux(constraint *types.Constraint) {
 	if p.matchSymbol(",", ")") {
 		return
 	}
@@ -357,7 +355,7 @@ func (p *parser) parseExprAux() string {
 func (p *parser) parseLiteralValue() interface{} {
 	token := p.token()
 	p.next()
-	if isNumericToken(token) {
+	if common.IsNumericToken(token) {
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
 	}
@@ -377,8 +375,8 @@ func (p *parser) parseLiteralValue() interface{} {
 }
 
 
-func (p *parser) parseReference() Reference {
-	var reference Reference
+func (p *parser) parseReference() types.Reference {
+	var reference types.Reference
 	p.next() // skip "REFERENCES"
 	reference.TableName = p.parseName()
 	if p.matchSymbol("(") {
@@ -388,7 +386,7 @@ func (p *parser) parseReference() Reference {
 }
 
 
-func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
+func (p *parser) parseTableConstraint(tableConstraint *types.TableConstraint) {
 	name := ""
 	if p.matchKeyword("CONSTRAINT") {
 		p.next() // skip "CONSTRAINT"
@@ -398,7 +396,7 @@ func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
 	}
 
 	if p.matchKeyword("PRIMARY") {
-		var primaryKey PrimaryKey
+		var primaryKey types.PrimaryKey
 		p.next() // skip "PRIMARY"
 		p.next() // skip "KEY"
 		primaryKey.Name = name
@@ -406,21 +404,21 @@ func (p *parser) parseTableConstraint(tableConstraint *TableConstraint) {
 		tableConstraint.PrimaryKey = append(tableConstraint.PrimaryKey, primaryKey)
 
 	} else if p.matchKeyword("UNIQUE") {
-		var unique Unique
+		var unique types.Unique
 		p.next() // skip "UNIQUE"
 		unique.Name = name
 		unique.ColumnNames = p.parseCommaSeparatedColumnNames()
 		tableConstraint.Unique = append(tableConstraint.Unique, unique)
 
 	} else if p.matchKeyword("CHECK") {
-		var check Check
+		var check types.Check
 		p.next() // skip "CHECK"
 		check.Name = name
 		check.Expr = p.parseExpr()
 		tableConstraint.Check = append(tableConstraint.Check, check)
 
 	} else if p.matchKeyword("FOREIGN") {
-		var foreignKey ForeignKey
+		var foreignKey types.ForeignKey
 		p.next() // skip "FOREIGN"
 		p.next() // skip "KEY"
 		foreignKey.Name = name

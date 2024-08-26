@@ -1,15 +1,17 @@
-package ddlparse
+package validator
 
 import (
 	"regexp"
 	"strings"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 type mysqlValidator struct {
 	validator
 }
 
-func newMySQLValidator(tokens []string) Validator {
+func NewMySQLValidator(tokens []string) Validator {
 	return &mysqlValidator{
 		validator: validator{
 			tokens: tokens,
@@ -52,7 +54,7 @@ func (v *mysqlValidator) isIdentifier(token string) bool {
 func (v *mysqlValidator) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
-		!contains(ReservedWords_MySQL, strings.ToUpper(name))
+		!common.Contains(ReservedWords_MySQL, strings.ToUpper(name))
 }
 
 
@@ -136,7 +138,7 @@ func (v *mysqlValidator) validateBracketsAux() error {
 
 
 func (v *mysqlValidator) validatePositiveInteger() error {
-	if !isPositiveIntegerToken(v.token()) {
+	if !common.IsPositiveIntegerToken(v.token()) {
 		return v.syntaxError()
 	}
 	if v.next() != nil {
@@ -437,22 +439,22 @@ func (v *mysqlValidator) validateColumnConstraintsAux(ls []string) error {
 		return nil
 	} 
 	if v.matchKeyword("NOT") {
-		if contains(ls, "NULL") {
+		if common.Contains(ls, "NULL") {
 			return v.syntaxError()
 		} 
 		ls = append(ls, "NULL")
 	} else if v.matchKeyword("PRIMARY", "KEY") {
-		if contains(ls, "PRIMARY") {
+		if common.Contains(ls, "PRIMARY") {
 			return v.syntaxError()
 		} 
 		ls = append(ls, "PRIMARY")
 	} else if v.matchKeyword("GENERATED", "AS") {
-		if contains(ls, "GENERATED") {
+		if common.Contains(ls, "GENERATED") {
 			return v.syntaxError()
 		} 
 		ls = append(ls, "GENERATED")
 	} else {
-		if contains(ls, strings.ToUpper(v.token())) {
+		if common.Contains(ls, strings.ToUpper(v.token())) {
 			return v.syntaxError()
 		} 
 		ls = append(ls, strings.ToUpper(v.token()))
@@ -815,7 +817,7 @@ func (v *mysqlValidator) validateExpr() error {
 
 
 func (v *mysqlValidator) validateLiteralValue() error {
-	if isNumericToken(v.token()) {
+	if common.IsNumericToken(v.token()) {
 		if v.next() != nil {
 			return v.syntaxError()
 		}

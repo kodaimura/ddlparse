@@ -1,3 +1,5 @@
+.PHONY: test
+
 up:
 	docker compose up -d
 
@@ -17,4 +19,4 @@ build:
 	docker compose build --no-cache
 
 test:
-	go test
+	go test -v ./test/test.go

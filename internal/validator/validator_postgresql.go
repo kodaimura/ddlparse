@@ -1,15 +1,17 @@
-package ddlparse
+package validator
 
 import (
 	"regexp"
 	"strings"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 type postgresqlValidator struct {
 	validator
 }
 
-func newPostgreSQLValidator(tokens []string) Validator {
+func NewPostgreSQLValidator(tokens []string) Validator {
 	return &postgresqlValidator{
 		validator: validator{
 			tokens: tokens,
@@ -51,7 +53,7 @@ func (v *postgresqlValidator) isIdentifier(token string) bool {
 func (v *postgresqlValidator) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
-		!contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
+		!common.Contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
 }
 
 
@@ -103,7 +105,7 @@ func (v *postgresqlValidator) validateColumnName() error {
 
 
 func (v *postgresqlValidator) validatePositiveInteger() error {
-	if !isPositiveIntegerToken(v.token()) {
+	if !common.IsPositiveIntegerToken(v.token()) {
 		return v.syntaxError()
 	}
 	if v.next() != nil {
@@ -399,12 +401,12 @@ func (v *postgresqlValidator) validateColumnConstraintsAux(ls []string) error {
 		return nil
 	} 
 	if v.matchKeyword("NOT") {
-		if contains(ls, "NULL") {
+		if common.Contains(ls, "NULL") {
 			return v.syntaxError()
 		} 
 		ls = append(ls, strings.ToUpper("NULL"))
 	} else {
-		if contains(ls, strings.ToUpper(v.token())) {
+		if common.Contains(ls, strings.ToUpper(v.token())) {
 			return v.syntaxError()
 		} 
 		ls = append(ls, strings.ToUpper(v.token()))
@@ -743,7 +745,7 @@ func (v *postgresqlValidator) validateIndexParameters() error {
 
 
 func (v *postgresqlValidator) validateLiteralValue() error {
-	if isNumericToken(v.token()) {
+	if common.IsNumericToken(v.token()) {
 		if v.next() != nil {
 			return v.syntaxError()
 		}
