@@ -1,35 +1,14 @@
-package test
+package ddlparse
 
 import (
 	"fmt"
 	"runtime"
 	"testing"
 	"encoding/json"
-
-	"github.com/kodaimura/ddlparse/types"
-	"github.com/kodaimura/ddlparse/internal/common"
-	"github.com/kodaimura/ddlparse/internal/lexer"
-	"github.com/kodaimura/ddlparse/internal/validator"
-	"github.com/kodaimura/ddlparse/internal/parser"
 )
 
-func tokenize (ddl string, rdbms common.Rdbms) ([]string, error) {
-	l := lexer.NewLexer(rdbms, ddl)
-	return l.Lex()
-}
-
-func validate (tokens []string, rdbms common.Rdbms) ([]string, error) {
-	v := validator.NewValidator(rdbms, tokens)
-	return v.Validate()
-}
-
-func parse (tokens []string, rdbms common.Rdbms) []types.Table {
-	p := parser.NewParser(rdbms, tokens)
-	return p.Parse()
-}
-
 type tester struct {
-	rdbms common.Rdbms
+	rdbms Rdbms
 	t *testing.T
 }
 
@@ -42,7 +21,7 @@ type testerI interface {
 	ParseNG(ddl string)
 } 
 
-func newTester(rdbms common.Rdbms, t *testing.T) testerI {
+func newTester(rdbms Rdbms, t *testing.T) testerI {
 	return &tester{rdbms, t}
 }
 
@@ -64,7 +43,7 @@ func (te *tester) TokenizeNG(ddl string, line int, near string) {
 	_, _, l, _ := runtime.Caller(1)
 	_, err := tokenize(ddl, te.rdbms)
 	if err != nil {
-		verr, _ := err.(common.ValidateError)
+		verr, _ := err.(ValidateError)
 		if (verr.Line == line && verr.Near == near) {
 			fmt.Println(err.Error())
 		}  else {

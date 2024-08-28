@@ -1,41 +1,62 @@
 package ddlparse
 
 import (
-	"fmt"
-
-	"github.com/kodaimura/ddlparse"
-	"github.com/kodaimura/ddlparse/types"
-	"github.com/kodaimura/ddlparse/common"
+	"github.com/kodaimura/ddlparse/internal/types"
+	"github.com/kodaimura/ddlparse/internal/common"
+	"github.com/kodaimura/ddlparse/internal/lexer"
+	"github.com/kodaimura/ddlparse/internal/parser"
+	"github.com/kodaimura/ddlparse/internal/validator"
 )
 
 
-func Parse(ddl string, rdbms common.Rdbms) ([]types.Table, error) {
+type (
+	Table = types.Table
+	Column = types.Column
+	DataType = types.DataType
+	Constraint = types.Constraint
+	Reference = types.Reference
+	TableConstraint = types.TableConstraint
+	PrimaryKey = types.PrimaryKey
+	Unique = types.Unique
+	Check = types.Check
+	ForeignKey = types.ForeignKey
+	Rdbms = common.Rdbms
+	ValidateError = common.ValidateError
+)
+
+const (
+	PostgreSQL = common.PostgreSQL
+	MySQL = common.MySQL
+	SQLite = common.SQLite
+)
+
+func Parse(ddl string, rdbms common.Rdbms) ([]Table, error) {
 	tokens, err := tokenize(ddl, rdbms)
 	if err != nil {
-		return []types.Table{}, err
+		return []Table{}, err
 	}
 	validatedTokens, err := validate(tokens, rdbms)
 	if err != nil {
-		return []types.Table{}, err
+		return []Table{}, err
 	}
 	tables:= parse(validatedTokens, rdbms)
 	return tables, nil
 }
 
-func ParseSQLite(ddl string) ([]types.Table, error) {
+func ParseSQLite(ddl string) ([]Table, error) {
 	return Parse(ddl, common.SQLite)
 }
 
-func ParsePostgreSQL(ddl string) ([]types.Table, error) {
+func ParsePostgreSQL(ddl string) ([]Table, error) {
 	return Parse(ddl, common.PostgreSQL)
 }
 
-func ParseMySQL(ddl string) ([]types.Table, error) {
+func ParseMySQL(ddl string) ([]Table, error) {
 	return Parse(ddl, common.MySQL)
 }
 
-func ParseForce(ddl string) ([]types.Table, error) {
-	ls := []Rdbms{common.SQLite, common.PostgreSQL, common.MySQL}
+func ParseForce(ddl string) ([]Table, error) {
+	ls := []common.Rdbms{common.SQLite, common.PostgreSQL, common.MySQL}
 	var err error
 	for _, rdbms := range ls {
 		tables, err := Parse(ddl, rdbms)
@@ -46,17 +67,17 @@ func ParseForce(ddl string) ([]types.Table, error) {
 	return []Table{}, err
 }
 
-func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
-	l := NewLexer(rdbms, ddl)
+func tokenize (ddl string, rdbms common.Rdbms) ([]string, error) {
+	l := lexer.NewLexer(rdbms, ddl)
 	return l.Lex()
 }
 
-func validate (tokens []string, rdbms Rdbms) ([]string, error) {
+func validate (tokens []string, rdbms common.Rdbms) ([]string, error) {
 	v := validator.NewValidator(rdbms, tokens)
 	return v.Validate()
 }
 
-func parse (tokens []string, rdbms Rdbms) []types.Table {
+func parse (tokens []string, rdbms common.Rdbms) []Table {
 	p := parser.NewParser(rdbms, tokens)
 	return p.Parse()
 }

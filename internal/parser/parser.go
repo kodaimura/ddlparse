@@ -5,7 +5,7 @@ import (
 	"strings"
 	"strconv"
 
-	"github.com/kodaimura/ddlparse/types"
+	"github.com/kodaimura/ddlparse/internal/types"
 	"github.com/kodaimura/ddlparse/internal/common"
 )
 
@@ -20,7 +20,7 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-type parserI interface {
+type Parser interface {
 	Parse() []types.Table
 }
 
@@ -33,7 +33,7 @@ type parser struct {
 }
 
 
-func NewParser(rdbms common.Rdbms, tokens []string) parserI {
+func NewParser(rdbms common.Rdbms, tokens []string) Parser {
 	return &parser{tokens: tokens, rdbms: rdbms}
 }
 
