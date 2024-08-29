@@ -47,7 +47,7 @@ Example:
 */
 
 type lexer struct {
-	Rdbms common.Rdbms
+	rdbms common.Rdbms
 	ddlr []rune
 	size int
 	i int
@@ -57,7 +57,7 @@ type lexer struct {
 
 
 func NewLexer(rdbms common.Rdbms) Lexer {
-	return &lexer{Rdbms: rdbms}
+	return &lexer{rdbms: rdbms}
 }
 
 
@@ -261,7 +261,7 @@ func (l *lexer) lexSingleQuote(token *string) error {
 
 
 func (l *lexer) lexBackQuote(token *string) error {
-	if l.Rdbms == common.PostgreSQL {
+	if l.rdbms == common.PostgreSQL {
 		return l.lexError()
 	}
 	c := l.char()
@@ -281,7 +281,7 @@ func (l *lexer) lexBackQuote(token *string) error {
 func (l *lexer) lexSharp(token *string) {
 	c := l.char()
 	if c == "#" {
-		if l.Rdbms == common.MySQL {
+		if l.rdbms == common.MySQL {
 			l.appendToken(*token)
 			*token = ""
 			l.skipComment()
