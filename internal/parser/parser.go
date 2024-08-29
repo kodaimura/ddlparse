@@ -21,7 +21,7 @@ import (
 */
 
 type Parser interface {
-	Parse() []types.Table
+	Parse(tokens []string) []types.Table
 }
 
 type parser struct {
@@ -33,21 +33,22 @@ type parser struct {
 }
 
 
-func NewParser(rdbms common.Rdbms, tokens []string) Parser {
-	return &parser{tokens: tokens, rdbms: rdbms}
+func NewParser(rdbms common.Rdbms) Parser {
+	return &parser{rdbms: rdbms}
 }
 
 
-func (p *parser) Parse() []types.Table {
-	p.init()
+func (p *parser) Parse(tokens []string) []types.Table {
+	p.init(tokens)
 	p.parse()
 	return p.tables
 }
 
 
-func (p *parser) init() {
-	p.i = 0
+func (p *parser) init(tokens []string) {
+	p.tokens = tokens
 	p.size = len(p.tokens)
+	p.i = 0
 	p.tables = []types.Table{}
 }
 

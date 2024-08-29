@@ -81,6 +81,6 @@ func validate (tokens []string, rdbms Rdbms) ([]string, error) {
 }
 
 func parse (tokens []string, rdbms Rdbms) []Table {
-	p := parser.NewParser(rdbms, tokens)
-	return p.Parse()
+	p := parser.NewParser(rdbms)
+	return p.Parse(tokens)
 }
