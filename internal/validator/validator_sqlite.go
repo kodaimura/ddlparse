@@ -11,17 +11,13 @@ type sqliteValidator struct {
 	validator
 }
 
-func NewSQLiteValidator(tokens []string) Validator {
-	return &sqliteValidator{
-		validator: validator{
-			tokens: tokens,
-        },
-	}
+func NewSQLiteValidator() Validator {
+	return &sqliteValidator{validator: validator{}}
 }
 
 
-func (v *sqliteValidator) Validate() ([]string, error) {
-	v.init()
+func (v *sqliteValidator) Validate(tokens []string) ([]string, error) {
+	v.init(tokens)
 	if err := v.validate(); err != nil {
 		return nil, err
 	}

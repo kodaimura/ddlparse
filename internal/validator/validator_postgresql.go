@@ -11,17 +11,13 @@ type postgresqlValidator struct {
 	validator
 }
 
-func NewPostgreSQLValidator(tokens []string) Validator {
-	return &postgresqlValidator{
-		validator: validator{
-			tokens: tokens,
-        },
-	}
+func NewPostgreSQLValidator() Validator {
+	return &postgresqlValidator{validator: validator{}}
 }
 
 
-func (v *postgresqlValidator) Validate() ([]string, error) {
-	v.init()
+func (v *postgresqlValidator) Validate(tokens []string) ([]string, error) {
+	v.init(tokens)
 	if err := v.validate(); err != nil {
 		return nil, err
 	}

@@ -8,34 +8,35 @@ import (
 )
 
 type Validator interface {
-	Validate() ([]string, error)
+	Validate(tokens []string) ([]string, error)
 }
 
-func NewValidator(rdbms common.Rdbms, tokens []string) Validator {
+func NewValidator(rdbms common.Rdbms) Validator {
 	if rdbms == common.PostgreSQL {
-		return NewPostgreSQLValidator(tokens)
+		return NewPostgreSQLValidator()
 	} else if rdbms == common.MySQL {
-		return NewMySQLValidator(tokens)
+		return NewMySQLValidator()
 	}
-	return NewSQLiteValidator(tokens)
+	return NewSQLiteValidator()
 }
 
 type validator struct {
 	tokens []string
-	validatedTokens []string
 	size int
 	i int
 	line int
 	flg bool
+	validatedTokens []string
 }
 
 
-func (v *validator) init() {
-	v.validatedTokens = []string{}
+func (v *validator) init(tokens []string) {
+	v.tokens = tokens
+	v.size = len(v.tokens)
 	v.i = -1
 	v.line = 1
-	v.size = len(v.tokens)
 	v.flg = false
+	v.validatedTokens = []string{}
 	v.next()
 }
 

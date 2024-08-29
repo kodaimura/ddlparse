@@ -76,8 +76,8 @@ func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
 }
 
 func validate (tokens []string, rdbms Rdbms) ([]string, error) {
-	v := validator.NewValidator(rdbms, tokens)
-	return v.Validate()
+	v := validator.NewValidator(rdbms)
+	return v.Validate(tokens)
 }
 
 func parse (tokens []string, rdbms Rdbms) []Table {

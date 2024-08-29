@@ -11,17 +11,13 @@ type mysqlValidator struct {
 	validator
 }
 
-func NewMySQLValidator(tokens []string) Validator {
-	return &mysqlValidator{
-		validator: validator{
-			tokens: tokens,
-        },
-	}
+func NewMySQLValidator() Validator {
+	return &mysqlValidator{validator: validator{}}
 }
 
 
-func (v *mysqlValidator) Validate() ([]string, error) {
-	v.init()
+func (v *mysqlValidator) Validate(tokens []string) ([]string, error) {
+	v.init(tokens)
 	if err := v.validate(); err != nil {
 		return nil, err
 	}
