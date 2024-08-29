@@ -1,29 +1,27 @@
-package ddlparse
+package validator
 
 import (
 	"regexp"
 	"strings"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 type sqliteValidator struct {
 	validator
 }
 
-func newSQLiteValidator(tokens []string) Validator {
-	return &sqliteValidator{
-		validator: validator{
-			tokens: tokens,
-        },
-	}
+func NewSQLiteValidator() Validator {
+	return &sqliteValidator{validator: validator{}}
 }
 
 
-func (v *sqliteValidator) Validate() ([]string, error) {
-	v.init()
+func (v *sqliteValidator) Validate(tokens []string) ([]string, error) {
+	v.init(tokens)
 	if err := v.validate(); err != nil {
 		return nil, err
 	}
-	return v.validatedTokens, nil
+	return v.result, nil
 }
 
 
@@ -52,7 +50,7 @@ func (v *sqliteValidator) isIdentifier(token string) bool {
 func (v *sqliteValidator) isValidName(name string) bool {
 	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 	return pattern.MatchString(name) && 
-		!contains(ReservedWords_SQLite, strings.ToUpper(name))
+		!common.Contains(ReservedWords_SQLite, strings.ToUpper(name))
 }
 
 
@@ -266,7 +264,7 @@ func (v *sqliteValidator) validateColumnConstraintsAux(ls []string) error {
 	if !v.isColumnConstraint(v.token()) {
 		return nil
 	} 
-	if contains(ls, strings.ToUpper(v.token())) {
+	if common.Contains(ls, strings.ToUpper(v.token())) {
 		return v.syntaxError()
 	} 
 	ls = append(ls, strings.ToUpper(v.token()))
@@ -556,7 +554,7 @@ func (v *sqliteValidator) validateExpr() error {
 
 
 func (v *sqliteValidator) validateLiteralValue() error {
-	if isNumericToken(v.token()) {
+	if common.IsNumericToken(v.token()) {
 		if v.next() != nil {
 			return v.syntaxError()
 		}

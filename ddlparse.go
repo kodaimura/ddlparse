@@ -1,82 +1,37 @@
 package ddlparse
 
 import (
-	"fmt"
+	"github.com/kodaimura/ddlparse/internal/types"
+	"github.com/kodaimura/ddlparse/internal/common"
+	"github.com/kodaimura/ddlparse/internal/lexer"
+	"github.com/kodaimura/ddlparse/internal/parser"
+	"github.com/kodaimura/ddlparse/internal/validator"
 )
 
-type Rdbms string
+
+type (
+	Table = types.Table
+	Column = types.Column
+	DataType = types.DataType
+	Constraint = types.Constraint
+	Reference = types.Reference
+	TableConstraint = types.TableConstraint
+	PrimaryKey = types.PrimaryKey
+	Unique = types.Unique
+	Check = types.Check
+	ForeignKey = types.ForeignKey
+)
+
+type (
+	Rdbms = common.Rdbms
+	ValidateError = common.ValidateError
+)
 
 const (
-	SQLite Rdbms = "SQLite"
-	PostgreSQL Rdbms = "PostgreSQL"
-	MySQL Rdbms = "MySQL"
+	PostgreSQL = common.PostgreSQL
+	MySQL = common.MySQL
+	SQLite = common.SQLite
 )
-
-type Table struct {
-	Schema string `json:"schema"`
-	Name string `json:"name"`
-	IfNotExists bool `json:"if_not_exists"`
-	Columns []Column `json:"columns"`
-	Constraints TableConstraint `json:"constraints"`
-}
-
-type Column struct {
-	Name string `json:"name"`
-	DataType DataType `json:"data_type"`
-	Constraint Constraint `json:"constraint"`
-}
-
-type DataType struct {
-	Name string `json:"name"`
-	DigitN int `json:"digit_n"`
-	DigitM int `json:"digit_m"`
-}
-
-type Constraint struct {
-	Name string `json:"name"`
-	IsPrimaryKey bool `json:"is_primary_key"`
-	IsUnique bool `json:"is_unique"`
-	IsNotNull bool `json:"is_not_null"`
-	IsAutoincrement bool `json:"is_autoincrement"`
-	Default interface{} `json:"default"`
-	Check string `json:"check"`
-	Collate string `json:"collate"`
-	References Reference `json:"references"`
-}
-
-type Reference struct {
-	TableName string `json:"table_name"`
-	ColumnNames []string `json:"column_names"`
-}
-
-type TableConstraint struct {
-	PrimaryKey []PrimaryKey `json:"primary_key"`
-	Unique []Unique `json:"unique"`
-	Check []Check `json:"check"`
-	ForeignKey []ForeignKey `json:"foreign_key"`
-}
-
-type PrimaryKey struct {
-	Name string `json:"name"`
-	ColumnNames []string `json:"column_names"`
-}
-
-type Unique struct {
-	Name string `json:"name"`
-	ColumnNames []string `json:"column_names"`
-}
-
-type Check struct {
-	Name string `json:"name"`
-	Expr string `json:"expr"`
-}
-
-type ForeignKey struct {
-	Name string `json:"name"`
-	ColumnNames []string `json:"column_names"`
-	References Reference `json:"references"`
-}
-
 
 func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	tokens, err := tokenize(ddl, rdbms)
@@ -115,15 +70,17 @@ func ParseForce(ddl string) ([]Table, error) {
 	return []Table{}, err
 }
 
-type ValidateError struct {
-	Line int
-	Near string
+func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
+	l := lexer.NewLexer(rdbms)
+	return l.Lex(ddl)
 }
 
-func NewValidateError(line int, near string) error {
-	return ValidateError{line, near}
+func validate (tokens []string, rdbms Rdbms) ([]string, error) {
+	v := validator.NewValidator(rdbms)
+	return v.Validate(tokens)
 }
 
-func (e ValidateError) Error() string {
-	return fmt.Sprintf("ValidateError: Syntax error: near '%s' at line %d.", e.Near, e.Line)
+func parse (tokens []string, rdbms Rdbms) []Table {
+	p := parser.NewParser(rdbms)
+	return p.Parse(tokens)
 }

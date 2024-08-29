@@ -1,10 +1,10 @@
-package ddlparse
+package common
 
 import (
 	"strconv"
 )
 
-func filter(slice []string, f func(string) bool) []string {
+func Filter(slice []string, f func(string) bool) []string {
 	var ret []string
 	for _, s := range slice {
 		if f(s) {
@@ -14,7 +14,7 @@ func filter(slice []string, f func(string) bool) []string {
 	return ret
 }
 
-func mapSlice(slice []string, f func(string) string) []string {
+func MapSlice(slice []string, f func(string) string) []string {
 	var ret []string
 	for _, s := range slice {
 		ret = append(ret, f(s))
@@ -22,7 +22,7 @@ func mapSlice(slice []string, f func(string) string) []string {
 	return ret
 }
 
-func contains(slice []string, key string) bool {
+func Contains(slice []string, key string) bool {
 	for _, s := range slice {
 		if s == key {
 			return true
@@ -31,7 +31,7 @@ func contains(slice []string, key string) bool {
 	return false
 }
 
-func remove(slice []string, element string) []string {
+func Remove(slice []string, element string) []string {
     var ret []string
 
     for _, v := range slice {
@@ -43,7 +43,7 @@ func remove(slice []string, element string) []string {
     return ret
 }
 
-func isPositiveIntegerToken(token string) bool {
+func IsPositiveIntegerToken(token string) bool {
 	n, err := strconv.Atoi(token)
 	if err != nil {
 		return false
@@ -51,7 +51,7 @@ func isPositiveIntegerToken(token string) bool {
 	return n > 0
 }
 
-func isNumericToken(token string) bool {
+func IsNumericToken(token string) bool {
 	_, err := strconv.ParseFloat(token, 64)
 	return err == nil
 }

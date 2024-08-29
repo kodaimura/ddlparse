@@ -1,39 +1,42 @@
-package ddlparse
+package validator
 
 import (
 	"errors"
 	"strings"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
 
 type Validator interface {
-	Validate() ([]string, error)
+	Validate(tokens []string) ([]string, error)
 }
 
-func newValidator(rdbms Rdbms, tokens []string) Validator {
-	if rdbms == PostgreSQL {
-		return newPostgreSQLValidator(tokens)
-	} else if rdbms == MySQL {
-		return newMySQLValidator(tokens)
+func NewValidator(rdbms common.Rdbms) Validator {
+	if rdbms == common.PostgreSQL {
+		return NewPostgreSQLValidator()
+	} else if rdbms == common.MySQL {
+		return NewMySQLValidator()
 	}
-	return newSQLiteValidator(tokens)
+	return NewSQLiteValidator()
 }
 
 type validator struct {
 	tokens []string
-	validatedTokens []string
 	size int
 	i int
 	line int
 	flg bool
+	result []string
 }
 
 
-func (v *validator) init() {
-	v.validatedTokens = []string{}
+func (v *validator) init(tokens []string) {
+	v.tokens = tokens
+	v.size = len(v.tokens)
 	v.i = -1
 	v.line = 1
-	v.size = len(v.tokens)
 	v.flg = false
+	v.result = []string{}
 	v.next()
 }
 
@@ -60,7 +63,7 @@ func (v *validator) isOutOfRange() bool {
 
 func (v *validator) next() error {
 	if v.flg {
-		v.validatedTokens = append(v.validatedTokens, v.token())
+		v.result = append(v.result, v.token())
 	}
 	return v.nextAux()
 }
@@ -82,23 +85,23 @@ func (v *validator) nextAux() error {
 
 func (v *validator) syntaxError() error {
 	if v.isOutOfRange() {
-		return NewValidateError(v.line, v.tokens[v.size - 1])
+		return common.NewValidateError(v.line, v.tokens[v.size - 1])
 	}
-	return NewValidateError(v.line, v.tokens[v.i])
+	return common.NewValidateError(v.line, v.tokens[v.i])
 }
 
 
 func (v *validator) matchKeyword(keywords ...string) bool {
-	return contains(
+	return common.Contains(
 		append(
-			mapSlice(keywords, strings.ToLower), 
-			mapSlice(keywords, strings.ToUpper)...,
+			common.MapSlice(keywords, strings.ToLower), 
+			common.MapSlice(keywords, strings.ToUpper)...,
 		), v.token())
 }
 
 
 func (v *validator) matchSymbol(symbols ...string) bool {
-	return contains(symbols, v.token())
+	return common.Contains(symbols, v.token())
 }
 
 

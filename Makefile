@@ -1,3 +1,5 @@
+.PHONY: test
+
 up:
 	docker compose up -d
 

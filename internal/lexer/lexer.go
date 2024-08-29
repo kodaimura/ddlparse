@@ -1,16 +1,23 @@
-package ddlparse
+package lexer
 
 import (
 	"errors"
+
+	"github.com/kodaimura/ddlparse/internal/common"
 )
+
+
+type Lexer interface {
+	Lex(ddl string) ([]string, error)
+}
 
 /*
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
-  TOKENIZE: 
+  Lex(): 
     Transform ddl (string) to tokens([]string). 
-	And remove sql comments.
+	And Remove sql comments.
 	Return an ValidateError 
 	 if the closing part of a multiline comment or string is not found.
 
@@ -39,27 +46,36 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
-	l := newLexer(rdbms, ddl)
-	return l.Lex()
-}
-
-type lexerI interface {
-	Lex() ([]string, error)
-}
-
 type lexer struct {
-	tokens []string
-	rdbms Rdbms
+	rdbms common.Rdbms
 	ddlr []rune
 	size int
 	i int
 	line int
+	result []string
 }
 
 
-func newLexer(rdbms Rdbms, ddl string) lexerI {
-	return &lexer{ddlr: []rune(ddl), rdbms: rdbms}
+func NewLexer(rdbms common.Rdbms) Lexer {
+	return &lexer{rdbms: rdbms}
+}
+
+
+func (l *lexer) Lex(ddl string) ([]string, error) {
+	l.init(ddl)
+	if err := l.lex(); err != nil {
+		return []string{}, err
+	}
+	return l.result, nil
+}
+
+
+func (l *lexer) init(ddl string) {
+	l.ddlr = []rune(ddl)
+	l.size = len(l.ddlr)
+	l.i = 0
+	l.line = 1
+	l.result = []string{}
 }
 
 
@@ -79,7 +95,7 @@ func (l *lexer) char() string {
 
 func (l *lexer) appendToken(token string) {
 	if (token != "") {
-		l.tokens = append(l.tokens, token)
+		l.result = append(l.result, token)
 	}
 }
 
@@ -91,26 +107,9 @@ func (l *lexer) isOutOfRange() bool {
 
 func (l *lexer) lexError() error {
 	if l.isOutOfRange() {
-		return NewValidateError(l.line, string(l.ddlr[l.size - 1]))
+		return common.NewValidateError(l.line, string(l.ddlr[l.size - 1]))
 	}
-	return NewValidateError(l.line, string(l.ddlr[l.i]))
-}
-
-
-func (l *lexer) Lex() ([]string, error) {
-	l.init()
-	if err := l.lex(); err != nil {
-		return []string{}, err
-	}
-	return l.tokens, nil
-}
-
-
-func (l *lexer) init() {
-	l.tokens = []string{}
-	l.size = len(l.ddlr)
-	l.i = 0
-	l.line = 1
+	return common.NewValidateError(l.line, string(l.ddlr[l.i]))
 }
 
 
@@ -262,7 +261,7 @@ func (l *lexer) lexSingleQuote(token *string) error {
 
 
 func (l *lexer) lexBackQuote(token *string) error {
-	if l.rdbms == PostgreSQL {
+	if l.rdbms == common.PostgreSQL {
 		return l.lexError()
 	}
 	c := l.char()
@@ -282,7 +281,7 @@ func (l *lexer) lexBackQuote(token *string) error {
 func (l *lexer) lexSharp(token *string) {
 	c := l.char()
 	if c == "#" {
-		if l.rdbms == MySQL {
+		if l.rdbms == common.MySQL {
 			l.appendToken(*token)
 			*token = ""
 			l.skipComment()
