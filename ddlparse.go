@@ -20,6 +20,9 @@ type (
 	Unique = types.Unique
 	Check = types.Check
 	ForeignKey = types.ForeignKey
+)
+
+type (
 	Rdbms = common.Rdbms
 	ValidateError = common.ValidateError
 )
@@ -30,7 +33,7 @@ const (
 	SQLite = common.SQLite
 )
 
-func Parse(ddl string, rdbms common.Rdbms) ([]Table, error) {
+func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	tokens, err := tokenize(ddl, rdbms)
 	if err != nil {
 		return []Table{}, err
@@ -44,19 +47,19 @@ func Parse(ddl string, rdbms common.Rdbms) ([]Table, error) {
 }
 
 func ParseSQLite(ddl string) ([]Table, error) {
-	return Parse(ddl, common.SQLite)
+	return Parse(ddl, SQLite)
 }
 
 func ParsePostgreSQL(ddl string) ([]Table, error) {
-	return Parse(ddl, common.PostgreSQL)
+	return Parse(ddl, PostgreSQL)
 }
 
 func ParseMySQL(ddl string) ([]Table, error) {
-	return Parse(ddl, common.MySQL)
+	return Parse(ddl, MySQL)
 }
 
 func ParseForce(ddl string) ([]Table, error) {
-	ls := []common.Rdbms{common.SQLite, common.PostgreSQL, common.MySQL}
+	ls := []Rdbms{SQLite, PostgreSQL, MySQL}
 	var err error
 	for _, rdbms := range ls {
 		tables, err := Parse(ddl, rdbms)
@@ -67,17 +70,17 @@ func ParseForce(ddl string) ([]Table, error) {
 	return []Table{}, err
 }
 
-func tokenize (ddl string, rdbms common.Rdbms) ([]string, error) {
+func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
 	l := lexer.NewLexer(rdbms, ddl)
 	return l.Lex()
 }
 
-func validate (tokens []string, rdbms common.Rdbms) ([]string, error) {
+func validate (tokens []string, rdbms Rdbms) ([]string, error) {
 	v := validator.NewValidator(rdbms, tokens)
 	return v.Validate()
 }
 
-func parse (tokens []string, rdbms common.Rdbms) []Table {
+func parse (tokens []string, rdbms Rdbms) []Table {
 	p := parser.NewParser(rdbms, tokens)
 	return p.Parse()
 }
