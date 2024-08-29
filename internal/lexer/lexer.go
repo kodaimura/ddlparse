@@ -52,7 +52,7 @@ type lexer struct {
 	size int
 	i int
 	line int
-	tokens []string
+	result []string
 }
 
 
@@ -66,7 +66,7 @@ func (l *lexer) Lex(ddl string) ([]string, error) {
 	if err := l.lex(); err != nil {
 		return []string{}, err
 	}
-	return l.tokens, nil
+	return l.result, nil
 }
 
 
@@ -75,7 +75,7 @@ func (l *lexer) init(ddl string) {
 	l.size = len(l.ddlr)
 	l.i = 0
 	l.line = 1
-	l.tokens = []string{}
+	l.result = []string{}
 }
 
 
@@ -95,7 +95,7 @@ func (l *lexer) char() string {
 
 func (l *lexer) appendToken(token string) {
 	if (token != "") {
-		l.tokens = append(l.tokens, token)
+		l.result = append(l.result, token)
 	}
 }
 

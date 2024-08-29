@@ -21,7 +21,7 @@ func (v *mysqlValidator) Validate(tokens []string) ([]string, error) {
 	if err := v.validate(); err != nil {
 		return nil, err
 	}
-	return v.validatedTokens, nil
+	return v.result, nil
 }
 
 
@@ -522,7 +522,7 @@ func (v *mysqlValidator) validateColumnConstraint() error {
 func (v *mysqlValidator) validateConstraintPrimaryKey() error {
 	v.flgOn()
 	if v.matchKeyword("KEY") {
-		v.validatedTokens = append(v.validatedTokens, "PRIMARY")
+		v.result = append(v.result, "PRIMARY")
 		if v.next() != nil {
 			return v.syntaxError()
 		}

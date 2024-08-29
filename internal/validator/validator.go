@@ -26,7 +26,7 @@ type validator struct {
 	i int
 	line int
 	flg bool
-	validatedTokens []string
+	result []string
 }
 
 
@@ -36,7 +36,7 @@ func (v *validator) init(tokens []string) {
 	v.i = -1
 	v.line = 1
 	v.flg = false
-	v.validatedTokens = []string{}
+	v.result = []string{}
 	v.next()
 }
 
@@ -63,7 +63,7 @@ func (v *validator) isOutOfRange() bool {
 
 func (v *validator) next() error {
 	if v.flg {
-		v.validatedTokens = append(v.validatedTokens, v.token())
+		v.result = append(v.result, v.token())
 	}
 	return v.nextAux()
 }

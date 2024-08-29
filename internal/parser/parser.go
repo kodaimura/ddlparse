@@ -29,7 +29,7 @@ type parser struct {
 	tokens []string
 	size int
 	i int
-	tables []types.Table
+	result []types.Table
 }
 
 
@@ -41,7 +41,7 @@ func NewParser(rdbms common.Rdbms) Parser {
 func (p *parser) Parse(tokens []string) []types.Table {
 	p.init(tokens)
 	p.parse()
-	return p.tables
+	return p.result
 }
 
 
@@ -49,7 +49,7 @@ func (p *parser) init(tokens []string) {
 	p.tokens = tokens
 	p.size = len(p.tokens)
 	p.i = 0
-	p.tables = []types.Table{}
+	p.result = []types.Table{}
 }
 
 
@@ -123,7 +123,7 @@ func (p *parser) parse() {
 		return
 	} else {
 		table := p.parseTable()
-		p.tables = append(p.tables, table)
+		p.result = append(p.result, table)
 	}
 	p.parse()
 }
