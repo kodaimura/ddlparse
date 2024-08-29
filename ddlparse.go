@@ -4,8 +4,8 @@ import (
 	"github.com/kodaimura/ddlparse/internal/types"
 	"github.com/kodaimura/ddlparse/internal/common"
 	"github.com/kodaimura/ddlparse/internal/lexer"
-	"github.com/kodaimura/ddlparse/internal/parser"
 	"github.com/kodaimura/ddlparse/internal/validator"
+	"github.com/kodaimura/ddlparse/internal/converter"
 )
 
 
@@ -42,7 +42,7 @@ func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
 	if err != nil {
 		return []Table{}, err
 	}
-	tables:= parse(validatedTokens, rdbms)
+	tables:= convert(validatedTokens, rdbms)
 	return tables, nil
 }
 
@@ -80,7 +80,7 @@ func validate (tokens []string, rdbms Rdbms) ([]string, error) {
 	return v.Validate(tokens)
 }
 
-func parse (tokens []string, rdbms Rdbms) []Table {
-	p := parser.NewParser(rdbms)
-	return p.Parse(tokens)
+func convert (tokens []string, rdbms Rdbms) []Table {
+	c := converter.NewConverter(rdbms)
+	return c.Convert(tokens)
 }
