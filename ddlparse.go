@@ -71,8 +71,8 @@ func ParseForce(ddl string) ([]Table, error) {
 }
 
 func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
-	l := lexer.NewLexer(rdbms, ddl)
-	return l.Lex()
+	l := lexer.NewLexer(rdbms)
+	return l.Lex(ddl)
 }
 
 func validate (tokens []string, rdbms Rdbms) ([]string, error) {

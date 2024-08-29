@@ -6,11 +6,16 @@ import (
 	"github.com/kodaimura/ddlparse/internal/common"
 )
 
+
+type Lexer interface {
+	Lex(ddl string) ([]string, error)
+}
+
 /*
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 
-  TOKENIZE: 
+  Lex(): 
     Transform ddl (string) to tokens([]string). 
 	And Remove sql comments.
 	Return an ValidateError 
@@ -41,22 +46,36 @@ Example:
 ////////////////////////////////////////////////////////////////////////////////////
 */
 
-type lexerI interface {
-	Lex() ([]string, error)
-}
-
 type lexer struct {
-	tokens []string
-	rdbms common.Rdbms
+	Rdbms common.Rdbms
 	ddlr []rune
 	size int
 	i int
 	line int
+	tokens []string
 }
 
 
-func NewLexer(rdbms common.Rdbms, ddl string) lexerI {
-	return &lexer{ddlr: []rune(ddl), rdbms: rdbms}
+func NewLexer(rdbms common.Rdbms) Lexer {
+	return &lexer{Rdbms: rdbms}
+}
+
+
+func (l *lexer) Lex(ddl string) ([]string, error) {
+	l.init(ddl)
+	if err := l.lex(); err != nil {
+		return []string{}, err
+	}
+	return l.tokens, nil
+}
+
+
+func (l *lexer) init(ddl string) {
+	l.ddlr = []rune(ddl)
+	l.size = len(l.ddlr)
+	l.i = 0
+	l.line = 1
+	l.tokens = []string{}
 }
 
 
@@ -91,23 +110,6 @@ func (l *lexer) lexError() error {
 		return common.NewValidateError(l.line, string(l.ddlr[l.size - 1]))
 	}
 	return common.NewValidateError(l.line, string(l.ddlr[l.i]))
-}
-
-
-func (l *lexer) Lex() ([]string, error) {
-	l.init()
-	if err := l.lex(); err != nil {
-		return []string{}, err
-	}
-	return l.tokens, nil
-}
-
-
-func (l *lexer) init() {
-	l.tokens = []string{}
-	l.size = len(l.ddlr)
-	l.i = 0
-	l.line = 1
 }
 
 
@@ -259,7 +261,7 @@ func (l *lexer) lexSingleQuote(token *string) error {
 
 
 func (l *lexer) lexBackQuote(token *string) error {
-	if l.rdbms == common.PostgreSQL {
+	if l.Rdbms == common.PostgreSQL {
 		return l.lexError()
 	}
 	c := l.char()
@@ -279,7 +281,7 @@ func (l *lexer) lexBackQuote(token *string) error {
 func (l *lexer) lexSharp(token *string) {
 	c := l.char()
 	if c == "#" {
-		if l.rdbms == common.MySQL {
+		if l.Rdbms == common.MySQL {
 			l.appendToken(*token)
 			*token = ""
 			l.skipComment()
