@@ -1,8 +1,6 @@
 package lexer
 
 import (
-	"errors"
-
 	"github.com/kodaimura/ddlparse/internal/common"
 )
 
@@ -79,16 +77,20 @@ func (l *lexer) init(ddl string) {
 }
 
 
-func (l *lexer) next() error {
-	l.i += 1
+func (l *lexer) next() string {
 	if l.isOutOfRange() {
-		return errors.New("out of range")
+		return common.EOF
 	}
-	return nil
+	char := l.char()
+	l.i += 1
+	return char
 }
 
 
 func (l *lexer) char() string {
+	if l.isOutOfRange() {
+		return common.EOF
+	}
 	return string(l.ddlr[l.i])
 }
 
@@ -106,10 +108,7 @@ func (l *lexer) isOutOfRange() bool {
 
 
 func (l *lexer) lexError() error {
-	if l.isOutOfRange() {
-		return common.NewValidateError(l.line, string(l.ddlr[l.size - 1]))
-	}
-	return common.NewValidateError(l.line, string(l.ddlr[l.i]))
+	return common.NewValidateError(l.line, string(l.char()))
 }
 
 
@@ -177,9 +176,7 @@ func (l *lexer) lex() error {
 func (l *lexer) lexHyphen(token *string) error {
 	c := l.char()
 	if c == "-" {
-		if l.next() != nil {
-			return l.lexError()
-		}
+		l.next()
 		if l.char() == "-" {
 			l.appendToken(*token)
 			*token = ""
@@ -196,9 +193,7 @@ func (l *lexer) lexHyphen(token *string) error {
 func (l *lexer) lexSlash(token *string) error {
 	c := l.char()
 	if c == "/" {
-		if l.next() != nil {
-			return l.lexError()
-		}
+		l.next()
 		if l.char() == "*" {
 			l.appendToken(*token)
 			*token = ""
@@ -216,9 +211,7 @@ func (l *lexer) lexSlash(token *string) error {
 func (l *lexer) lexAsterisk(token *string) error {
 	c := l.char()
 	if c == "*" {
-		if l.next() != nil {
-			return l.lexError()
-		}
+		l.next()
 		if l.char() == "/" {
 			l.i -= 1
 			return l.lexError()
@@ -354,17 +347,13 @@ func (l *lexer) skipMultiLineComment() error {
 			l.line += 1
 			l.appendToken("\n")
 		} else if c == "*" {
-			if l.next() != nil {
-				return l.lexError()
-			}
+			l.next()
 			if l.char() == "/" {
 				l.next()
 				return nil
 			}
 		} else if c == "/" {
-			if l.next() != nil {
-				return l.lexError()
-			}
+			l.next()
 			if l.char() == "*" {
 				return l.skipMultiLineComment()
 			}

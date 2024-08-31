@@ -149,22 +149,22 @@ func TestTokenize(t *testing.T) {
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT, /*
 		email TEXT NOT NULL UNIQUE
 	);`;
-	test.TokenizeNG(ddl, 4, ";")
+	test.TokenizeNG(ddl, 4, "<EOF>")
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE "
 	);`;
-	test.TokenizeNG(ddl, 4, ";")
+	test.TokenizeNG(ddl, 4, "<EOF>")
 
 	ddl = `CREATE TABLE IF NOT EXISTS users (
 		"user_id" INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT NOT NULL UNIQUE '
 	);`;
-	test.TokenizeNG(ddl, 4, ";")
+	test.TokenizeNG(ddl, 4, "<EOF>")
 
 	ddl = "CREATE TABLE IF NOT EXISTS `users ();"
-	test.TokenizeNG(ddl, 1, ";")
+	test.TokenizeNG(ddl, 1, "<EOF>")
 
 	/* -------------------------------------------------- */
 	test = newTester(MySQL, t)
@@ -223,10 +223,10 @@ func TestValidate_SQLite(t *testing.T) {
 	test.ValidateNG(ddl, 1, "TABL")
 
 	ddl = `CREATE TABLE IF NOT EXISTS "users ();`
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	ddl = "CREATE TABLE IF NOT EXISTS `users ();"
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	ddl = `CREATE TABLE IF NOT EXISTS AUTOINCREMENT ();`
 	test.ValidateNG(ddl, 1, "AUTOINCREMENT")
@@ -264,7 +264,7 @@ func TestValidate_SQLite(t *testing.T) {
 		aaaa integer,
 		aaaa integer /* aaa
 	);`
-	test.ValidateNG(ddl, 4, ";")
+	test.ValidateNG(ddl, 4, "<EOF>")
 
 	ddl = `create table users (
 		aaaa integer,
@@ -323,10 +323,10 @@ func TestValidate_SQLite(t *testing.T) {
 	ddl = `create table "scm.users (
 		aaaa integer
 	);`
-	test.ValidateNG(ddl, 3, ";")
+	test.ValidateNG(ddl, 3, "<EOF>")
 
 	ddl = "create table `scm.users (aaaa integer);"
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	/* -------------------------------------------------- */
 	fmt.Println("Column Date Type")
@@ -536,7 +536,7 @@ func TestValidate_SQLite(t *testing.T) {
 	ddl = `create table users (
 		aaaa integer default 'aaa
 	);`
-	test.ValidateNG(ddl, 3, ";")
+	test.ValidateNG(ddl, 3, "<EOF>")
 
 	ddl = `create table users (
 		aaaa integer default - 2
@@ -579,10 +579,10 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	test.ValidateNG(ddl, 1, "TABL")
 
 	ddl = `CREATE TABLE IF NOT EXISTS "users ();`
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	ddl = `CREATE TABLE IF NOT EXISTS 'users ();`
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	ddl = `CREATE TABLE IF NOT EXISTS ALLOCATE ();`
 	test.ValidateNG(ddl, 1, "ALLOCATE")
@@ -620,7 +620,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa int,
 		aaaa integer /* aaa
 	);`
-	test.ValidateNG(ddl, 4, ";")
+	test.ValidateNG(ddl, 4, "<EOF>")
 
 	ddl = `create table users (
 		aaaa int,
@@ -679,7 +679,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	ddl = `create table "scm.users (
 		aaaa integer
 	);`
-	test.ValidateNG(ddl, 3, ";")
+	test.ValidateNG(ddl, 3, "<EOF>")
 
 	/* -------------------------------------------------- */
 	fmt.Println("Column Date Type")
@@ -1043,7 +1043,7 @@ func TestValidate_PostgreSQL(t *testing.T) {
 	ddl = `create table users (
 		aaaa integer default 'aaa
 	);`
-	test.ValidateNG(ddl, 3, ";")
+	test.ValidateNG(ddl, 3, "<EOF>")
 
 	ddl = `create table users (
 		aaaa integer default - 2
@@ -1086,10 +1086,10 @@ func TestValidate_MySQL(t *testing.T) {
 	test.ValidateNG(ddl, 1, "TABL")
 
 	ddl = `CREATE TABLE IF NOT EXISTS "users ();`
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	ddl = "CREATE TABLE IF NOT EXISTS `users ();"
-	test.ValidateNG(ddl, 1, ";")
+	test.ValidateNG(ddl, 1, "<EOF>")
 
 	ddl = `CREATE TABLE IF NOT EXISTS AUTO_INCREMENT ();`
 	test.ValidateNG(ddl, 1, "AUTO_INCREMENT")
@@ -1127,7 +1127,7 @@ func TestValidate_MySQL(t *testing.T) {
 		aaaa int,
 		aaaa integer /* aaa
 	);`
-	test.ValidateNG(ddl, 4, ";")
+	test.ValidateNG(ddl, 4, "<EOF>")
 
 	ddl = `create table users (
 		aaaa int --aaa,
@@ -1183,7 +1183,7 @@ func TestValidate_MySQL(t *testing.T) {
 	ddl = `create table "scm.users (
 		aaaa integer
 	);`
-	test.ValidateNG(ddl, 3, ";")
+	test.ValidateNG(ddl, 3, "<EOF>")
 
 	/* -------------------------------------------------- */
 	fmt.Println("Column Date Type")
@@ -1616,7 +1616,7 @@ func TestValidate_MySQL(t *testing.T) {
 	ddl = `create table users (
 		aaaa integer default 'aaa
 	);`
-	test.ValidateNG(ddl, 3, ";")
+	test.ValidateNG(ddl, 3, "<EOF>")
 
 	ddl = `create table users (
 		aaaa integer default - 2
