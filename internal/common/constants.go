@@ -8,3 +8,5 @@ const (
 	PostgreSQL Rdbms = "PostgreSQL"
 	MySQL Rdbms = "MySQL"
 )
+
+const EOF = "<EOF>"

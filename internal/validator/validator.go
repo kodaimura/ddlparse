@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/kodaimura/ddlparse/internal/common"
@@ -33,15 +32,20 @@ type validator struct {
 func (v *validator) init(tokens []string) {
 	v.tokens = tokens
 	v.size = len(v.tokens)
-	v.i = -1
+	v.i = 0
 	v.line = 1
 	v.flg = false
 	v.result = []string{}
-	v.next()
+	if v.token() == "\n" {
+		v.next()
+	}
 }
 
 
 func (v *validator) token() string {
+	if v.isOutOfRange() {
+		return common.EOF
+	}
 	return v.tokens[v.i]
 }
 
@@ -61,7 +65,7 @@ func (v *validator) isOutOfRange() bool {
 }
 
 
-func (v *validator) next() error {
+func (v *validator) next() string {
 	if v.flg {
 		v.result = append(v.result, v.token())
 	}
@@ -69,29 +73,30 @@ func (v *validator) next() error {
 }
 
 
-func (v *validator) nextAux() error {
-	v.i += 1
+func (v *validator) nextAux() string {
 	if (v.isOutOfRange()) {
-		return errors.New("out of range")
+		return common.EOF
 	}
+	token := v.token()
+	v.i += 1
 	if (v.token() == "\n") {
 		v.line += 1
 		return v.nextAux()
 	} else {
-		return nil
+		return token
 	}
 }
 
 
 func (v *validator) syntaxError() error {
 	if v.isOutOfRange() {
-		return common.NewValidateError(v.line, v.tokens[v.size - 1])
+		return common.NewValidateError(v.line, common.EOF)
 	}
 	return common.NewValidateError(v.line, v.tokens[v.i])
 }
 
 
-func (v *validator) matchKeyword(keywords ...string) bool {
+func (v *validator) matchToken(keywords ...string) bool {
 	return common.Contains(
 		append(
 			common.MapSlice(keywords, strings.ToLower), 
@@ -100,16 +105,11 @@ func (v *validator) matchKeyword(keywords ...string) bool {
 }
 
 
-func (v *validator) matchSymbol(symbols ...string) bool {
-	return common.Contains(symbols, v.token())
-}
-
-
-func (v *validator) validateKeyword(keywords ...string) error {
+func (v *validator) validateToken(keywords ...string) error {
 	if (v.isOutOfRange()) {
 		return v.syntaxError()
 	}
-	if v.matchKeyword(keywords...) {
+	if v.matchToken(keywords...) {
 		v.next()
 		return nil
 	}
@@ -117,13 +117,30 @@ func (v *validator) validateKeyword(keywords ...string) error {
 }
 
 
-func (v *validator) validateSymbol(symbols ...string) error {
-	if (v.isOutOfRange()) {
-		return v.syntaxError()
+func (v *validator) validateBrackets() error {
+	if err := v.validateToken("("); err != nil {
+		return err
 	}
-	if v.matchSymbol(symbols...) {
-		v.next()
+	if err := v.validateBracketsAux(); err != nil {
+		return err
+	}
+	if err := v.validateToken(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *validator) validateBracketsAux() error {
+	if v.matchToken(")") {
 		return nil
 	}
-	return v.syntaxError()
+	if v.matchToken("(") {
+		if err := v.validateBrackets(); err != nil {
+			return err
+		}
+		return v.validateBracketsAux()
+	}
+	v.next()
+	return v.validateBracketsAux()
 }
