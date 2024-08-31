@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"errors"
 	"strings"
 	"strconv"
 
@@ -55,6 +54,9 @@ func (c *converter) init(tokens []string) {
 
 
 func (c *converter) token() string {
+	if c.isOutOfRange() {
+		return common.EOF
+	}
 	return c.tokens[c.i]
 }
 
@@ -64,16 +66,16 @@ func (c *converter) isOutOfRange() bool {
 }
 
 
-func (c *converter) next() error {
-	pre := c.token()
-	c.i += 1
+func (c *converter) next() string {
 	if (c.isOutOfRange()) {
-		return errors.New("out of range")
+		return common.EOF
 	}
-	if pre == "," && c.token() == "," {
+	token := c.token()
+	c.i += 1
+	if token == "," && c.token() == "," {
 		return c.next()
 	}
-	return nil
+	return token
 }
 
 
