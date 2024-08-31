@@ -89,10 +89,7 @@ func (v *validator) nextAux() string {
 
 
 func (v *validator) syntaxError() error {
-	if v.isOutOfRange() {
-		return common.NewValidateError(v.line, common.EOF)
-	}
-	return common.NewValidateError(v.line, v.tokens[v.i])
+	return common.NewValidateError(v.line, v.token())
 }
 
 
