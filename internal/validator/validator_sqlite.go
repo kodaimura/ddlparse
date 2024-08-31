@@ -48,32 +48,22 @@ func (v *sqliteValidator) isIdentifier(token string) bool {
 
 
 func (v *sqliteValidator) isValidName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name) && 
-		!common.Contains(ReservedWords_SQLite, strings.ToUpper(name))
-}
-
-
-func (v *sqliteValidator) isValidQuotedName(name string) bool {
-	return true
+	if v.isIdentifier(name) {
+		return true
+	} else {
+		pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+		return pattern.MatchString(name) && 
+			!common.Contains(ReservedWords_SQLite, strings.ToUpper(name))
+	}
 }
 
 
 func (v *sqliteValidator) validateName() error {
-	if v.isIdentifier(v.token()) {
-		if !v.isValidQuotedName(v.token()) {
-			return v.syntaxError()
-		}
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-	} else {
-		if !v.isValidName(v.token()) {
-			return v.syntaxError()
-		}
-		if v.next() != nil {
-			return v.syntaxError()
-		}
+	if !v.isValidName(v.token()) {
+		return v.syntaxError()
+	}
+	if v.next() != nil {
+		return v.syntaxError()
 	}
 
 	return nil

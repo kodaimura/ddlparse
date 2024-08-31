@@ -47,32 +47,22 @@ func (v *postgresqlValidator) isIdentifier(token string) bool {
 
 
 func (v *postgresqlValidator) isValidName(name string) bool {
-	pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	return pattern.MatchString(name) && 
-		!common.Contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
-}
-
-
-func (v *postgresqlValidator) isValidQuotedName(name string) bool {
-	return true
+	if v.isIdentifier(name) {
+		return true
+	} else {
+		pattern := regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+		return pattern.MatchString(name) && 
+			!common.Contains(ReservedWords_PostgreSQL, strings.ToUpper(name))
+	}
 }
 
 
 func (v *postgresqlValidator) validateName() error {
-	if v.isIdentifier(v.token()) {
-		if !v.isValidQuotedName(v.token()) {
-			return v.syntaxError()
-		}
-		if v.next() != nil {
-			return v.syntaxError()
-		}
-	} else {
-		if !v.isValidName(v.token()) {
-			return v.syntaxError()
-		}
-		if v.next() != nil {
-			return v.syntaxError()
-		}
+	if !v.isValidName(v.token()) {
+		return v.syntaxError()
+	}
+	if v.next() != nil {
+		return v.syntaxError()
 	}
 
 	return nil
