@@ -61,9 +61,7 @@ func (v *postgresqlValidator) validateName() error {
 	if !v.isValidName(v.token()) {
 		return v.syntaxError()
 	}
-	if v.next() == EOF {
-		return v.syntaxError()
-	}
+	v.next()
 
 	return nil
 }
@@ -74,9 +72,7 @@ func (v *postgresqlValidator) validateTableName() error {
 		return err
 	}
 	if v.matchToken(".") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateName(); err != nil {
 			return err
 		}
@@ -94,9 +90,7 @@ func (v *postgresqlValidator) validatePositiveInteger() error {
 	if !common.IsPositiveIntegerToken(v.token()) {
 		return v.syntaxError()
 	}
-	if v.next() == EOF {
-		return v.syntaxError()
-	}
+	v.next()
 	return nil
 }
 
@@ -127,9 +121,7 @@ func (v *postgresqlValidator) validateCreateTable() error {
 
 func (v *postgresqlValidator) validateIfNotExists() error {
 	if v.matchToken("IF") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("NOT"); err != nil {
 			return err
 		}
@@ -167,9 +159,7 @@ func (v *postgresqlValidator) validateColumnDefinitions() error {
 	}
 	if v.matchToken(",") {
 		v.flgOn()
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		return v.validateColumnDefinitions()
 	}
 	v.flgOff()
@@ -199,13 +189,9 @@ func (v *postgresqlValidator) validateColumnDefinition() error {
 func (v *postgresqlValidator) validateColumnType() error {
 	v.flgOn()
 	if v.matchToken("BIT", "CHARACTER") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if v.matchToken("VARYING") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 		}
 		if err := v.validateTypeDigitN(); err != nil {
 			return err
@@ -215,9 +201,7 @@ func (v *postgresqlValidator) validateColumnType() error {
 	}
 
 	if v.matchToken("VARBIT", "VARCHAR", "CHAR") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateTypeDigitN(); err != nil {
 			return err
 		}
@@ -226,9 +210,7 @@ func (v *postgresqlValidator) validateColumnType() error {
 	}
 
 	if v.matchToken("NUMERIC", "DECIMAL") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateTypeDigitPS(); err != nil {
 			return err
 		}
@@ -237,9 +219,7 @@ func (v *postgresqlValidator) validateColumnType() error {
 	}
 
 	if v.matchToken("DOUBLE") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		v.flgOff()
 		if err := v.validateToken("PRECISION"); err != nil {
 			return err
@@ -252,17 +232,13 @@ func (v *postgresqlValidator) validateColumnType() error {
 	//}
 
 	if v.matchToken("TIME", "TIMESTAMP") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateTypeDigitP(); err != nil {
 			return err
 		}
 		v.flgOff()
 		if v.matchToken("WITH", "WITHOUT") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 			if err := v.validateToken("TIME"); err != nil {
 				return err
 			}
@@ -285,9 +261,7 @@ func (v *postgresqlValidator) validateColumnType() error {
 // (number)
 func (v *postgresqlValidator) validateTypeDigitN() error {
 	if v.matchToken("(") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validatePositiveInteger(); err != nil {
 			return err
 		}
@@ -306,16 +280,12 @@ func (v *postgresqlValidator) validateTypeDigitP() error {
 // (presision. scale)
 func (v *postgresqlValidator) validateTypeDigitPS() error {
 	if v.matchToken("(") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validatePositiveInteger(); err != nil {
 			return err
 		}
 		if v.matchToken(",") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 			if err := v.validatePositiveInteger(); err != nil {
 				return err
 			}
@@ -466,9 +436,7 @@ func (v *postgresqlValidator) validateConstraintCheck() error {
 	}
 	v.flgOff()
 	if v.matchToken("NO") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("INHERIT"); err != nil {
 			return err
 		}
@@ -506,9 +474,7 @@ func (v *postgresqlValidator) validateConstraintReferences() error {
 		return err
 	}
 	if v.matchToken("(") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateColumnName(); err != nil {
 			return err
 		}
@@ -527,27 +493,19 @@ func (v *postgresqlValidator) validateConstraintReferences() error {
 func (v *postgresqlValidator) validateConstraintReferencesAux() error {
 	v.flgOff()
 	if v.matchToken("ON") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("DELETE", "UPDATE"); err != nil {
 			return err
 		}
 		if v.matchToken("SET") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 			if err := v.validateToken("NULL", "DEFAULT"); err != nil {
 				return err
 			}
 		} else if v.matchToken("CASCADE", "RESTRICT") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 		} else if v.matchToken("NO") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 			if err := v.validateToken("ACTION"); err != nil {
 				return err
 			}
@@ -558,9 +516,7 @@ func (v *postgresqlValidator) validateConstraintReferencesAux() error {
 	}
 
 	if v.matchToken("MATCH") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("SIMPLE", "PARTIAL", "FULL"); err != nil {
 			return err
 		}
@@ -579,16 +535,12 @@ func (v *postgresqlValidator) validateConstraintGenerated() error {
 	}
 
 	if v.matchToken("ALWAYS") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("AS"); err != nil {
 			return err
 		}
 		if v.matchToken("IDENTITY") {
-			if v.next() == EOF {
-				return v.syntaxError()
-			}
+			v.next()
 			if v.matchToken("(") {
 				if err := v.validateBrackets(); err != nil {
 					return err
@@ -611,9 +563,7 @@ func (v *postgresqlValidator) validateConstraintGenerated() error {
 			return v.syntaxError()
 		}
 	} else if v.matchToken("BY") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("DEFAULT"); err != nil {
 			return err
 		}
@@ -659,9 +609,7 @@ func (v *postgresqlValidator) validateExpr() error {
 func (v *postgresqlValidator) validateIndexParameters() error {
 	v.flgOff()
 	if v.matchToken("INCLUDE") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("("); err != nil {
 			return err
 		}
@@ -673,17 +621,13 @@ func (v *postgresqlValidator) validateIndexParameters() error {
 		}
 	}
 	if v.matchToken("WITH") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateBrackets(); err != nil {
 			return err
 		}
 	}
 	if v.matchToken("USING") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("INDEX"); err != nil {
 			return err
 		}
@@ -701,15 +645,11 @@ func (v *postgresqlValidator) validateIndexParameters() error {
 
 func (v *postgresqlValidator) validateLiteralValue() error {
 	if common.IsNumericToken(v.token()) {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		return nil
 	}
 	if v.isStringValue(v.token()) {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		return nil
 	}
 	ls := []string{"NULL", "TRUE", "FALSE", "CURRENT_TIME", "CURRENT_DATE", "CURRENT_TIMESTAMP"}
@@ -723,9 +663,7 @@ func (v *postgresqlValidator) validateLiteralValue() error {
 func (v *postgresqlValidator) validateTableConstraint() error {
 	v.flgOn()
 	if v.matchToken("CONSTRAINT") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateName(); err != nil {
 			return err
 		}
@@ -809,9 +747,7 @@ func (v *postgresqlValidator) validateTableConstraintCheck() error {
 	}
 	v.flgOff()
 	if v.matchToken("NO") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateToken("INHERIT"); err != nil {
 			return err
 		}
@@ -846,9 +782,7 @@ func (v *postgresqlValidator) validateTableConstraintForeignKey() error {
 		return err
 	}
 	if v.matchToken("(") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateCommaSeparatedColumnNames(); err != nil {
 			return v.syntaxError()
 		}
@@ -871,9 +805,7 @@ func (v *postgresqlValidator) validateTableConstraintExclude() error {
 		return err
 	}
 	if v.matchToken("USING") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateName(); err != nil {
 			return err
 		}
@@ -885,9 +817,7 @@ func (v *postgresqlValidator) validateTableConstraintExclude() error {
 		return err
 	}
 	if v.matchToken("WHERE") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		if err := v.validateBrackets(); err != nil {
 			return err
 		}
@@ -902,9 +832,7 @@ func (v *postgresqlValidator) validateCommaSeparatedColumnNames() error {
 		return err
 	}
 	if v.matchToken(",") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 		return v.validateCommaSeparatedColumnNames()
 	}
 	return nil
@@ -920,9 +848,7 @@ func (v *postgresqlValidator) validateTableOptions() error {
 		return nil
 	}
 	if v.matchToken(",") {
-		if v.next() == EOF {
-			return v.syntaxError()
-		}
+		v.next()
 	}
 	if err := v.validateTableOption(); err != nil {
 		return err

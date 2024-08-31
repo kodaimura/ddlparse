@@ -87,7 +87,7 @@ func (v *validator) nextAux() string {
 
 func (v *validator) syntaxError() error {
 	if v.isOutOfRange() {
-		return common.NewValidateError(v.line, v.tokens[v.size - 1])
+		return common.NewValidateError(v.line, EOF)
 	}
 	return common.NewValidateError(v.line, v.tokens[v.i])
 }
@@ -138,8 +138,6 @@ func (v *validator) validateBracketsAux() error {
 		}
 		return v.validateBracketsAux()
 	}
-	if v.next() == EOF {
-		return v.syntaxError()
-	}
+	v.next()
 	return v.validateBracketsAux()
 }
