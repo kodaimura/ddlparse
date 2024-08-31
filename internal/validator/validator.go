@@ -91,7 +91,7 @@ func (v *validator) syntaxError() error {
 }
 
 
-func (v *validator) matchKeyword(keywords ...string) bool {
+func (v *validator) matchToken(keywords ...string) bool {
 	return common.Contains(
 		append(
 			common.MapSlice(keywords, strings.ToLower), 
@@ -100,28 +100,11 @@ func (v *validator) matchKeyword(keywords ...string) bool {
 }
 
 
-func (v *validator) matchSymbol(symbols ...string) bool {
-	return common.Contains(symbols, v.token())
-}
-
-
-func (v *validator) validateKeyword(keywords ...string) error {
+func (v *validator) validateToken(keywords ...string) error {
 	if (v.isOutOfRange()) {
 		return v.syntaxError()
 	}
-	if v.matchKeyword(keywords...) {
-		v.next()
-		return nil
-	}
-	return v.syntaxError()
-}
-
-
-func (v *validator) validateSymbol(symbols ...string) error {
-	if (v.isOutOfRange()) {
-		return v.syntaxError()
-	}
-	if v.matchSymbol(symbols...) {
+	if v.matchToken(keywords...) {
 		v.next()
 		return nil
 	}

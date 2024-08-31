@@ -77,17 +77,12 @@ func (c *converter) next() error {
 }
 
 
-func (c *converter) matchKeyword(keywords ...string) bool {
+func (c *converter) matchToken(keywords ...string) bool {
 	return common.Contains(
 		append(
 			common.MapSlice(keywords, strings.ToLower), 
 			common.MapSlice(keywords, strings.ToUpper)...,
 		), c.token())
-}
-
-
-func (c *converter) matchSymbol(symbols ...string) bool {
-	return common.Contains(symbols, c.token())
 }
 
 
@@ -142,7 +137,7 @@ func (c *converter) convertTable() types.Table {
 	c.next() // skip "CREATE"
 	c.next() // skip "TABLE"
 
-	if c.matchKeyword("IF") {
+	if c.matchToken("IF") {
 		c.next() // skip "IF"
 		c.next() // skip "NOT"
 		c.next() // skip "EXISTS"
@@ -158,7 +153,7 @@ func (c *converter) convertTable() types.Table {
 	table.Constraints = constraints
 
 	if (c.size > c.i) {
-		if c.matchSymbol(";") {
+		if c.matchToken(";") {
 			c.next()
 		}
 	}
@@ -170,7 +165,7 @@ func (c *converter) convertTableName() (string, string) {
 	schemaName := c.convertName()
 	tableName := ""
 
-	if c.matchSymbol(".") {
+	if c.matchToken(".") {
 		c.next()
 		tableName = c.convertName()
 	} else {
@@ -196,15 +191,15 @@ func (c *converter) convertTableDefinition() ([]types.Column, types.TableConstra
 	c.next()
 	var columns []types.Column
 	var constraints types.TableConstraint
-	for !c.matchSymbol(")") {
-		if (c.matchKeyword("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN")) {
+	for !c.matchToken(")") {
+		if (c.matchToken("CONSTRAINT", "PRIMARY", "UNIQUE", "CHECK", "FOREIGN")) {
 			c.convertTableConstraint(&constraints);
 		} else {
 			column := c.convertColumnDefinition()
 			columns = append(columns, column)
 		}
 		
-		if c.matchKeyword(")") {
+		if c.matchToken(")") {
 			break
 		}
 		c.next()
@@ -227,7 +222,7 @@ func (c *converter) convertColumnDefinition() types.Column {
 func (c *converter) convertDateType() types.DataType {
 	var dataType types.DataType
 	dataType.Name = strings.ToUpper(c.convertToken())
-	if c.matchKeyword("VARYING") {
+	if c.matchToken("VARYING") {
 		if dataType.Name == "BIT" {
 			dataType.Name = "VARBIT"
 		} else if dataType.Name == "CHARACTER" {
@@ -247,10 +242,10 @@ func (c *converter) convertDateType() types.DataType {
 func (c *converter) convertTypeDigit() (int, int) {
 	n := 0
 	m := 0
-	if c.matchSymbol("(") {
+	if c.matchToken("(") {
 		c.next()
 		n, _ = strconv.Atoi(c.convertToken())
-		if c.matchSymbol(",") {
+		if c.matchToken(",") {
 			c.next()
 			m, _ = strconv.Atoi(c.convertToken())
 		}
@@ -262,9 +257,9 @@ func (c *converter) convertTypeDigit() (int, int) {
 
 func (c *converter) convertConstraint() types.Constraint {
 	var constraint types.Constraint
-	if c.matchKeyword("CONSTRAINT") {
+	if c.matchToken("CONSTRAINT") {
 		c.next() // skip "CONSTRAINT"
-		if (!c.matchKeyword("PRIMARY", "UNIQUE", "NOT", "AUTOINCREMENT", "AUTO_INCREMENT", "DEFAULT", "CHECK", "REFERENCES", "COLLATE")) {
+		if (!c.matchToken("PRIMARY", "UNIQUE", "NOT", "AUTOINCREMENT", "AUTO_INCREMENT", "DEFAULT", "CHECK", "REFERENCES", "COLLATE")) {
 			constraint.Name = c.convertName()
 		}
 	}
@@ -274,54 +269,54 @@ func (c *converter) convertConstraint() types.Constraint {
 
 
 func (c *converter) convertConstraintAux(constraint *types.Constraint) {
-	if c.matchSymbol(",", ")") {
+	if c.matchToken(",", ")") {
 		return
 	}
-	if c.matchKeyword("PRIMARY") {
+	if c.matchToken("PRIMARY") {
 		c.next() // skip "PRIMARY"
 		c.next() // skip "KEY"
 		constraint.IsPrimaryKey = true
 		c.convertConstraintAux(constraint)
 		return 
 	}
-	if c.matchKeyword("AUTOINCREMENT", "AUTO_INCREMENT") {
+	if c.matchToken("AUTOINCREMENT", "AUTO_INCREMENT") {
 		c.next() // skip "AUTOINCREMENT"
 		constraint.IsAutoincrement = true
 		c.convertConstraintAux(constraint)
 		return
 	}
-	if c.matchKeyword("NOT") {
+	if c.matchToken("NOT") {
 		c.next() // skip "NOT"
 		c.next() // skip "NULL"
 		constraint.IsNotNull = true
 		c.convertConstraintAux(constraint)
 		return
 	}
-	if c.matchKeyword("UNIQUE") {
+	if c.matchToken("UNIQUE") {
 		c.next() // skip "UNIQUE"
 		constraint.IsUnique = true
 		c.convertConstraintAux(constraint)
 		return
 	}
-	if c.matchKeyword("DEFAULT") {
+	if c.matchToken("DEFAULT") {
 		c.next() // skip "DEFAULT"
 		constraint.Default = c.convertDefaultValue()
 		c.convertConstraintAux(constraint)
 		return
 	}
-	if c.matchKeyword("CHECK") {
+	if c.matchToken("CHECK") {
 		c.next() // skip "CHECK"
 		constraint.Check = c.convertExpr()
 		c.convertConstraintAux(constraint)
 		return
 	}
-	if c.matchKeyword("COLLATE") {
+	if c.matchToken("COLLATE") {
 		c.next() // skip "COLLATE"
 		constraint.Collate = c.convertName()
 		c.convertConstraintAux(constraint)
 		return
 	}
-	if c.matchKeyword("REFERENCES") {
+	if c.matchToken("REFERENCES") {
 		constraint.References = c.convertReference()
 		c.convertConstraintAux(constraint)
 		return
@@ -330,7 +325,7 @@ func (c *converter) convertConstraintAux(constraint *types.Constraint) {
 
 
 func (c *converter) convertDefaultValue() interface{} {
-	if c.matchSymbol("(") {
+	if c.matchToken("(") {
 		return c.convertExpr()
 	} else {
 		return c.convertLiteralValue()
@@ -344,10 +339,10 @@ func (c *converter) convertExpr() string {
 
 
 func (c *converter) convertExprAux() string {
-	if c.matchSymbol(")") {
+	if c.matchToken(")") {
 		return ""
 	}
-	if c.matchSymbol("(") {
+	if c.matchToken("(") {
 		return c.convertExpr() + c.convertExprAux()
 	}
 	return c.convertToken() + c.convertExprAux()
@@ -381,7 +376,7 @@ func (c *converter) convertReference() types.Reference {
 	var reference types.Reference
 	c.next() // skip "REFERENCES"
 	reference.TableName = c.convertName()
-	if c.matchSymbol("(") {
+	if c.matchToken("(") {
 		reference.ColumnNames = c.convertCommaSeparatedColumnNames()
 	}
 	return reference
@@ -390,14 +385,14 @@ func (c *converter) convertReference() types.Reference {
 
 func (c *converter) convertTableConstraint(tableConstraint *types.TableConstraint) {
 	name := ""
-	if c.matchKeyword("CONSTRAINT") {
+	if c.matchToken("CONSTRAINT") {
 		c.next() // skip "CONSTRAINT"
-		if !c.matchKeyword("PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
+		if !c.matchToken("PRIMARY", "UNIQUE", "CHECK", "FOREIGN") {
 			name = c.convertName()
 		}
 	}
 
-	if c.matchKeyword("PRIMARY") {
+	if c.matchToken("PRIMARY") {
 		var primaryKey types.PrimaryKey
 		c.next() // skip "PRIMARY"
 		c.next() // skip "KEY"
@@ -405,21 +400,21 @@ func (c *converter) convertTableConstraint(tableConstraint *types.TableConstrain
 		primaryKey.ColumnNames = c.convertCommaSeparatedColumnNames()
 		tableConstraint.PrimaryKey = append(tableConstraint.PrimaryKey, primaryKey)
 
-	} else if c.matchKeyword("UNIQUE") {
+	} else if c.matchToken("UNIQUE") {
 		var unique types.Unique
 		c.next() // skip "UNIQUE"
 		unique.Name = name
 		unique.ColumnNames = c.convertCommaSeparatedColumnNames()
 		tableConstraint.Unique = append(tableConstraint.Unique, unique)
 
-	} else if c.matchKeyword("CHECK") {
+	} else if c.matchToken("CHECK") {
 		var check types.Check
 		c.next() // skip "CHECK"
 		check.Name = name
 		check.Expr = c.convertExpr()
 		tableConstraint.Check = append(tableConstraint.Check, check)
 
-	} else if c.matchKeyword("FOREIGN") {
+	} else if c.matchToken("FOREIGN") {
 		var foreignKey types.ForeignKey
 		c.next() // skip "FOREIGN"
 		c.next() // skip "KEY"
@@ -436,9 +431,9 @@ func (c *converter) convertCommaSeparatedColumnNames() []string {
 	c.next() // skip "(""
 	ls := []string{}
 	for {
-		if c.matchSymbol(")") {
+		if c.matchToken(")") {
 			break
-		} else if c.matchSymbol(",") {
+		} else if c.matchToken(",") {
 			c.next()
 			continue
 		}
