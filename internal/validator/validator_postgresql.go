@@ -301,7 +301,7 @@ func (v *postgresqlValidator) validateTypeDigitPS() error {
 func (v *postgresqlValidator) validateColumnConstraints() error {
 	if v.matchToken("CONSTRAINT") {
 		v.flgOn()
-		if v.next() == EOF {
+		if v.next() == common.EOF {
 			return nil
 		}
 		if err := v.validateName(); err != nil {

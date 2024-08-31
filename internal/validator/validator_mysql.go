@@ -334,7 +334,7 @@ func (v *mysqlValidator) validateTypeDigitPS() error {
 func (v *mysqlValidator) validateColumnConstraints() error {
 	v.flgOn()
 	if v.matchToken("CONSTRAINT") {
-		if v.next() == EOF {
+		if v.next() == common.EOF {
 			return nil
 		}
 		if !v.matchToken("CHECK") {

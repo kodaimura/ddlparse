@@ -6,8 +6,6 @@ import (
 	"github.com/kodaimura/ddlparse/internal/common"
 )
 
-const EOF = "<EOF>"
-
 type Validator interface {
 	Validate(tokens []string) ([]string, error)
 }
@@ -73,7 +71,7 @@ func (v *validator) next() string {
 func (v *validator) nextAux() string {
 	v.i += 1
 	if (v.isOutOfRange()) {
-		return EOF
+		return common.EOF
 	}
 	token := v.token()
 	if (token == "\n") {
@@ -87,7 +85,7 @@ func (v *validator) nextAux() string {
 
 func (v *validator) syntaxError() error {
 	if v.isOutOfRange() {
-		return common.NewValidateError(v.line, EOF)
+		return common.NewValidateError(v.line, common.EOF)
 	}
 	return common.NewValidateError(v.line, v.tokens[v.i])
 }

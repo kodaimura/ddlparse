@@ -192,7 +192,7 @@ func (v *sqliteValidator) validateColumnType() error {
 func (v *sqliteValidator) validateColumnConstraints() error {
 	v.flgOn()
 	if v.matchToken("CONSTRAINT") {
-		if v.next() == EOF {
+		if v.next() == common.EOF {
 			return nil
 		}
 		if err := v.validateName(); err != nil {
