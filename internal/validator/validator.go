@@ -60,31 +60,33 @@ func (v *validator) flgOff() {
 }
 
 
+func (v *validator) set(token string) {
+	v.result = append(v.result, token)
+}
+
+
 func (v *validator) isOutOfRange() bool {
 	return v.i > v.size - 1
 }
 
 
 func (v *validator) next() string {
-	if v.flg {
-		v.result = append(v.result, v.token())
-	}
-	return v.nextAux()
-}
-
-
-func (v *validator) nextAux() string {
 	if (v.isOutOfRange()) {
 		return common.EOF
 	}
 	token := v.token()
-	v.i += 1
-	if (v.token() == "\n") {
-		v.line += 1
-		return v.nextAux()
-	} else {
-		return token
+	for true {
+		v.i += 1
+		if v.isOutOfRange() {
+			break
+		} else if (v.token() == "\n") {
+			v.line += 1
+			continue
+		} else {
+			break
+		}
 	}
+	return token
 }
 
 
@@ -102,42 +104,63 @@ func (v *validator) matchToken(keywords ...string) bool {
 }
 
 
-func (v *validator) validateToken(keywords ...string) error {
+func (v *validator) matchTokenNext(set bool, keywords ...string) bool {
+	if v.matchToken(keywords...) {
+		if set {
+			v.set(v.next())
+		} else {
+			v.next()
+		}
+		return true
+	}
+	return false
+}
+
+
+func (v *validator) validateToken(set bool, keywords ...string) error {
 	if (v.isOutOfRange()) {
 		return v.syntaxError()
 	}
 	if v.matchToken(keywords...) {
-		v.next()
+		if set {
+			v.set(v.next())
+		} else {
+			v.next()
+		}
 		return nil
 	}
 	return v.syntaxError()
 }
 
 
-func (v *validator) validateBrackets() error {
-	if err := v.validateToken("("); err != nil {
+func (v *validator) validateBrackets(set bool) error {
+	if err := v.validateToken(set, "("); err != nil {
 		return err
 	}
-	if err := v.validateBracketsAux(); err != nil {
+	if err := v.validateBracketsAux(set); err != nil {
 		return err
 	}
-	if err := v.validateToken(")"); err != nil {
+	if err := v.validateToken(set, ")"); err != nil {
 		return err
 	}
 	return nil
 }
 
 
-func (v *validator) validateBracketsAux() error {
+func (v *validator) validateBracketsAux(set bool) error {
 	if v.matchToken(")") {
 		return nil
 	}
 	if v.matchToken("(") {
-		if err := v.validateBrackets(); err != nil {
+		if err := v.validateBrackets(set); err != nil {
 			return err
 		}
-		return v.validateBracketsAux()
+		return v.validateBracketsAux(set)
 	}
-	v.next()
-	return v.validateBracketsAux()
+	if set {
+		v.set(v.next())
+	} else {
+		v.next()
+	}
+	return v.validateBracketsAux(set)
 }
