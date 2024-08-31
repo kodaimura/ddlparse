@@ -62,7 +62,7 @@ func (v *sqliteValidator) validateName() error {
 	if !v.isValidName(v.token()) {
 		return v.syntaxError()
 	}
-	if v.next() != nil {
+	if v.next() == EOF {
 		return v.syntaxError()
 	}
 
@@ -75,7 +75,7 @@ func (v *sqliteValidator) validateTableName() error {
 		return err
 	}
 	if v.matchToken(".") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateName(); err != nil {
@@ -118,7 +118,7 @@ func (v *sqliteValidator) validateCreateTable() error {
 
 func (v *sqliteValidator) validateIfNotExists() error {
 	if v.matchToken("IF") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateToken("NOT"); err != nil {
@@ -158,7 +158,7 @@ func (v *sqliteValidator) validateColumnDefinitions() error {
 	}
 	if v.matchToken(",") {
 		v.flgOn()
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		return v.validateColumnDefinitions()
@@ -200,7 +200,7 @@ func (v *sqliteValidator) validateColumnType() error {
 func (v *sqliteValidator) validateColumnConstraints() error {
 	v.flgOn()
 	if v.matchToken("CONSTRAINT") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return nil
 		}
 		if err := v.validateName(); err != nil {
@@ -273,7 +273,7 @@ func (v *sqliteValidator) validateConstraintPrimaryKey() error {
 	}
 	v.flgOff()
 	if v.matchToken("ASC", "DESC") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 	}
@@ -282,7 +282,7 @@ func (v *sqliteValidator) validateConstraintPrimaryKey() error {
 	}
 	if v.matchToken("AUTOINCREMENT") {
 		v.flgOn()
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 	}
@@ -376,7 +376,7 @@ func (v *sqliteValidator) validateConstraintReferences() error {
 		return err
 	}
 	if v.matchToken("(") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateColumnName(); err != nil {
@@ -398,25 +398,25 @@ func (v *sqliteValidator) validateConstraintReferences() error {
 func (v *sqliteValidator) validateConstraintReferencesAux() error {
 	v.flgOff()
 	if v.matchToken("ON") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateToken("DELETE", "UPDATE"); err != nil {
 			return err
 		}
 		if v.matchToken("SET") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 			if err := v.validateToken("NULL", "DEFAULT"); err != nil {
 				return err
 			}
 		} else if v.matchToken("CASCADE", "RESTRICT") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 		} else if v.matchToken("NO") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 			if err := v.validateToken("ACTION"); err != nil {
@@ -429,7 +429,7 @@ func (v *sqliteValidator) validateConstraintReferencesAux() error {
 	}
 
 	if v.matchToken("MATCH") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateToken("SIMPLE", "PARTIAL", "FULL"); err != nil {
@@ -440,7 +440,7 @@ func (v *sqliteValidator) validateConstraintReferencesAux() error {
 
 	if v.matchToken("NOT", "DEFERRABLE") {
 		if v.matchToken("NOT") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 		}
@@ -448,7 +448,7 @@ func (v *sqliteValidator) validateConstraintReferencesAux() error {
 			return err
 		}
 		if v.matchToken("INITIALLY") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 			if err := v.validateToken("DEFERRED", "IMMEDIATE"); err != nil {
@@ -466,7 +466,7 @@ func (v *sqliteValidator) validateConstraintReferencesAux() error {
 func (v *sqliteValidator) validateConstraintGenerated() error {
 	v.flgOff()
 	if v.matchToken("GENERATED") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateToken("ALWAYS"); err != nil {
@@ -480,7 +480,7 @@ func (v *sqliteValidator) validateConstraintGenerated() error {
 		return err
 	}
 	if v.matchToken("STORED", "VIRTUAL") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 	}
@@ -492,7 +492,7 @@ func (v *sqliteValidator) validateConstraintGenerated() error {
 func (v *sqliteValidator) validateConflictClause() error {
 	v.flgOff()
 	if v.matchToken("ON") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateToken("CONFLICT"); err != nil {
@@ -514,13 +514,13 @@ func (v *sqliteValidator) validateExpr() error {
 
 func (v *sqliteValidator) validateLiteralValue() error {
 	if common.IsNumericToken(v.token()) {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		return nil
 	}
 	if v.isStringValue(v.token()) {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		return nil
@@ -536,7 +536,7 @@ func (v *sqliteValidator) validateLiteralValue() error {
 func (v *sqliteValidator) validateTableConstraint() error {
 	v.flgOn()
 	if v.matchToken("CONSTRAINT") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateName(); err != nil {
@@ -646,7 +646,7 @@ func (v *sqliteValidator) validateTableConstraintForeignKey() error {
 		return err
 	}
 	if v.matchToken("(") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateCommaSeparatedColumnNames(); err != nil {
@@ -670,7 +670,7 @@ func (v *sqliteValidator) validateCommaSeparatedColumnNames() error {
 		return err
 	}
 	if v.matchToken(",") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		return v.validateCommaSeparatedColumnNames()
@@ -685,14 +685,14 @@ func (v *sqliteValidator) validateTableOptions() error {
 		return nil
 	}
 	if v.matchToken("WITHOUT") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if err := v.validateToken("ROWID"); err != nil {
 			return err
 		}
 		if v.matchToken(",") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 			if err := v.validateToken("STRICT"); err != nil {
@@ -700,11 +700,11 @@ func (v *sqliteValidator) validateTableOptions() error {
 			}
 		}
 	} else if v.matchToken("STRICT") {
-		if v.next() != nil {
+		if v.next() == EOF {
 			return v.syntaxError()
 		}
 		if v.matchToken(",") {
-			if v.next() != nil {
+			if v.next() == EOF {
 				return v.syntaxError()
 			}
 			if err := v.validateToken("WITHOUT"); err != nil {

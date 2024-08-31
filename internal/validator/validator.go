@@ -1,11 +1,12 @@
 package validator
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/kodaimura/ddlparse/internal/common"
 )
+
+const EOF = "<EOF>"
 
 type Validator interface {
 	Validate(tokens []string) ([]string, error)
@@ -61,7 +62,7 @@ func (v *validator) isOutOfRange() bool {
 }
 
 
-func (v *validator) next() error {
+func (v *validator) next() string {
 	if v.flg {
 		v.result = append(v.result, v.token())
 	}
@@ -69,16 +70,17 @@ func (v *validator) next() error {
 }
 
 
-func (v *validator) nextAux() error {
+func (v *validator) nextAux() string {
 	v.i += 1
 	if (v.isOutOfRange()) {
-		return errors.New("out of range")
+		return EOF
 	}
-	if (v.token() == "\n") {
+	token := v.token()
+	if (token == "\n") {
 		v.line += 1
 		return v.nextAux()
 	} else {
-		return nil
+		return token
 	}
 }
 
@@ -136,7 +138,7 @@ func (v *validator) validateBracketsAux() error {
 		}
 		return v.validateBracketsAux()
 	}
-	if v.next() != nil {
+	if v.next() == EOF {
 		return v.syntaxError()
 	}
 	return v.validateBracketsAux()
