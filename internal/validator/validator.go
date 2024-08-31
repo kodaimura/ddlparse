@@ -32,15 +32,20 @@ type validator struct {
 func (v *validator) init(tokens []string) {
 	v.tokens = tokens
 	v.size = len(v.tokens)
-	v.i = -1
+	v.i = 0
 	v.line = 1
 	v.flg = false
 	v.result = []string{}
-	v.next()
+	if v.token() == "\n" {
+		v.next()
+	}
 }
 
 
 func (v *validator) token() string {
+	if v.isOutOfRange() {
+		return common.EOF
+	}
 	return v.tokens[v.i]
 }
 
@@ -69,12 +74,12 @@ func (v *validator) next() string {
 
 
 func (v *validator) nextAux() string {
-	v.i += 1
 	if (v.isOutOfRange()) {
 		return common.EOF
 	}
 	token := v.token()
-	if (token == "\n") {
+	v.i += 1
+	if (v.token() == "\n") {
 		v.line += 1
 		return v.nextAux()
 	} else {
