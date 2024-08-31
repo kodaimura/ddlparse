@@ -102,37 +102,6 @@ func (v *sqliteValidator) validateColumnName() error {
 }
 
 
-func (v *sqliteValidator) validateBrackets() error {
-	if err := v.validateToken("("); err != nil {
-		return err
-	}
-	if err := v.validateBracketsAux(); err != nil {
-		return err
-	}
-	if err := v.validateToken(")"); err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func (v *sqliteValidator) validateBracketsAux() error {
-	if v.matchToken(")") {
-		return nil
-	}
-	if v.matchToken("(") {
-		if err := v.validateBrackets(); err != nil {
-			return err
-		}
-		return v.validateBracketsAux()
-	}
-	if v.next() != nil {
-		return v.syntaxError()
-	}
-	return v.validateBracketsAux()
-}
-
-
 func (v *sqliteValidator) validateCreateTable() error {
 	v.flgOn()
 	if err := v.validateToken("CREATE"); err != nil {

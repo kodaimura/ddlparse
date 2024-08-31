@@ -102,37 +102,6 @@ func (v *mysqlValidator) validateColumnName() error {
 }
 
 
-func (v *mysqlValidator) validateBrackets() error {
-	if err := v.validateToken("("); err != nil {
-		return err
-	}
-	if err := v.validateBracketsAux(); err != nil {
-		return err
-	}
-	if err := v.validateToken(")"); err != nil {
-		return err
-	}
-	return nil
-}
-
-
-func (v *mysqlValidator) validateBracketsAux() error {
-	if v.matchToken(")") {
-		return nil
-	}
-	if v.matchToken("(") {
-		if err := v.validateBrackets(); err != nil {
-			return err
-		}
-		return v.validateBracketsAux()
-	}
-	if v.next() != nil {
-		return v.syntaxError()
-	}
-	return v.validateBracketsAux()
-}
-
-
 func (v *mysqlValidator) validatePositiveInteger() error {
 	if !common.IsPositiveIntegerToken(v.token()) {
 		return v.syntaxError()

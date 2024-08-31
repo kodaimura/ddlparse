@@ -110,3 +110,34 @@ func (v *validator) validateToken(keywords ...string) error {
 	}
 	return v.syntaxError()
 }
+
+
+func (v *validator) validateBrackets() error {
+	if err := v.validateToken("("); err != nil {
+		return err
+	}
+	if err := v.validateBracketsAux(); err != nil {
+		return err
+	}
+	if err := v.validateToken(")"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *validator) validateBracketsAux() error {
+	if v.matchToken(")") {
+		return nil
+	}
+	if v.matchToken("(") {
+		if err := v.validateBrackets(); err != nil {
+			return err
+		}
+		return v.validateBracketsAux()
+	}
+	if v.next() != nil {
+		return v.syntaxError()
+	}
+	return v.validateBracketsAux()
+}
