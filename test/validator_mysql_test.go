@@ -574,4 +574,46 @@ func TestValidate_MySQL(t *testing.T) {
 		aaaa integer primary key primary key
 	);`
 	tr.ValidateNG(ddl, 2, "primary")
+
+	/* -------------------------------------------------- */
+	fmt.Println("Create Other Than Table")
+	ddl = `create table scm.users (
+		aaaa integer
+	);
+
+	CREATE TRIGGER update_timestamp
+	AFTER UPDATE ON users
+	FOR EACH ROW
+	BEGIN
+		UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+	END;
+
+	CREATE VIEW temp_active_users AS
+	SELECT id, name, email
+	FROM users
+	WHERE active = 1;
+
+	CREATE INDEX idx_active_users_email ON users(email) WHERE active = 1;
+	CREATE DATABASE LINK dblink_name
+	CONNECT TO user_name IDENTIFIED BY password
+	USING 'service_name';
+	
+	create table scm.users2 (
+		aaaa integer
+	);`
+	tr.ValidateOK(ddl)
+
+	ddl = `create table scm.users (
+		aaaa integer
+	);
+
+	CREATE TRIGGE update_timestamp
+	AFTER UPDATE ON users
+	FOR EACH ROW
+	BEGIN
+		UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+	END;`
+	tr.ValidateNG(ddl, 5, "TRIGGE")
+
+	/* -------------------------------------------------- */
 }

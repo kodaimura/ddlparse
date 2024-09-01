@@ -29,7 +29,7 @@ func (v *mysqlValidator) validate() error {
 	if (v.isOutOfRange()) {
 		return nil
 	}
-	if err := v.validateCreateTable(); err != nil {
+	if err := v.validateDdl(); err != nil {
 		return err
 	}
 	return v.validate()
@@ -220,10 +220,25 @@ func (v *mysqlValidator) validateIndexKeysAux(set bool) error {
 }
 
 
-func (v *mysqlValidator) validateCreateTable() error {
-	if err := v.validateToken(true, "CREATE"); err != nil {
+func (v *mysqlValidator) validateDdl() error {
+	if err := v.validateToken(false, "CREATE"); err != nil {
 		return err
 	}
+	if v.matchToken("TABLE") {
+		if err := v.validateCreateTable(); err != nil {
+			return err
+		}
+	} else {
+		if err := v.validateCreateOther(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateCreateTable() error {
+	v.set("CREATE")
 	if err := v.validateToken(true, "TABLE"); err != nil {
 		return err
 	}
@@ -237,6 +252,39 @@ func (v *mysqlValidator) validateCreateTable() error {
 		return err
 	}
 	if err := v.validateToken(true, ";"); err != nil {
+		return err
+	}
+	return nil
+}
+
+
+func (v *mysqlValidator) validateCreateOther() error {
+	if err := v.validateToken(false, 
+		"VIEW", "TRIGGER", "INDEX", "DATABASE", "UNIQUE", "PROCEDURE", "SERVER",
+		"FUNCTION", "USER", "EVENT", "SEQUENCE", "TABLESPACE", "ROLE", "LOGIN",
+	); err != nil {
+		return err
+	}
+	begin := false
+	for true {
+		if v.isOutOfRange() {
+			return v.syntaxError()
+		}
+		if v.matchToken("BEGIN") {
+			begin = true
+		}
+		if begin {
+			if v.matchToken("END") {
+				begin = false
+			}
+		} else {
+			if v.matchToken(";") {
+				break
+			}
+		}
+		v.next()
+	}
+	if err := v.validateToken(false, ";"); err != nil {
 		return err
 	}
 	return nil

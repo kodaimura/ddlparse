@@ -357,4 +357,50 @@ func TestValidate_SQLite(t *testing.T) {
 		aaaa integer primary key primary key
 	);`
 	tr.ValidateNG(ddl, 2, "primary")
+
+	/* -------------------------------------------------- */
+	fmt.Println("Create Other Than Table")
+	ddl = `create table users (
+		aaaa integer
+	) without rowid;
+	
+	create temp table users (
+		aaaa integer
+	) strict;
+
+	CREATE TRIGGER update_timestamp
+	AFTER UPDATE ON users
+	FOR EACH ROW
+	BEGIN
+		UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+	END;
+
+	CREATE VIRTUAL TABLE documents USING fts5(content);
+
+	CREATE TEMP VIEW temp_active_users AS
+	SELECT id, name, email
+	FROM users
+	WHERE active = 1;
+
+	CREATE INDEX idx_active_users_email ON users(email) WHERE active = 1;
+	CREATE UNIQUE INDEX idx_users_unique_email ON users(email);
+	
+	create table users2 (
+		aaaa integer
+	) without rowid, strict;`
+	tr.ValidateOK(ddl)
+
+	ddl = `create table users (
+		aaaa integer
+	) without rowid;
+
+	CREATE TRIGGE update_timestamp
+	AFTER UPDATE ON users
+	FOR EACH ROW
+	BEGIN
+		UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+	END;`
+	tr.ValidateNG(ddl, 5, "TRIGGE")
+
+	/* -------------------------------------------------- */
 }

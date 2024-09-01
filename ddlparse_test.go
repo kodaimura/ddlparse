@@ -29,7 +29,14 @@ func TestParseSQlite(t *testing.T) {
 		user_password TEXT NOT NULL,
 		created_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime')),
 		updated_at TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
-	);`
+	);
+	
+	CREATE TRIGGER IF NOT EXISTS trg_users_upd AFTER UPDATE ON users
+	BEGIN
+	UPDATE users
+	SET updated_at = DATETIME('now', 'localtime') 
+    WHERE rowid == NEW.rowid;
+	END;`
 
 	EXPECT_JSON := `[
 		{
@@ -175,7 +182,10 @@ func TestParsePostgreSQL(t *testing.T) {
 		user_password TEXT NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-	);`
+	);
+	
+	create trigger trg_users_upd BEFORE UPDATE ON users FOR EACH ROW
+  	execute procedure set_update_time();`
 
 	EXPECT_JSON := `[
 		{
@@ -321,7 +331,9 @@ func TestParseMySQL(t *testing.T) {
 		user_password TEXT NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-	);`
+	);
+	
+	CREATE INDEX index_user_name ON users (user_name);`
 
 	EXPECT_JSON := `[
 		{
