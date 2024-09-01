@@ -10,6 +10,19 @@ type Validator interface {
 	Validate(tokens []string) ([]string, error)
 }
 
+/*
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+
+  Validate(): 
+    Check the DDL syntax.
+	And remove comments and options that are not subject to conversion.
+	Return an ValidateError if the DDL syntax is incorrect."
+
+////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////
+*/
+
 func NewValidator(rdbms common.Rdbms) Validator {
 	if rdbms == common.PostgreSQL {
 		return NewPostgreSQLValidator()
@@ -24,7 +37,6 @@ type validator struct {
 	size int
 	i int
 	line int
-	flg bool
 	result []string
 }
 
@@ -34,7 +46,6 @@ func (v *validator) init(tokens []string) {
 	v.size = len(v.tokens)
 	v.i = 0
 	v.line = 1
-	v.flg = false
 	v.result = []string{}
 	if v.token() == "\n" {
 		v.next()
@@ -50,13 +61,8 @@ func (v *validator) token() string {
 }
 
 
-func (v *validator) flgOn() {
-	v.flg = true
-}
-
-
-func (v *validator) flgOff() {
-	v.flg = false
+func (v *validator) set(token string) {
+	v.result = append(v.result, token)
 }
 
 
@@ -66,33 +72,27 @@ func (v *validator) isOutOfRange() bool {
 
 
 func (v *validator) next() string {
-	if v.flg {
-		v.result = append(v.result, v.token())
-	}
-	return v.nextAux()
-}
-
-
-func (v *validator) nextAux() string {
 	if (v.isOutOfRange()) {
 		return common.EOF
 	}
 	token := v.token()
-	v.i += 1
-	if (v.token() == "\n") {
-		v.line += 1
-		return v.nextAux()
-	} else {
-		return token
+	for true {
+		v.i += 1
+		if v.isOutOfRange() {
+			break
+		} else if (v.token() == "\n") {
+			v.line += 1
+			continue
+		} else {
+			break
+		}
 	}
+	return token
 }
 
 
 func (v *validator) syntaxError() error {
-	if v.isOutOfRange() {
-		return common.NewValidateError(v.line, common.EOF)
-	}
-	return common.NewValidateError(v.line, v.tokens[v.i])
+	return common.NewValidateError(v.line, v.token())
 }
 
 
@@ -105,42 +105,63 @@ func (v *validator) matchToken(keywords ...string) bool {
 }
 
 
-func (v *validator) validateToken(keywords ...string) error {
+func (v *validator) matchTokenNext(set bool, keywords ...string) bool {
+	if v.matchToken(keywords...) {
+		if set {
+			v.set(v.next())
+		} else {
+			v.next()
+		}
+		return true
+	}
+	return false
+}
+
+
+func (v *validator) validateToken(set bool, keywords ...string) error {
 	if (v.isOutOfRange()) {
 		return v.syntaxError()
 	}
 	if v.matchToken(keywords...) {
-		v.next()
+		if set {
+			v.set(v.next())
+		} else {
+			v.next()
+		}
 		return nil
 	}
 	return v.syntaxError()
 }
 
 
-func (v *validator) validateBrackets() error {
-	if err := v.validateToken("("); err != nil {
+func (v *validator) validateBrackets(set bool) error {
+	if err := v.validateToken(set, "("); err != nil {
 		return err
 	}
-	if err := v.validateBracketsAux(); err != nil {
+	if err := v.validateBracketsAux(set); err != nil {
 		return err
 	}
-	if err := v.validateToken(")"); err != nil {
+	if err := v.validateToken(set, ")"); err != nil {
 		return err
 	}
 	return nil
 }
 
 
-func (v *validator) validateBracketsAux() error {
+func (v *validator) validateBracketsAux(set bool) error {
 	if v.matchToken(")") {
 		return nil
 	}
 	if v.matchToken("(") {
-		if err := v.validateBrackets(); err != nil {
+		if err := v.validateBrackets(set); err != nil {
 			return err
 		}
-		return v.validateBracketsAux()
+		return v.validateBracketsAux(set)
 	}
-	v.next()
-	return v.validateBracketsAux()
+	if set {
+		v.set(v.next())
+	} else {
+		v.next()
+	}
+	return v.validateBracketsAux(set)
 }

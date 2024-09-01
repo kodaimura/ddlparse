@@ -19,4 +19,5 @@ build:
 	docker compose build --no-cache
 
 test:
+	go test -v ./test/...
 	go test

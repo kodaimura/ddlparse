@@ -34,16 +34,21 @@ const (
 )
 
 func Parse(ddl string, rdbms Rdbms) ([]Table, error) {
-	tokens, err := tokenize(ddl, rdbms)
+	l := lexer.NewLexer(rdbms)
+	v := validator.NewValidator(rdbms)
+	c := converter.NewConverter(rdbms)
+
+	tokens, err := l.Lex(ddl)
 	if err != nil {
 		return []Table{}, err
 	}
-	validatedTokens, err := validate(tokens, rdbms)
+	
+	validatedTokens, err := v.Validate(tokens)
 	if err != nil {
 		return []Table{}, err
 	}
-	tables:= convert(validatedTokens, rdbms)
-	return tables, nil
+	
+	return c.Convert(validatedTokens), nil
 }
 
 func ParseSQLite(ddl string) ([]Table, error) {
@@ -68,19 +73,4 @@ func ParseForce(ddl string) ([]Table, error) {
 		}
 	}
 	return []Table{}, err
-}
-
-func tokenize (ddl string, rdbms Rdbms) ([]string, error) {
-	l := lexer.NewLexer(rdbms)
-	return l.Lex(ddl)
-}
-
-func validate (tokens []string, rdbms Rdbms) ([]string, error) {
-	v := validator.NewValidator(rdbms)
-	return v.Validate(tokens)
-}
-
-func convert (tokens []string, rdbms Rdbms) []Table {
-	c := converter.NewConverter(rdbms)
-	return c.Convert(tokens)
 }
