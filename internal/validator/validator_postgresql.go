@@ -813,11 +813,10 @@ func (v *postgresqlValidator) validateTableOptionWithout() error {
 
 
 func (v *postgresqlValidator) validateTableOptionTablespace() error {
-	v.flgOff()
-	if err := v.validateToken("TABLESPACE"); err != nil {
+	if err := v.validateToken(false, "TABLESPACE"); err != nil {
 		return err
 	}
-	if err := v.validateName(); err != nil {
+	if err := v.validateName(false); err != nil {
 		return err
 	}
 	return nil

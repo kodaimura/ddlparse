@@ -176,7 +176,7 @@ func (v *sqliteValidator) validateColumnDefinition() error {
 	if err := v.validateColumnName(true); err != nil {
 		return err
 	}
-	if err := v.validateColumnType() err != nil {
+	if err := v.validateColumnType(); err != nil {
 		return err
 	}
 	if err := v.validateColumnConstraints(); err != nil {
@@ -195,7 +195,7 @@ func (v *sqliteValidator) validateColumnType() error {
 
 func (v *sqliteValidator) validateColumnConstraints() error {
 	if v.matchTokenNext(true, "CONSTRAINT") {
-		if err := v.validateName(set); err != nil {
+		if err := v.validateName(true); err != nil {
 			return err
 		}
 	}
@@ -316,7 +316,7 @@ func (v *sqliteValidator) validateConstraintDefault() error {
 			return err
 		}
 	} else {
-		if err := v.validateLiteralValue(true); err != nil {
+		if err := v.validateLiteralValue(); err != nil {
 			return err
 		}
 	}
@@ -386,7 +386,7 @@ func (v *sqliteValidator) validateConstraintReferencesAux() error {
 		} else if v.matchTokenNext(false, "CASCADE", "RESTRICT") {
 
 		} else if v.matchTokenNext(false, "NO") {
-			if err := v.validateToke(false, "ACTION"); err != nil {
+			if err := v.validateToken(false, "ACTION"); err != nil {
 				return err
 			}
 		} else {
@@ -396,7 +396,7 @@ func (v *sqliteValidator) validateConstraintReferencesAux() error {
 	}
 
 	if v.matchTokenNext(false, "MATCH") {
-		if err := v.validateToken("SIMPLE", "PARTIAL", "FULL"); err != nil {
+		if err := v.validateToken(false, "SIMPLE", "PARTIAL", "FULL"); err != nil {
 			return err
 		}
 		return v.validateConstraintReferencesAux()
@@ -568,20 +568,20 @@ func (v *sqliteValidator) validateTableOptions() error {
 		return nil
 	}
 	if v.matchTokenNext(false, "WITHOUT") {
-		if err := v.validateToke(false, "ROWID"); err != nil {
+		if err := v.validateToken(false, "ROWID"); err != nil {
 			return err
 		}
 		if v.matchTokenNext(false, ",") {
-			if err := v.validateToke(false, "STRICT"); err != nil {
+			if err := v.validateToken(false, "STRICT"); err != nil {
 				return err
 			}
 		}
 	} else if v.matchTokenNext(false, "STRICT") {
 		if v.matchTokenNext(false, ",") {
-			if err := v.validateToke(false, "WITHOUT"); err != nil {
+			if err := v.validateToken(false, "WITHOUT"); err != nil {
 				return err
 			}
-			if err := v.validateToke(false, "ROWID"); err != nil {
+			if err := v.validateToken(false, "ROWID"); err != nil {
 				return err
 			}
 		}

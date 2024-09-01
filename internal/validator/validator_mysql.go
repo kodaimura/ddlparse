@@ -495,7 +495,7 @@ func (v *mysqlValidator) validateConstraintUnique() error {
 	if err := v.validateToken(true, "UNIQUE"); err != nil {
 		return err
 	}
-	v.matchTokenNext(false "KEY")
+	v.matchTokenNext(false, "KEY")
 	return nil
 }
 
@@ -722,14 +722,12 @@ func (v *mysqlValidator) validateTableConstraintAux() error {
 
 
 func (v *mysqlValidator) validateTableConstraintPrimaryKey() error {
-	v.flgOn()
-	if err := v.validateToken("PRIMARY"); err != nil {
+	if err := v.validateToken(true, "PRIMARY"); err != nil {
 		return err
 	}
-	if err := v.validateToken("KEY"); err != nil {
+	if err := v.validateToken(true, "KEY"); err != nil {
 		return err
 	}
-	v.flgOff()
 	if v.matchToken("USING") {
 		if err := v.validateIndexType(); err != nil {
 			return err
@@ -738,30 +736,23 @@ func (v *mysqlValidator) validateTableConstraintPrimaryKey() error {
 	if err := v.validateIndexKeys(true); err != nil {
 		return err
 	}
-	v.flgOff()
 	if err := v.validateIndexOption(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
 
 func (v *mysqlValidator) validateTableConstraintUnique() error {
-	v.flgOn()
-	if err := v.validateToken("UNIQUE"); err != nil {
+	if err := v.validateToken(true, "UNIQUE"); err != nil {
 		return err
 	}
-	v.flgOff()
-	if v.matchToken("INDEX", "KEY") {
-		v.next()
-	}
+	v.matchTokenNext(false, "INDEX", "KEY")
 	if !v.matchToken("(") {
-		if err := v.validateName(); err != nil {
+		if err := v.validateName(false); err != nil {
 			return err
 		}
 	}
-	v.flgOff()
 	if v.matchToken("USING") {
 		if err := v.validateIndexType(); err != nil {
 			return err
@@ -770,53 +761,46 @@ func (v *mysqlValidator) validateTableConstraintUnique() error {
 	if err := v.validateIndexKeys(true); err != nil {
 		return err
 	}
-	v.flgOff()
 	if err := v.validateIndexOption(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
 
 func (v *mysqlValidator) validateTableConstraintForeignKey() error {
-	v.flgOn()
-	if err := v.validateToken("FOREIGN"); err != nil {
+	if err := v.validateToken(true, "FOREIGN"); err != nil {
 		return err
 	}
-	if err := v.validateToken("KEY"); err != nil {
+	if err := v.validateToken(true, "KEY"); err != nil {
 		return err
 	}
 	if !v.matchToken("(") {
-		v.flgOff()
-		if err := v.validateName(); err != nil {
+		if err := v.validateName(false); err != nil {
 			return err
 		}
 	}
-	v.flgOn()
-	if err := v.validateToken("("); err != nil {
+	if err := v.validateToken(true, "("); err != nil {
 		return err
 	}
-	if err := v.validateCommaSeparatedColumnNames(); err != nil {
-		return v.syntaxError()
-	}
-	if err := v.validateToken(")"); err != nil {
+	if err := v.validateCommaSeparatedColumnNames(true); err != nil {
 		return err
 	}
-	if err := v.validateToken("REFERENCES"); err != nil {
+	if err := v.validateToken(true, ")"); err != nil {
 		return err
 	}
-	if err := v.validateTableName(); err != nil {
+	if err := v.validateToken(true, "REFERENCES"); err != nil {
+		return err
+	}
+	if err := v.validateTableName(true); err != nil {
 		return err
 	}
 	if err := v.validateIndexKeys(true); err != nil {
 		return v.syntaxError()
 	}
-	v.flgOff()
 	if err := v.validateConstraintReferencesAux(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
@@ -827,12 +811,11 @@ func (v *mysqlValidator) validateTableConstraintCheck() error {
 
 
 func (v *mysqlValidator) validateTableConstraintIndex() error {
-	v.flgOff()
-	if err := v.validateToken("INDEX", "KEY"); err != nil {
+	if err := v.validateToken(false, "INDEX", "KEY"); err != nil {
 		return err
 	}
 	if !v.matchToken("USING") && !v.matchToken("(") {
-		if err := v.validateName(); err != nil {
+		if err := v.validateName(false); err != nil {
 			return err
 		}
 	}
@@ -847,32 +830,25 @@ func (v *mysqlValidator) validateTableConstraintIndex() error {
 	if err := v.validateIndexOption(); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
 
 func (v *mysqlValidator) validateIndexType() error {
-	v.flgOff()
-	if err := v.validateToken("USING"); err != nil {
+	if err := v.validateToken(false, "USING"); err != nil {
 		return err
 	}
-	if err := v.validateToken("BTREE", "HASH"); err != nil {
+	if err := v.validateToken(false, "BTREE", "HASH"); err != nil {
 		return err
 	}
-	v.flgOff()
 	return nil
 }
 
 
 func (v *mysqlValidator) validateIndexOption() error {
-	v.flgOff()
-	if v.matchToken("KEY_BLOCK_SIZE") {
-		v.next()
-		if v.matchToken("=") {
-			v.next()
-		}
-		if err := v.validateLiteralValue(); err != nil {
+	if v.matchTokenNext(false, "KEY_BLOCK_SIZE") {
+		v.matchTokenNext(false, "=")
+		if err := v.validateLiteralValue(false); err != nil {
 			return err
 		}
 		return v.validateIndexOption()
@@ -883,80 +859,66 @@ func (v *mysqlValidator) validateIndexOption() error {
 		}
 		return v.validateIndexOption()
 		
-	} else if v.matchToken("WITH") {
-		v.next()
-		if err := v.validateToken("PARSER"); err != nil {
+	} else if v.matchTokenNext(false, "WITH") {
+		if err := v.validateToken(false, "PARSER"); err != nil {
 			return err
 		}
-		if err := v.validateName(); err != nil {
-			return err
-		}
-		return v.validateIndexOption()
-
-	} else if v.matchToken("COMMENT") {
-		v.next()
-		if err := v.validateStringValue(); err != nil {
+		if err := v.validateName(false); err != nil {
 			return err
 		}
 		return v.validateIndexOption()
 
-	} else if v.matchToken("VISIBLE", "INVISIBLE") {
-		v.next()
-		return v.validateIndexOption()
-
-	} else if v.matchToken("ENGINE_ATTRIBUTE", "SECONDARY_ENGINE_ATTRIBUTE") {
-		v.next()
-		if v.matchToken("=") {
-			v.next()
-		}
-		if err := v.validateStringValue(); err != nil {
+	} else if v.matchTokenNext(false, "COMMENT") {
+		if err := v.validateStringValue(false); err != nil {
 			return err
 		}
-		
 		return v.validateIndexOption()
 
+	} else if v.matchTokenNext(false, "VISIBLE", "INVISIBLE") {
+		return v.validateIndexOption()
+
+	} else if v.matchTokenNext(false, "ENGINE_ATTRIBUTE", "SECONDARY_ENGINE_ATTRIBUTE") {
+		v.matchTokenNext(false, "=")
+		if err := v.validateStringValue(false); err != nil {
+			return err
+		}
+		return v.validateIndexOption()
 	}
 
-	v.flgOff()
 	return nil
 }
 
 
-func (v *mysqlValidator) validateCommaSeparatedColumnNames() error {
-	if err := v.validateColumnName(); err != nil {
+func (v *mysqlValidator) validateCommaSeparatedColumnNames(set bool) error {
+	if err := v.validateColumnName(set); err != nil {
 		return err
 	}
-	if v.matchToken(",") {
-		v.next()
-		return v.validateCommaSeparatedColumnNames()
+	if v.matchTokenNext(set, ",") {
+		return v.validateCommaSeparatedColumnNames(set)
 	}
 	return nil
 }
 
 
-func (v *mysqlValidator) validateCommaSeparatedTableNames() error {
-	if err := v.validateTableName(); err != nil {
+func (v *mysqlValidator) validateCommaSeparatedTableNames(set bool) error {
+	if err := v.validateTableName(set); err != nil {
 		return err
 	}
-	if v.matchToken(",") {
-		v.next()
-		return v.validateCommaSeparatedTableNames()
+	if v.matchTokenNext(set, ",") {
+		return v.validateCommaSeparatedTableNames(set)
 	}
 	return nil
 }
 
 
 func (v *mysqlValidator) validateTableOptions() error {
-	v.flgOff()
 	if (v.isOutOfRange()) {
 		return nil
 	}
 	if v.matchToken(";") {
 		return nil
 	}
-	if v.matchToken(",") {
-		v.next()
-	}
+	v.matchTokenNext(false, ",")
 	if err := v.validateTableOption(); err != nil {
 		return err
 	}
@@ -965,7 +927,6 @@ func (v *mysqlValidator) validateTableOptions() error {
 
 
 func (v *mysqlValidator) validateTableOption() error {
-	v.flgOff()
 	if v.matchToken(
 		"AUTOEXTEND_SIZE", "AUTO_INCREMENT", "AVG_ROW_LENGTH", 
 		"KEY_BLOCK_SIZE", "MAX_ROWS", "MIN_ROWS", "STATS_SAMPLE_PAGES",
@@ -1012,12 +973,9 @@ func (v *mysqlValidator) validateTableOption() error {
 
 // option [=] 'value'
 func (v *mysqlValidator) validateTableOptionCommonLiteral() error {
-	v.flgOff()
 	v.next()
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateLiteralValue(); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateLiteralValue(false); err != nil {
 		return err
 	}
 	return nil
@@ -1026,12 +984,9 @@ func (v *mysqlValidator) validateTableOptionCommonLiteral() error {
 
 // option [=] 'string'
 func (v *mysqlValidator) validateTableOptionCommonString() error {
-	v.flgOff()
 	v.next()
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateStringValue(); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateStringValue(false); err != nil {
 		return err
 	}
 	return nil
@@ -1040,21 +995,17 @@ func (v *mysqlValidator) validateTableOptionCommonString() error {
 
 // option [=] name 
 func (v *mysqlValidator) validateTableOptionCommonName() error {
-	v.flgOff()
-	if v.matchToken("CHARACTER") {
-		v.next()
-		if v.validateToken("SET") != nil {
-			return v.syntaxError()
+	if v.matchTokenNext(false, "CHARACTER") {
+		if err := v.validateToken(false, "SET"); err != nil {
+			return err
 		}
 	} else {
-		if err := v.validateToken("COLLATE", "ENGINE"); err != nil {
+		if err := v.validateToken(false, "COLLATE", "ENGINE"); err != nil {
 			return err
 		}
 	}
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateName(); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateName(false); err != nil {
 		return err
 	}
 	return nil
@@ -1063,12 +1014,9 @@ func (v *mysqlValidator) validateTableOptionCommonName() error {
 
 // option [=] {0 | 1}
 func (v *mysqlValidator) validateTableOptionCommon01() error {
-	v.flgOff()
 	v.next()
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateToken("0", "1"); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateToken(false, "0", "1"); err != nil {
 		return err
 	}
 	return nil
@@ -1077,32 +1025,24 @@ func (v *mysqlValidator) validateTableOptionCommon01() error {
 
 // option [=] {0 | 1 | DEFAULT}
 func (v *mysqlValidator) validateTableOptionCommon01Default() error {
-	v.flgOff()
 	v.next()
-	if v.matchToken("=") {
-		v.next()
-	}
-	if (v.matchToken("0", "1") || v.matchToken("DEFAULT")) {
-		v.next()
-	} else {
-		return v.syntaxError()
+	v.matchTokenNext(false, "=")
+	if err := v.validateToken(false, "0", "1", "DEFAULT"); err != nil {
+		return err
 	}
 	return nil
 }
 
 
 func (v *mysqlValidator) validateTableOptionDirectory() error {
-	v.flgOff()
-	if err := v.validateToken("DATA", "INDEX"); err != nil {
+	if err := v.validateToken(false, "DATA", "INDEX"); err != nil {
 		return err
 	}
-	if err := v.validateToken("DIRECTORY"); err != nil {
+	if err := v.validateToken(false, "DIRECTORY"); err != nil {
 		return err
 	}
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateLiteralValue(); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateLiteralValue(false); err != nil {
 		return err
 	}
 	return nil
@@ -1110,17 +1050,15 @@ func (v *mysqlValidator) validateTableOptionDirectory() error {
 
 
 func (v *mysqlValidator) validateTableOptionTablespace() error {
-	v.flgOff()
-	if err := v.validateToken("TABLESPACE"); err != nil {
+	if err := v.validateToken(false, "TABLESPACE"); err != nil {
 		return err
 	}
-	if err := v.validateName(); err != nil {
+	if err := v.validateName(false); err != nil {
 		return err
 	}
-	if v.matchToken("STORAGE") {
-		v.next()
-		if v.validateToken("DISK", "MEMORY") != nil {
-			return v.syntaxError()
+	if v.matchTokenNext(false, "STORAGE") {
+		if err := v.validateToken(false, "DISK", "MEMORY"); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1128,24 +1066,20 @@ func (v *mysqlValidator) validateTableOptionTablespace() error {
 
 
 func (v *mysqlValidator) validateTableOptionDefault() error {
-	v.flgOff()
-	if err := v.validateToken("DEFAULT"); err != nil {
+	if err := v.validateToken(false, "DEFAULT"); err != nil {
 		return err
 	}
-	if v.matchToken("CHARACTER") {
-		v.next()
-		if v.validateToken("SET") != nil {
-			return v.syntaxError()
+	if v.matchTokenNext(false, "CHARACTER") {
+		if err := v.validateToken(false, "SET"); err != nil {
+			return err
 		}
-	} else if v.matchToken("COLLATE") {
-		v.next()
+	} else if v.matchTokenNext(false, "COLLATE") {
+
 	} else {
 		return v.syntaxError()
 	}
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateName(); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateName(false); err != nil {
 		return err
 	}
 	return nil
@@ -1153,20 +1087,17 @@ func (v *mysqlValidator) validateTableOptionDefault() error {
 
 
 func (v *mysqlValidator) validateTableOptionUnion() error {
-	v.flgOff()
-	if err := v.validateToken("UNION"); err != nil {
+	if err := v.validateToken(false, "UNION"); err != nil {
 		return err
 	}
-	if v.matchToken("=") {
-		v.next()
-	}
-	if err := v.validateToken("("); err != nil {
+	v.matchTokenNext(false, "=")
+	if err := v.validateToken(false, "("); err != nil {
 		return err
 	}
-	if err := v.validateCommaSeparatedTableNames(); err != nil {
-		return v.syntaxError()
+	if err := v.validateCommaSeparatedTableNames(false); err != nil {
+		return err
 	}
-	if err := v.validateToken(")"); err != nil {
+	if err := v.validateToken(false, ")"); err != nil {
 		return err
 	}
 	return nil
@@ -1174,34 +1105,24 @@ func (v *mysqlValidator) validateTableOptionUnion() error {
 
 
 func (v *mysqlValidator) validateTableOptionInsertMethod() error {
-	v.flgOff()
-	if err := v.validateToken("INSERT_METHOD"); err != nil {
+	if err := v.validateToken(false, "INSERT_METHOD"); err != nil {
 		return err
 	}
-	if v.matchToken("=") {
-		v.next()
-	}
-	if (v.matchToken("NO", "FIRST", "LAST")) {
-		v.next()
-	} else {
-		return v.syntaxError()
+	v.matchTokenNext(false, "=")
+	if err := v.validateToken(false, "NO", "FIRST", "LAST"); err != nil {
+		return err
 	}
 	return nil
 }
 
 
 func (v *mysqlValidator) validateTableOptionRowFormat() error {
-	v.flgOff()
-	if err := v.validateToken("ROW_FORMAT"); err != nil {
+	if err := v.validateToken(false, "ROW_FORMAT"); err != nil {
 		return err
 	}
-	if v.matchToken("=") {
-		v.next()
-	}
-	if (v.matchToken("DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT")) {
-		v.next()
-	} else {
-		return v.syntaxError()
+	v.matchTokenNext(false, "=")
+	if err := v.validateToken(false,"DEFAULT", "DYNAMIC", "FIXED", "COMPRESSED", "REDUNDANT", "COMPACT"); err != nil {
+		return err
 	}
 	return nil
 }

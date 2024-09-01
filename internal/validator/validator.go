@@ -24,7 +24,6 @@ type validator struct {
 	size int
 	i int
 	line int
-	flg bool
 	result []string
 }
 
@@ -34,7 +33,6 @@ func (v *validator) init(tokens []string) {
 	v.size = len(v.tokens)
 	v.i = 0
 	v.line = 1
-	v.flg = false
 	v.result = []string{}
 	if v.token() == "\n" {
 		v.next()
@@ -47,16 +45,6 @@ func (v *validator) token() string {
 		return common.EOF
 	}
 	return v.tokens[v.i]
-}
-
-
-func (v *validator) flgOn() {
-	v.flg = true
-}
-
-
-func (v *validator) flgOff() {
-	v.flg = false
 }
 
 
