@@ -127,13 +127,6 @@ func (c *converter) convert() {
 }
 
 
-func (c *converter) convertToken() string {
-	token := c.token()
-	c.next()
-	return token
-}
-
-
 func (c *converter) convertTable() types.Table {
 	var table types.Table
 	c.next() // skip "CREATE"
@@ -180,7 +173,7 @@ func (c *converter) convertTableName() (string, string) {
 
 
 func (c *converter) convertName() string {
-	token := c.convertToken()
+	token := c.next()
 	if c.isIdentifier(token) {
 		return token[1 : len(token)-1]
 	} else {
@@ -223,7 +216,7 @@ func (c *converter) convertColumnDefinition() types.Column {
 
 func (c *converter) convertDateType() types.DataType {
 	var dataType types.DataType
-	dataType.Name = strings.ToUpper(c.convertToken())
+	dataType.Name = strings.ToUpper(c.next())
 	if c.matchToken("VARYING") {
 		if dataType.Name == "BIT" {
 			dataType.Name = "VARBIT"
@@ -246,10 +239,10 @@ func (c *converter) convertTypeDigit() (int, int) {
 	m := 0
 	if c.matchToken("(") {
 		c.next()
-		n, _ = strconv.Atoi(c.convertToken())
+		n, _ = strconv.Atoi(c.next())
 		if c.matchToken(",") {
 			c.next()
-			m, _ = strconv.Atoi(c.convertToken())
+			m, _ = strconv.Atoi(c.next())
 		}
 		c.next()   //skip ")"
 	}
@@ -336,7 +329,7 @@ func (c *converter) convertDefaultValue() interface{} {
 
 
 func (c *converter) convertExpr() string {
-	return c.convertToken() + c.convertExprAux() + c.convertToken()
+	return c.next() + c.convertExprAux() + c.next()
 }
 
 
@@ -347,13 +340,12 @@ func (c *converter) convertExprAux() string {
 	if c.matchToken("(") {
 		return c.convertExpr() + c.convertExprAux()
 	}
-	return c.convertToken() + c.convertExprAux()
+	return c.next() + c.convertExprAux()
 }
 
 
 func (c *converter) convertLiteralValue() interface{} {
-	token := c.token()
-	c.next()
+	token := c.next()
 	if common.IsNumericToken(token) {
 		n, _ := strconv.ParseFloat(token, 64)
 		return n
