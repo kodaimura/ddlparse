@@ -508,4 +508,49 @@ func TestValidate_PostgreSQL(t *testing.T) {
 		aaaa integer primary key primary key
 	);`
 	tr.ValidateNG(ddl, 2, "primary")
+
+	/* -------------------------------------------------- */
+	fmt.Println("Create Other Than Table")
+	ddl = `create table scm.users (
+		aaaa integer
+	);
+
+	CREATE TRIGGER update_timestamp
+	AFTER UPDATE ON users
+	FOR EACH ROW
+	BEGIN
+		UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+	END;
+
+	CREATE VIEW temp_active_users AS
+	SELECT id, name, email
+	FROM users
+	WHERE active = 1;
+
+	CREATE INDEX idx_active_users_email ON users(email) WHERE active = 1;
+	CREATE AGGREGATE aggregate_name (datatype) (
+		SFUNC = state_function,
+		STYPE = state_data_type,
+		FINALFUNC = final_function,
+		INITCOND = initial_condition
+	);
+	
+	create table scm.users2 (
+		aaaa integer
+	);`
+	tr.ValidateOK(ddl)
+
+	ddl = `create table scm.users (
+		aaaa integer
+	);
+
+	CREATE TRIGGE update_timestamp
+	AFTER UPDATE ON users
+	FOR EACH ROW
+	BEGIN
+		UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+	END;`
+	tr.ValidateNG(ddl, 5, "TRIGGE")
+
+	/* -------------------------------------------------- */
 }
