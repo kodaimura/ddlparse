@@ -129,11 +129,11 @@ func (v *sqliteValidator) validateCreateTable() error {
 
 
 func (v *sqliteValidator) validateIfNotExists() error {
-	if v.matchTokenNext(false, "IF") {
-		if err := v.validateToken(false, "NOT"); err != nil {
+	if v.matchTokenNext(true, "IF") {
+		if err := v.validateToken(true, "NOT"); err != nil {
 			return err
 		}
-		if err := v.validateToken(false, "EXISTS"); err != nil {
+		if err := v.validateToken(true, "EXISTS"); err != nil {
 			return err
 		}
 	}
