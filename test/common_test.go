@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"reflect"
+	"encoding/json"
 
 	"github.com/kodaimura/ddlparse/internal/types"
 	"github.com/kodaimura/ddlparse/internal/common"
@@ -73,8 +75,7 @@ type Tester interface {
 	LexNG(ddl string, line int, near string)
 	ValidateOK(ddl string)
 	ValidateNG(ddl string, line int, near string)
-	ConvertOK(ddl string)
-	ConvertNG(ddl string)
+	ConvertOK(ddl string, expectJson string)
 } 
 
 func NewTester(rdbms Rdbms, t *testing.T) Tester {
@@ -139,23 +140,19 @@ func (te *tester) ValidateNG(ddl string, line int, near string) {
 	}
 }
 
-func (te *tester) ConvertOK(ddl string) {
+func (te *tester) ConvertOK(ddl string, expectJson string) {
 	_, _, l, _ := runtime.Caller(1)
 	tables, err := convert(ddl, te.rdbms)
 	if err != nil {
 		te.t.Errorf("%d: failed ConvertOK: %s", l, err.Error())
 	} else {
-		fmt.Println(tables)
-	}
-}
-
-func (te *tester) ConvertNG(ddl string) {
-	_, _, l, _ := runtime.Caller(1)
-	tables, err := convert(ddl, te.rdbms)
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		te.t.Errorf("%d: failed ConvertNG", l)
-		fmt.Println(tables)
+		var map1, map2 []map[string]interface{}
+		jsonData, _ := json.MarshalIndent(tables, "", "  ")
+		
+		json.Unmarshal([]byte(expectJson), &map1)
+		json.Unmarshal([]byte(string(jsonData)), &map2)
+		if !reflect.DeepEqual(map1, map2) {
+			te.t.Errorf("%d: failed ConvertOK: \n%s", l, string(jsonData))
+		}
 	}
 }
